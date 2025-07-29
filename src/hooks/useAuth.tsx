@@ -84,16 +84,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (displayName: string, institutionalUser: string, pin: string) => {
     try {
+      // Check if user already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('institutional_user')
+        .eq('institutional_user', institutionalUser)
+        .single();
+
+      if (existingProfile) {
+        return { error: { message: 'Usuário institucional já cadastrado' } };
+      }
+
       const bcrypt = await import('bcryptjs');
       const pinHash = await bcrypt.hash(pin, 10);
 
-      // Create user with temporary email
+      // Create user with temporary email - disable email confirmation
       const tempEmail = `${institutionalUser}@temp.com`;
       const { data, error: authError } = await supabase.auth.signUp({
         email: tempEmail,
         password: institutionalUser + pin, // temporary password
         options: {
-          emailRedirectTo: `${window.location.origin}/`
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            institutional_user: institutionalUser,
+            display_name: displayName
+          }
         }
       });
 
@@ -102,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        // Create profile
+        // Create profile immediately
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -113,18 +128,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
 
         if (profileError) {
-          return { error: profileError };
+          console.error('Profile creation error:', profileError);
+          return { error: { message: 'Erro ao criar perfil. Tente novamente.' } };
         }
 
-        toast({
-          title: "Cadastro realizado com sucesso!",
-          description: "Você pode fazer login agora."
-        });
+        // Don't show success toast here, let the component handle it
+        return { error: null };
       }
 
-      return { error: null };
+      return { error: { message: 'Erro inesperado durante o cadastro' } };
     } catch (error) {
-      return { error };
+      console.error('Signup error:', error);
+      return { error: { message: 'Erro interno. Tente novamente.' } };
     }
   };
 

@@ -24,8 +24,15 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-background">
-      <div className="container mx-auto px-4 py-16">
+    <div className="min-h-screen relative overflow-hidden" style={{ background: 'var(--gradient-academic)' }}>
+      {/* Academic geometric background */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-20 left-10 w-64 h-64 border border-primary rotate-45"></div>
+        <div className="absolute top-40 right-20 w-48 h-48 border border-primary/60 rotate-12"></div>
+        <div className="absolute bottom-20 left-1/4 w-32 h-32 border border-primary/40 -rotate-12"></div>
+        <div className="absolute bottom-40 right-10 w-56 h-56 border border-primary/30 rotate-45"></div>
+      </div>
+      <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4 text-foreground">
             Sistema de Reservas de Equipamentos
@@ -36,7 +43,7 @@ const Index = () => {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
-          <Card className="text-center">
+          <Card className="text-center backdrop-blur-sm" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)' }}>
             <CardHeader>
               <Monitor className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Projetores</CardTitle>
@@ -48,36 +55,36 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center">
+          <Card className="text-center backdrop-blur-sm" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)' }}>
             <CardHeader>
               <Speaker className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Caixas de Som</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
-                Garanta áudio de qualidade para seus eventos
+                Reserva caixas de som para sua aula
               </CardDescription>
             </CardContent>
           </Card>
 
-          <Card className="text-center">
+          <Card className="text-center backdrop-blur-sm" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)' }}>
             <CardHeader>
               <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Agendamento</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
-                Sistema simples de reservas para hoje e amanhã
+                Sistema simples de reservas de projetores
               </CardDescription>
             </CardContent>
           </Card>
         </div>
 
         <div className="text-center">
-          <Card className="inline-block p-8">
+          <Card className="inline-block p-8 backdrop-blur-sm" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-academic)' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 justify-center">
-                <Users className="h-6 w-6" />
+                <Users className="h-6 w-6 text-primary" />
                 Acesso para Professores
               </CardTitle>
               <CardDescription className="mb-6">

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Monitor, Speaker, Calendar, Users } from 'lucide-react';
 
+
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -24,26 +25,37 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ background: 'var(--gradient-academic)' }}>
-      {/* Academic geometric background */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-20 left-10 w-64 h-64 border border-primary rotate-45"></div>
-        <div className="absolute top-40 right-20 w-48 h-48 border border-primary/60 rotate-12"></div>
-        <div className="absolute bottom-20 left-1/4 w-32 h-32 border border-primary/40 -rotate-12"></div>
-        <div className="absolute bottom-40 right-10 w-56 h-56 border border-primary/30 rotate-45"></div>
+    <div className="min-h-screen relative overflow-hidden gradient-mesh">
+      {/* Animated floating shapes */}
+      <div className="floating-shapes">
+        <div className="floating-shape"></div>
+        <div className="floating-shape"></div>
+        <div className="floating-shape"></div>
+        <div className="floating-shape"></div>
+        <div className="floating-shape"></div>
       </div>
-      <div className="container mx-auto px-4 py-16 relative z-10">
+      
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <img 
+            src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
+            alt="FTEC Logo" 
+            className="mx-auto h-20 md:h-24 object-contain animate-fade-in"
+          />
+        </div>
+        
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 text-foreground">
+          <h1 className="text-4xl font-bold mb-4 text-foreground animate-fade-in">
             Sistema de Reservas de Equipamentos
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Plataforma para professores reservarem projetores e caixas de som de forma simples e eficiente.
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in">
+            Plataforma para professores reservarem projetores e caixas de som na unidade FTEC POA.
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
-          <Card className="text-center backdrop-blur-sm" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)' }}>
+          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)' }}>
             <CardHeader>
               <Monitor className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Projetores</CardTitle>
@@ -55,7 +67,7 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center backdrop-blur-sm" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)' }}>
+          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)', animationDelay: '0.1s' }}>
             <CardHeader>
               <Speaker className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Caixas de Som</CardTitle>
@@ -67,7 +79,7 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center backdrop-blur-sm" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)' }}>
+          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)', animationDelay: '0.2s' }}>
             <CardHeader>
               <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Agendamento</CardTitle>
@@ -81,7 +93,7 @@ const Index = () => {
         </div>
 
         <div className="text-center">
-          <Card className="inline-block p-8 backdrop-blur-sm" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-academic)' }}>
+          <Card className="inline-block p-8 backdrop-blur-sm hover-scale animate-fade-in" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-academic)', animationDelay: '0.3s' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 justify-center">
                 <Users className="h-6 w-6 text-primary" />
@@ -95,7 +107,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={() => navigate('/auth')}
-                className="px-8"
+                className="px-8 transition-all duration-300 hover:scale-105"
               >
                 Entrar no Sistema
               </Button>

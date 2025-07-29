@@ -81,3 +81,104 @@
     font-family: 'Inter', sans-serif;
   }
 }
+
+@layer utilities {
+  .floating-shapes {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+  }
+  
+  .floating-shape {
+    position: absolute;
+    border: 1px solid hsl(var(--primary) / 0.1);
+    border-radius: 50%;
+    animation: float 20s infinite linear;
+  }
+  
+  .floating-shape:nth-child(1) {
+    width: 100px;
+    height: 100px;
+    top: 10%;
+    left: 10%;
+    animation-delay: 0s;
+    animation-duration: 25s;
+  }
+  
+  .floating-shape:nth-child(2) {
+    width: 150px;
+    height: 150px;
+    top: 20%;
+    right: 15%;
+    animation-delay: -5s;
+    animation-duration: 30s;
+  }
+  
+  .floating-shape:nth-child(3) {
+    width: 80px;
+    height: 80px;
+    bottom: 30%;
+    left: 20%;
+    animation-delay: -10s;
+    animation-duration: 35s;
+  }
+  
+  .floating-shape:nth-child(4) {
+    width: 120px;
+    height: 120px;
+    bottom: 15%;
+    right: 25%;
+    animation-delay: -15s;
+    animation-duration: 40s;
+  }
+  
+  .floating-shape:nth-child(5) {
+    width: 60px;
+    height: 60px;
+    top: 50%;
+    left: 50%;
+    animation-delay: -20s;
+    animation-duration: 45s;
+  }
+  
+  @keyframes float {
+    0% {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 0.1;
+    }
+    25% {
+      transform: translate(100px, -100px) rotate(90deg);
+      opacity: 0.3;
+    }
+    50% {
+      transform: translate(-50px, -200px) rotate(180deg);
+      opacity: 0.2;
+    }
+    75% {
+      transform: translate(-150px, -50px) rotate(270deg);
+      opacity: 0.4;
+    }
+    100% {
+      transform: translate(0, 0) rotate(360deg);
+      opacity: 0.1;
+    }
+  }
+  
+  .gradient-mesh {
+    background: linear-gradient(135deg, 
+      hsl(var(--primary) / 0.05) 0%, 
+      transparent 25%, 
+      hsl(var(--primary) / 0.03) 50%, 
+      transparent 75%, 
+      hsl(var(--primary) / 0.08) 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+  }
+  
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+}

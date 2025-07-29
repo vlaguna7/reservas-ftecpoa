@@ -100,7 +100,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      handle_signup_with_profile: {
+        Args: {
+          p_display_name: string
+          p_institutional_user: string
+          p_pin_hash: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

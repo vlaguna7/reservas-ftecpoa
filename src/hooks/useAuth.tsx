@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .select('institutional_user')
         .eq('institutional_user', institutionalUser)
-        .single();
+        .maybeSingle();
 
       if (existingProfile) {
         return { error: { message: 'Usuário institucional já cadastrado' } };
@@ -98,11 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const bcrypt = await import('bcryptjs');
       const pinHash = await bcrypt.hash(pin, 10);
 
-      // Create user with temporary email - disable email confirmation
+      // Create user with temporary email - no email confirmation needed
       const tempEmail = `${institutionalUser}@temp.com`;
       const { data, error: authError } = await supabase.auth.signUp({
         email: tempEmail,
-        password: institutionalUser + pin, // temporary password
+        password: institutionalUser + pin,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
@@ -117,23 +117,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        // Create profile immediately
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: data.user.id,
-            display_name: displayName,
-            institutional_user: institutionalUser,
-            pin_hash: pinHash
+        try {
+          // Use the database function to create profile
+          const { error: profileError } = await supabase.rpc('handle_signup_with_profile', {
+            p_display_name: displayName,
+            p_institutional_user: institutionalUser,
+            p_pin_hash: pinHash,
+            p_user_id: data.user.id
           });
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
+          if (profileError) {
+            console.error('Profile creation error:', profileError);
+            return { error: { message: 'Erro ao criar perfil. Tente novamente.' } };
+          }
+
+          return { error: null };
+        } catch (profileErr) {
+          console.error('Profile creation failed:', profileErr);
           return { error: { message: 'Erro ao criar perfil. Tente novamente.' } };
         }
-
-        // Don't show success toast here, let the component handle it
-        return { error: null };
       }
 
       return { error: { message: 'Erro inesperado durante o cadastro' } };

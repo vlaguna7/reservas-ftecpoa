@@ -62,6 +62,28 @@ export function MakeReservation() {
     fetchEquipmentSettings();
     fetchAvailability();
     fetchUserReservations();
+
+    // Configurar realtime updates para mudanças nas reservas
+    const channel = supabase
+      .channel('reservation-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reservations'
+        },
+        () => {
+          console.log('Reservation change detected, updating availability...');
+          fetchAvailability();
+          fetchUserReservations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchEquipmentSettings = async () => {
@@ -219,8 +241,11 @@ export function MakeReservation() {
       });
       setSelectedEquipment('');
       setSelectedDate('');
-      fetchAvailability(); // Refresh availability
-      fetchUserReservations(); // Refresh user reservations
+      // Aguardar um pouco antes de atualizar para garantir que a inserção foi processada
+      setTimeout(() => {
+        fetchAvailability();
+        fetchUserReservations();
+      }, 500);
     }
 
     setLoading(false);

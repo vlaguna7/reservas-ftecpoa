@@ -8,6 +8,7 @@ import { MakeReservation } from '@/components/MakeReservation';
 import { MyReservations } from '@/components/MyReservations';
 import { Profile } from '@/components/Profile';
 import { AdminPanel } from '@/components/AdminPanel';
+import { TodayReservations } from '@/components/TodayReservations';
 
 export default function Dashboard() {
   const { user, profile, loading, signOut } = useAuth();
@@ -70,14 +71,18 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="reservations" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Fazer uma Reserva</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MakeReservation />
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Fazer uma Reserva</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <MakeReservation />
+                </CardContent>
+              </Card>
+              
+              <TodayReservations />
+            </div>
           </TabsContent>
 
           <TabsContent value="my-reservations" className="space-y-6">

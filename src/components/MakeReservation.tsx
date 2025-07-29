@@ -1,0 +1,272 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Calendar, Monitor, Speaker, MonitorSpeaker, AlertCircle } from 'lucide-react';
+
+interface EquipmentSettings {
+  projector_limit: number;
+  speaker_limit: number;
+}
+
+interface ReservationCount {
+  projector_count: number;
+  speaker_count: number;
+}
+
+export function MakeReservation() {
+  const { user } = useAuth();
+  const [selectedEquipment, setSelectedEquipment] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [equipmentSettings, setEquipmentSettings] = useState<EquipmentSettings | null>(null);
+  const [availability, setAvailability] = useState<Record<string, ReservationCount>>({});
+  const [loading, setLoading] = useState(false);
+
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const availableDates = [
+    { date: format(today, 'yyyy-MM-dd'), label: format(today, "EEEE, dd 'de' MMMM", { locale: ptBR }) },
+    { date: format(tomorrow, 'yyyy-MM-dd'), label: format(tomorrow, "EEEE, dd 'de' MMMM", { locale: ptBR }) }
+  ];
+
+  useEffect(() => {
+    fetchEquipmentSettings();
+    fetchAvailability();
+  }, []);
+
+  const fetchEquipmentSettings = async () => {
+    const { data, error } = await supabase
+      .from('equipment_settings')
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error fetching equipment settings:', error);
+      return;
+    }
+
+    setEquipmentSettings(data);
+  };
+
+  const fetchAvailability = async () => {
+    const dateList = availableDates.map(d => d.date);
+    
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('reservation_date, equipment_type')
+      .in('reservation_date', dateList);
+
+    if (error) {
+      console.error('Error fetching availability:', error);
+      return;
+    }
+
+    const counts: Record<string, ReservationCount> = {};
+    
+    dateList.forEach(date => {
+      counts[date] = { projector_count: 0, speaker_count: 0 };
+    });
+
+    data.forEach(reservation => {
+      const dateStr = reservation.reservation_date;
+      if (reservation.equipment_type === 'projector' || reservation.equipment_type === 'both') {
+        counts[dateStr].projector_count++;
+      }
+      if (reservation.equipment_type === 'speaker' || reservation.equipment_type === 'both') {
+        counts[dateStr].speaker_count++;
+      }
+    });
+
+    setAvailability(counts);
+  };
+
+  const getAvailabilityForDate = (date: string, equipment: string) => {
+    if (!equipmentSettings || !availability[date]) return null;
+
+    const { projector_count, speaker_count } = availability[date];
+    
+    switch (equipment) {
+      case 'projector':
+        return equipmentSettings.projector_limit - projector_count;
+      case 'speaker':
+        return equipmentSettings.speaker_limit - speaker_count;
+      case 'both':
+        const projectorAvailable = equipmentSettings.projector_limit - projector_count;
+        const speakerAvailable = equipmentSettings.speaker_limit - speaker_count;
+        return Math.min(projectorAvailable, speakerAvailable);
+      default:
+        return null;
+    }
+  };
+
+  const isAvailable = (date: string, equipment: string) => {
+    const available = getAvailabilityForDate(date, equipment);
+    return available !== null && available > 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedEquipment || !selectedDate) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, selecione o equipamento e a data.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!isAvailable(selectedDate, selectedEquipment)) {
+      toast({
+        title: "Indisponível",
+        description: "Não há mais unidades disponíveis para esta data. Por favor, escolha outro dia.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase
+      .from('reservations')
+      .insert({
+        user_id: user!.id,
+        equipment_type: selectedEquipment,
+        reservation_date: selectedDate
+      });
+
+    if (error) {
+      toast({
+        title: "Erro ao fazer reserva",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Reserva realizada!",
+        description: "Sua reserva foi confirmada com sucesso."
+      });
+      setSelectedEquipment('');
+      setSelectedDate('');
+      fetchAvailability(); // Refresh availability
+    }
+
+    setLoading(false);
+  };
+
+  const getEquipmentIcon = (type: string) => {
+    switch (type) {
+      case 'projector':
+        return <Monitor className="h-4 w-4" />;
+      case 'speaker':
+        return <Speaker className="h-4 w-4" />;
+      case 'both':
+        return <MonitorSpeaker className="h-4 w-4" />;
+      default:
+        return null;
+    }
+  };
+
+  const getEquipmentLabel = (type: string) => {
+    switch (type) {
+      case 'projector':
+        return 'Projetor';
+      case 'speaker':
+        return 'Caixa de Som';
+      case 'both':
+        return 'Projetor + Caixa de Som';
+      default:
+        return '';
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <Label className="text-base font-medium">Selecione o equipamento:</Label>
+        <RadioGroup value={selectedEquipment} onValueChange={setSelectedEquipment} className="mt-3">
+          {['projector', 'speaker', 'both'].map((type) => (
+            <div key={type} className="flex items-center space-x-2">
+              <RadioGroupItem value={type} id={type} />
+              <Label htmlFor={type} className="flex items-center gap-2 cursor-pointer">
+                {getEquipmentIcon(type)}
+                {getEquipmentLabel(type)}
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
+      </div>
+
+      <div>
+        <Label className="text-base font-medium">Selecione a data:</Label>
+        <div className="mt-3 space-y-3">
+          {availableDates.map(({ date, label }) => (
+            <Card key={date} className={`cursor-pointer transition-colors ${
+              selectedDate === date ? 'ring-2 ring-primary' : ''
+            } ${!selectedEquipment || !isAvailable(date, selectedEquipment) ? 'opacity-50' : ''}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      name="date"
+                      value={date}
+                      checked={selectedDate === date}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      disabled={!selectedEquipment || !isAvailable(date, selectedEquipment)}
+                      className="radio"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span className="font-medium capitalize">{label}</span>
+                      </div>
+                      {selectedEquipment && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {isAvailable(date, selectedEquipment) ? (
+                            `${getAvailabilityForDate(date, selectedEquipment)} unidades disponíveis`
+                          ) : (
+                            <span className="text-destructive flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Indisponível
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {selectedEquipment && selectedDate && !isAvailable(selectedDate, selectedEquipment) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Não há mais unidades disponíveis para esta data. Por favor, escolha outro dia.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Button 
+        type="submit" 
+        disabled={loading || !selectedEquipment || !selectedDate || !isAvailable(selectedDate, selectedEquipment)}
+        className="w-full"
+      >
+        {loading ? 'Reservando...' : 'Confirmar Reserva'}
+      </Button>
+    </form>
+  );
+}

@@ -196,6 +196,8 @@ export function MakeReservation() {
 
     setLoading(true);
 
+    console.log('Saving reservation with date:', selectedDate); // Debug log
+
     const { error } = await supabase
       .from('reservations')
       .insert({

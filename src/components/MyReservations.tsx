@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar, Monitor, Speaker, Trash2 } from 'lucide-react';
 import {
@@ -57,6 +57,7 @@ export function MyReservations() {
         variant: "destructive"
       });
     } else {
+      console.log('Reservations data:', data); // Debug log
       setReservations(data || []);
     }
 
@@ -149,7 +150,10 @@ export function MyReservations() {
   return (
     <div className="space-y-4">
       {reservations.map((reservation) => {
-        const reservationDate = new Date(reservation.reservation_date);
+        // Parse the date string safely to avoid timezone issues
+        console.log('Raw reservation_date:', reservation.reservation_date); // Debug log
+        const reservationDate = parseISO(reservation.reservation_date + 'T00:00:00');
+        console.log('Parsed reservationDate:', reservationDate); // Debug log
         const dayOfWeek = format(reservationDate, 'EEEE', { locale: ptBR });
         const formattedDate = format(reservationDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 

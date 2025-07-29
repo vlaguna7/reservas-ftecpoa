@@ -131,6 +131,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return { error: { message: 'Erro ao criar perfil. Tente novamente.' } };
           }
 
+          // Confirm user automatically to avoid email confirmation
+          try {
+            await supabase.functions.invoke('confirm-user', {
+              body: { userId: data.user.id }
+            });
+            console.log('User auto-confirmed');
+          } catch (confirmError) {
+            console.log('Auto-confirm failed, but continuing:', confirmError);
+          }
+
           return { error: null };
         } catch (profileErr) {
           console.error('Profile creation failed:', profileErr);
@@ -154,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('institutional_user', institutionalUser)
-        .single();
+        .maybeSingle();
 
       if (profileError || !profileData) {
         return { error: { message: 'Usuário não encontrado' } };
@@ -166,15 +176,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN incorreto' } };
       }
 
-      // Sign in with temporary credentials
+      // Sign in with temporary credentials - ignore email confirmation
       const tempEmail = `${institutionalUser}@temp.com`;
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: tempEmail,
         password: institutionalUser + pin
       });
 
       if (signInError) {
-        return { error: signInError };
+        // If error is about unconfirmed email, try to confirm and retry
+        if (signInError.message?.includes('confirmation') || 
+            signInError.message?.includes('confirmed') ||
+            signInError.message?.includes('not confirmed')) {
+          
+          try {
+            // Auto-confirm the user
+            await supabase.functions.invoke('confirm-user', {
+              body: { userId: profileData.user_id }
+            });
+            
+            // Wait a moment for the confirmation to process
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Try sign in again
+            const { error: retryError } = await supabase.auth.signInWithPassword({
+              email: tempEmail,
+              password: institutionalUser + pin
+            });
+            
+            if (retryError) {
+              return { error: { message: 'Erro de autenticação. Tente novamente.' } };
+            }
+          } catch (confirmError) {
+            console.error('Auto-confirm failed:', confirmError);
+            return { error: { message: 'Erro de autenticação. Tente novamente.' } };
+          }
+        } else {
+          return { error: signInError };
+        }
       }
 
       return { error: null };

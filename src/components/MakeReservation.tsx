@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Monitor, Speaker, MonitorSpeaker, AlertCircle } from 'lucide-react';
+import { Calendar, Monitor, Speaker, AlertCircle } from 'lucide-react';
 
 interface EquipmentSettings {
   projector_limit: number;
@@ -27,6 +27,7 @@ export function MakeReservation() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [equipmentSettings, setEquipmentSettings] = useState<EquipmentSettings | null>(null);
   const [availability, setAvailability] = useState<Record<string, ReservationCount>>({});
+  const [userReservations, setUserReservations] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
 
   const getAvailableDate = () => {
@@ -60,6 +61,7 @@ export function MakeReservation() {
   useEffect(() => {
     fetchEquipmentSettings();
     fetchAvailability();
+    fetchUserReservations();
   }, []);
 
   const fetchEquipmentSettings = async () => {
@@ -97,15 +99,44 @@ export function MakeReservation() {
 
     data.forEach(reservation => {
       const dateStr = reservation.reservation_date;
-      if (reservation.equipment_type === 'projector' || reservation.equipment_type === 'both') {
+      if (reservation.equipment_type === 'projector') {
         counts[dateStr].projector_count++;
       }
-      if (reservation.equipment_type === 'speaker' || reservation.equipment_type === 'both') {
+      if (reservation.equipment_type === 'speaker') {
         counts[dateStr].speaker_count++;
       }
     });
 
     setAvailability(counts);
+  };
+
+  const fetchUserReservations = async () => {
+    if (!user) return;
+    
+    const dateList = availableDates.map(d => d.date);
+    
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('reservation_date, equipment_type')
+      .eq('user_id', user.id)
+      .in('reservation_date', dateList);
+
+    if (error) {
+      console.error('Error fetching user reservations:', error);
+      return;
+    }
+
+    const userRes: Record<string, string[]> = {};
+    dateList.forEach(date => {
+      userRes[date] = [];
+    });
+
+    data.forEach(reservation => {
+      const dateStr = reservation.reservation_date;
+      userRes[dateStr].push(reservation.equipment_type);
+    });
+
+    setUserReservations(userRes);
   };
 
   const getAvailabilityForDate = (date: string, equipment: string) => {
@@ -118,18 +149,19 @@ export function MakeReservation() {
         return equipmentSettings.projector_limit - projector_count;
       case 'speaker':
         return equipmentSettings.speaker_limit - speaker_count;
-      case 'both':
-        const projectorAvailable = equipmentSettings.projector_limit - projector_count;
-        const speakerAvailable = equipmentSettings.speaker_limit - speaker_count;
-        return Math.min(projectorAvailable, speakerAvailable);
       default:
         return null;
     }
   };
 
+  const hasUserReservation = (date: string, equipment: string) => {
+    return userReservations[date]?.includes(equipment) || false;
+  };
+
   const isAvailable = (date: string, equipment: string) => {
     const available = getAvailabilityForDate(date, equipment);
-    return available !== null && available > 0;
+    const userAlreadyHasReservation = hasUserReservation(date, equipment);
+    return available !== null && available > 0 && !userAlreadyHasReservation;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,6 +171,15 @@ export function MakeReservation() {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, selecione o equipamento e a data.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (hasUserReservation(selectedDate, selectedEquipment)) {
+      toast({
+        title: "Reserva já existe",
+        description: `Você já possui uma reserva de ${getEquipmentLabel(selectedEquipment)} para esta data.`,
         variant: "destructive"
       });
       return;
@@ -177,6 +218,7 @@ export function MakeReservation() {
       setSelectedEquipment('');
       setSelectedDate('');
       fetchAvailability(); // Refresh availability
+      fetchUserReservations(); // Refresh user reservations
     }
 
     setLoading(false);
@@ -188,8 +230,6 @@ export function MakeReservation() {
         return <Monitor className="h-4 w-4" />;
       case 'speaker':
         return <Speaker className="h-4 w-4" />;
-      case 'both':
-        return <MonitorSpeaker className="h-4 w-4" />;
       default:
         return null;
     }
@@ -201,8 +241,6 @@ export function MakeReservation() {
         return 'Projetor';
       case 'speaker':
         return 'Caixa de Som';
-      case 'both':
-        return 'Projetor + Caixa de Som';
       default:
         return '';
     }
@@ -213,7 +251,7 @@ export function MakeReservation() {
       <div>
         <Label className="text-base font-medium">Selecione o equipamento:</Label>
         <RadioGroup value={selectedEquipment} onValueChange={setSelectedEquipment} className="mt-3">
-          {['projector', 'speaker', 'both'].map((type) => (
+          {['projector', 'speaker'].map((type) => (
             <div key={type} className="flex items-center space-x-2">
               <RadioGroupItem value={type} id={type} />
               <Label htmlFor={type} className="flex items-center gap-2 cursor-pointer">
@@ -223,6 +261,9 @@ export function MakeReservation() {
             </div>
           ))}
         </RadioGroup>
+        <div className="mt-2 text-sm text-muted-foreground">
+          Você pode reservar 1 projetor e 1 caixa de som por dia.
+        </div>
       </div>
 
       <div>
@@ -256,7 +297,12 @@ export function MakeReservation() {
                       </div>
                       {selectedEquipment && (
                         <div className="text-sm text-muted-foreground mt-1">
-                          {isAvailable(date, selectedEquipment) ? (
+                          {hasUserReservation(date, selectedEquipment) ? (
+                            <span className="text-amber-600 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Você já tem uma reserva deste equipamento
+                            </span>
+                          ) : isAvailable(date, selectedEquipment) ? (
                             `${getAvailabilityForDate(date, selectedEquipment)} unidades disponíveis`
                           ) : (
                             <span className="text-destructive flex items-center gap-1">
@@ -281,11 +327,20 @@ export function MakeReservation() {
         )}
       </div>
 
-      {selectedEquipment && selectedDate && !isAvailable(selectedDate, selectedEquipment) && (
+      {selectedEquipment && selectedDate && hasUserReservation(selectedDate, selectedEquipment) && (
+        <Alert variant="default" className="border-amber-200 bg-amber-50">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            Você já possui uma reserva de {getEquipmentLabel(selectedEquipment)} para esta data.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {selectedEquipment && selectedDate && !hasUserReservation(selectedDate, selectedEquipment) && !isAvailable(selectedDate, selectedEquipment) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Não há mais unidades disponíveis para esta data. Por favor, escolha outro dia.
+            Não há mais unidades disponíveis para esta data.
           </AlertDescription>
         </Alert>
       )}

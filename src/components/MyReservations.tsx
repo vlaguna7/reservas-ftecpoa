@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Monitor, Speaker, MonitorSpeaker, Trash2 } from 'lucide-react';
+import { Calendar, Monitor, Speaker, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,10 +90,8 @@ export function MyReservations() {
         return <Monitor className="h-4 w-4" />;
       case 'speaker':
         return <Speaker className="h-4 w-4" />;
-      case 'both':
-        return <MonitorSpeaker className="h-4 w-4" />;
       default:
-        return null;
+        return <Monitor className="h-4 w-4" />;
     }
   };
 
@@ -103,10 +101,8 @@ export function MyReservations() {
         return 'Projetor';
       case 'speaker':
         return 'Caixa de Som';
-      case 'both':
-        return 'Projetor + Caixa de Som';
       default:
-        return '';
+        return type;
     }
   };
 
@@ -116,8 +112,6 @@ export function MyReservations() {
         return 'bg-blue-100 text-blue-800';
       case 'speaker':
         return 'bg-green-100 text-green-800';
-      case 'both':
-        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

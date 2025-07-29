@@ -25,14 +25,25 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden gradient-mesh">
-      {/* Animated floating shapes */}
-      <div className="floating-shapes">
-        <div className="floating-shape"></div>
-        <div className="floating-shape"></div>
-        <div className="floating-shape"></div>
-        <div className="floating-shape"></div>
-        <div className="floating-shape"></div>
+    <div className="min-h-screen relative overflow-hidden modern-bg">
+      {/* Floating particles */}
+      <div className="floating-particles">
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+      </div>
+      
+      {/* Geometric shapes */}
+      <div className="geometric-shapes">
+        <div className="geo-shape"></div>
+        <div className="geo-shape"></div>
+        <div className="geo-shape"></div>
       </div>
       
       <div className="container mx-auto px-4 py-8 relative z-10">
@@ -55,7 +66,8 @@ const Index = () => {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
-          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)' }}>
+          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in pulse-glow border-0" 
+                style={{ background: 'rgba(255, 255, 255, 0.1)' }}>
             <CardHeader>
               <Monitor className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Projetores</CardTitle>
@@ -67,7 +79,8 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)', animationDelay: '0.1s' }}>
+          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in pulse-glow border-0" 
+                style={{ background: 'rgba(255, 255, 255, 0.1)', animationDelay: '0.1s' }}>
             <CardHeader>
               <Speaker className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Caixas de Som</CardTitle>
@@ -79,7 +92,8 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-card)', animationDelay: '0.2s' }}>
+          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in pulse-glow border-0" 
+                style={{ background: 'rgba(255, 255, 255, 0.1)', animationDelay: '0.2s' }}>
             <CardHeader>
               <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Agendamento</CardTitle>
@@ -93,7 +107,8 @@ const Index = () => {
         </div>
 
         <div className="text-center">
-          <Card className="inline-block p-8 backdrop-blur-sm hover-scale animate-fade-in" style={{ background: 'var(--gradient-academic-card)', boxShadow: 'var(--shadow-academic)', animationDelay: '0.3s' }}>
+          <Card className="inline-block p-8 backdrop-blur-sm hover-scale animate-fade-in pulse-glow border-0" 
+                style={{ background: 'rgba(255, 255, 255, 0.15)', animationDelay: '0.3s' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 justify-center">
                 <Users className="h-6 w-6 text-primary" />
@@ -107,7 +122,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={() => navigate('/auth')}
-                className="px-8 transition-all duration-300 hover:scale-105"
+                className="px-8 transition-all duration-300 hover:scale-105 shadow-lg"
               >
                 Entrar no Sistema
               </Button>

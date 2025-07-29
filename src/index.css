@@ -83,102 +83,207 @@
 }
 
 @layer utilities {
-  .floating-shapes {
+  .modern-bg {
+    background: 
+      radial-gradient(circle at 20% 80%, hsl(var(--primary) / 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, hsl(var(--primary) / 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, hsl(var(--primary) / 0.08) 0%, transparent 50%),
+      linear-gradient(135deg, hsl(var(--background)), hsl(var(--background)) 50%, hsl(var(--primary) / 0.02));
+    background-size: 800px 800px, 600px 600px, 400px 400px, 100% 100%;
+    animation: 
+      moveGradient1 20s ease infinite,
+      moveGradient2 25s ease infinite reverse,
+      moveGradient3 15s ease infinite;
+  }
+  
+  @keyframes moveGradient1 {
+    0%, 100% { background-position: 0% 0%, 100% 100%, 50% 50%, 0% 0%; }
+    25% { background-position: 100% 0%, 0% 100%, 25% 75%, 0% 0%; }
+    50% { background-position: 100% 100%, 0% 0%, 75% 25%, 0% 0%; }
+    75% { background-position: 0% 100%, 100% 0%, 50% 50%, 0% 0%; }
+  }
+  
+  @keyframes moveGradient2 {
+    0%, 100% { background-position: 50% 50%, 0% 0%, 100% 100%, 0% 0%; }
+    50% { background-position: 0% 100%, 100% 0%, 0% 50%, 0% 0%; }
+  }
+  
+  @keyframes moveGradient3 {
+    0%, 100% { background-position: 100% 0%, 50% 50%, 0% 100%, 0% 0%; }
+    33% { background-position: 0% 50%, 100% 25%, 50% 0%, 0% 0%; }
+    66% { background-position: 50% 100%, 25% 75%, 100% 50%, 0% 0%; }
+  }
+  
+  .floating-particles {
     position: absolute;
     inset: 0;
     overflow: hidden;
-    z-index: 0;
+    z-index: 1;
   }
   
-  .floating-shape {
+  .particle {
     position: absolute;
-    border: 1px solid hsl(var(--primary) / 0.1);
+    background: hsl(var(--primary) / 0.1);
     border-radius: 50%;
-    animation: float 20s infinite linear;
+    animation: floatParticle linear infinite;
   }
   
-  .floating-shape:nth-child(1) {
-    width: 100px;
-    height: 100px;
+  .particle:nth-child(1) {
+    width: 4px;
+    height: 4px;
+    left: 10%;
+    animation-duration: 15s;
+    animation-delay: 0s;
+  }
+  
+  .particle:nth-child(2) {
+    width: 6px;
+    height: 6px;
+    left: 20%;
+    animation-duration: 18s;
+    animation-delay: -2s;
+  }
+  
+  .particle:nth-child(3) {
+    width: 3px;
+    height: 3px;
+    left: 30%;
+    animation-duration: 12s;
+    animation-delay: -4s;
+  }
+  
+  .particle:nth-child(4) {
+    width: 5px;
+    height: 5px;
+    left: 40%;
+    animation-duration: 20s;
+    animation-delay: -6s;
+  }
+  
+  .particle:nth-child(5) {
+    width: 4px;
+    height: 4px;
+    left: 50%;
+    animation-duration: 16s;
+    animation-delay: -8s;
+  }
+  
+  .particle:nth-child(6) {
+    width: 7px;
+    height: 7px;
+    left: 60%;
+    animation-duration: 14s;
+    animation-delay: -10s;
+  }
+  
+  .particle:nth-child(7) {
+    width: 3px;
+    height: 3px;
+    left: 70%;
+    animation-duration: 22s;
+    animation-delay: -12s;
+  }
+  
+  .particle:nth-child(8) {
+    width: 5px;
+    height: 5px;
+    left: 80%;
+    animation-duration: 17s;
+    animation-delay: -14s;
+  }
+  
+  .particle:nth-child(9) {
+    width: 4px;
+    height: 4px;
+    left: 90%;
+    animation-duration: 19s;
+    animation-delay: -16s;
+  }
+  
+  @keyframes floatParticle {
+    0% {
+      transform: translateY(100vh) scale(0);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.5;
+      transform: translateY(90vh) scale(1);
+    }
+    90% {
+      opacity: 0.5;
+      transform: translateY(10vh) scale(1);
+    }
+    100% {
+      transform: translateY(-10vh) scale(0);
+      opacity: 0;
+    }
+  }
+  
+  .geometric-shapes {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 1;
+  }
+  
+  .geo-shape {
+    position: absolute;
+    border: 1px solid hsl(var(--primary) / 0.08);
+    animation: rotateShape 30s linear infinite;
+  }
+  
+  .geo-shape:nth-child(1) {
+    width: 200px;
+    height: 200px;
     top: 10%;
     left: 10%;
-    animation-delay: 0s;
+    border-radius: 20px;
     animation-duration: 25s;
   }
   
-  .floating-shape:nth-child(2) {
+  .geo-shape:nth-child(2) {
     width: 150px;
     height: 150px;
-    top: 20%;
+    top: 60%;
     right: 15%;
-    animation-delay: -5s;
-    animation-duration: 30s;
-  }
-  
-  .floating-shape:nth-child(3) {
-    width: 80px;
-    height: 80px;
-    bottom: 30%;
-    left: 20%;
-    animation-delay: -10s;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
     animation-duration: 35s;
+    animation-direction: reverse;
   }
   
-  .floating-shape:nth-child(4) {
-    width: 120px;
-    height: 120px;
-    bottom: 15%;
-    right: 25%;
-    animation-delay: -15s;
+  .geo-shape:nth-child(3) {
+    width: 180px;
+    height: 180px;
+    bottom: 20%;
+    left: 60%;
+    border-radius: 50%;
     animation-duration: 40s;
   }
   
-  .floating-shape:nth-child(5) {
-    width: 60px;
-    height: 60px;
-    top: 50%;
-    left: 50%;
-    animation-delay: -20s;
-    animation-duration: 45s;
+  @keyframes rotateShape {
+    0% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(90deg) scale(1.1); }
+    50% { transform: rotate(180deg) scale(0.9); }
+    75% { transform: rotate(270deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
   }
   
-  @keyframes float {
-    0% {
-      transform: translate(0, 0) rotate(0deg);
-      opacity: 0.1;
-    }
-    25% {
-      transform: translate(100px, -100px) rotate(90deg);
-      opacity: 0.3;
+  .pulse-glow {
+    animation: pulseGlow 4s ease-in-out infinite;
+  }
+  
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 
+        0 0 20px hsl(var(--primary) / 0.3),
+        0 0 40px hsl(var(--primary) / 0.1),
+        0 0 60px hsl(var(--primary) / 0.05);
     }
     50% {
-      transform: translate(-50px, -200px) rotate(180deg);
-      opacity: 0.2;
+      box-shadow: 
+        0 0 30px hsl(var(--primary) / 0.4),
+        0 0 60px hsl(var(--primary) / 0.2),
+        0 0 80px hsl(var(--primary) / 0.1);
     }
-    75% {
-      transform: translate(-150px, -50px) rotate(270deg);
-      opacity: 0.4;
-    }
-    100% {
-      transform: translate(0, 0) rotate(360deg);
-      opacity: 0.1;
-    }
-  }
-  
-  .gradient-mesh {
-    background: linear-gradient(135deg, 
-      hsl(var(--primary) / 0.05) 0%, 
-      transparent 25%, 
-      hsl(var(--primary) / 0.03) 50%, 
-      transparent 75%, 
-      hsl(var(--primary) / 0.08) 100%);
-    background-size: 400% 400%;
-    animation: gradientShift 15s ease infinite;
-  }
-  
-  @keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
   }
 }

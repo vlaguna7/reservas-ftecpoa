@@ -51,11 +51,18 @@ export default function Auth() {
         description: error.message,
         variant: "destructive"
       });
+      setLoading(false);
     } else {
-      navigate('/dashboard');
+      toast({
+        title: "Login realizado!",
+        description: "Redirecionando para o sistema..."
+      });
+      // Force redirect after successful login
+      setTimeout(() => {
+        navigate('/dashboard');
+        setLoading(false);
+      }, 1000);
     }
-    
-    setLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -126,7 +133,7 @@ export default function Auth() {
                   <Input
                     id="institutional-user"
                     type="text"
-                    placeholder="v.souza"
+                    placeholder="usuário da ftec"
                     value={loginData.institutionalUser}
                     onChange={(e) => setLoginData(prev => ({ ...prev, institutionalUser: e.target.value }))}
                     required
@@ -176,7 +183,7 @@ export default function Auth() {
                   <Input
                     id="signup-institutional-user"
                     type="text"
-                    placeholder="v.souza"
+                    placeholder="usuário da ftec"
                     value={signupData.institutionalUser}
                     onChange={(e) => setSignupData(prev => ({ ...prev, institutionalUser: e.target.value }))}
                     required

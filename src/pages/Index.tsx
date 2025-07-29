@@ -13,7 +13,7 @@ const Index = () => {
   useEffect(() => {
     if (!loading && user) {
       console.log('User authenticated, redirecting to dashboard');
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
 

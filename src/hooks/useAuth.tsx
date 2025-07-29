@@ -45,13 +45,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTimeout(() => {
             fetchProfile(session.user.id);
           }, 0);
-        } else {
+        } else if (session?.user && event === 'TOKEN_REFRESHED') {
+          // User session was refreshed, keep them logged in
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+          }, 0);
+        } else if (!session) {
           setProfile(null);
         }
         setLoading(false);
       }
     );
 
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('Initial session:', session?.user?.id);
       setSession(session);

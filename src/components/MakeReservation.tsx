@@ -264,7 +264,7 @@ export function MakeReservation() {
           ))}
         </RadioGroup>
         <div className="mt-2 text-sm text-muted-foreground">
-          Você pode reservar 1 projetor e 1 caixa de som por dia.
+          Você pode fazer 1 reserva de cada tipo de equipamento por dia (1 projetor + 1 caixa de som).
         </div>
       </div>
 
@@ -274,7 +274,7 @@ export function MakeReservation() {
           {availableDates.map(({ date, label, isToday }) => (
             <Card key={date} className={`cursor-pointer transition-colors ${
               selectedDate === date ? 'ring-2 ring-primary' : ''
-            } ${!selectedEquipment || !isAvailable(date, selectedEquipment) ? 'opacity-50' : ''}`}>
+            }`}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -284,7 +284,6 @@ export function MakeReservation() {
                       value={date}
                       checked={selectedDate === date}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      disabled={!selectedEquipment || !isAvailable(date, selectedEquipment)}
                       className="radio"
                     />
                     <div>
@@ -297,19 +296,21 @@ export function MakeReservation() {
                           </span>
                         )}
                       </div>
-                      {selectedEquipment && (
+                      {selectedEquipment && selectedDate === date && (
                         <div className="text-sm text-muted-foreground mt-1">
                           {hasUserReservation(date, selectedEquipment) ? (
                             <span className="text-amber-600 flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
-                              Você já tem uma reserva deste equipamento
+                              Você já tem uma reserva de {getEquipmentLabel(selectedEquipment)}
                             </span>
                           ) : isAvailable(date, selectedEquipment) ? (
-                            `${getAvailabilityForDate(date, selectedEquipment)} unidades disponíveis`
+                            <span className="text-green-600 flex items-center gap-1">
+                              ✓ Disponível ({getAvailabilityForDate(date, selectedEquipment)} unidades restantes)
+                            </span>
                           ) : (
                             <span className="text-destructive flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
-                              Indisponível
+                              Indisponível (limite atingido)
                             </span>
                           )}
                         </div>
@@ -325,6 +326,17 @@ export function MakeReservation() {
         {!availableDates[0].isToday && (
           <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded">
             <strong>Observação:</strong> Como hoje é fim de semana, a data disponível é o próximo dia útil (segunda-feira).
+          </div>
+        )}
+        
+        {selectedDate && userReservations[selectedDate]?.length > 0 && (
+          <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded">
+            <strong>Suas reservas para este dia:</strong>
+            <ul className="mt-1">
+              {userReservations[selectedDate].map((equipType, index) => (
+                <li key={index}>• {getEquipmentLabel(equipType)}</li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
@@ -349,7 +361,7 @@ export function MakeReservation() {
 
       <Button 
         type="submit" 
-        disabled={loading || !selectedEquipment || !selectedDate || !isAvailable(selectedDate, selectedEquipment)}
+        disabled={loading || !selectedEquipment || !selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)}
         className="w-full"
       >
         {loading ? 'Reservando...' : 'Confirmar Reserva'}

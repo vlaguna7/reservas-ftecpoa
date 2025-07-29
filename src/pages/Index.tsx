@@ -25,25 +25,21 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden modern-bg">
-      {/* Floating particles */}
-      <div className="floating-particles">
-        <div className="particle"></div>
-        <div className="particle"></div>
-        <div className="particle"></div>
-        <div className="particle"></div>
-        <div className="particle"></div>
-        <div className="particle"></div>
-        <div className="particle"></div>
-        <div className="particle"></div>
-        <div className="particle"></div>
+    <div className="min-h-screen relative overflow-hidden clean-bg">
+      {/* Subtle moving dots */}
+      <div className="subtle-dots">
+        <div className="moving-dot"></div>
+        <div className="moving-dot"></div>
+        <div className="moving-dot"></div>
+        <div className="moving-dot"></div>
+        <div className="moving-dot"></div>
       </div>
       
-      {/* Geometric shapes */}
-      <div className="geometric-shapes">
-        <div className="geo-shape"></div>
-        <div className="geo-shape"></div>
-        <div className="geo-shape"></div>
+      {/* Subtle moving lines */}
+      <div className="subtle-lines">
+        <div className="moving-line"></div>
+        <div className="moving-line"></div>
+        <div className="moving-line"></div>
       </div>
       
       <div className="container mx-auto px-4 py-8 relative z-10">
@@ -66,8 +62,7 @@ const Index = () => {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
-          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in pulse-glow border-0" 
-                style={{ background: 'rgba(255, 255, 255, 0.1)' }}>
+          <Card className="text-center card-hover animate-fade-in">
             <CardHeader>
               <Monitor className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Projetores</CardTitle>
@@ -79,8 +74,7 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in pulse-glow border-0" 
-                style={{ background: 'rgba(255, 255, 255, 0.1)', animationDelay: '0.1s' }}>
+          <Card className="text-center card-hover animate-fade-in" style={{ animationDelay: '0.1s' }}>
             <CardHeader>
               <Speaker className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Caixas de Som</CardTitle>
@@ -92,8 +86,7 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center backdrop-blur-sm hover-scale animate-fade-in pulse-glow border-0" 
-                style={{ background: 'rgba(255, 255, 255, 0.1)', animationDelay: '0.2s' }}>
+          <Card className="text-center card-hover animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <CardHeader>
               <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Agendamento</CardTitle>
@@ -107,8 +100,7 @@ const Index = () => {
         </div>
 
         <div className="text-center">
-          <Card className="inline-block p-8 backdrop-blur-sm hover-scale animate-fade-in pulse-glow border-0" 
-                style={{ background: 'rgba(255, 255, 255, 0.15)', animationDelay: '0.3s' }}>
+          <Card className="inline-block p-8 card-hover animate-fade-in" style={{ animationDelay: '0.3s' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 justify-center">
                 <Users className="h-6 w-6 text-primary" />
@@ -122,7 +114,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={() => navigate('/auth')}
-                className="px-8 transition-all duration-300 hover:scale-105 shadow-lg"
+                className="px-8 transition-all duration-300 hover:scale-105"
               >
                 Entrar no Sistema
               </Button>

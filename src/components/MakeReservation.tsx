@@ -29,13 +29,32 @@ export function MakeReservation() {
   const [availability, setAvailability] = useState<Record<string, ReservationCount>>({});
   const [loading, setLoading] = useState(false);
 
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const getAvailableDate = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = domingo, 6 = sábado
+    
+    // Se for sábado (6) ou domingo (0), mostrar segunda-feira
+    if (dayOfWeek === 0) { // Domingo
+      const monday = new Date(today);
+      monday.setDate(monday.getDate() + 1); // Segunda-feira
+      return monday;
+    } else if (dayOfWeek === 6) { // Sábado
+      const monday = new Date(today);
+      monday.setDate(monday.getDate() + 2); // Segunda-feira
+      return monday;
+    }
+    
+    // Dias úteis, mostrar hoje
+    return today;
+  };
 
+  const availableDate = getAvailableDate();
   const availableDates = [
-    { date: format(today, 'yyyy-MM-dd'), label: format(today, "EEEE, dd 'de' MMMM", { locale: ptBR }) },
-    { date: format(tomorrow, 'yyyy-MM-dd'), label: format(tomorrow, "EEEE, dd 'de' MMMM", { locale: ptBR }) }
+    { 
+      date: format(availableDate, 'yyyy-MM-dd'), 
+      label: format(availableDate, "EEEE, dd 'de' MMMM", { locale: ptBR }),
+      isToday: format(availableDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+    }
   ];
 
   useEffect(() => {
@@ -207,9 +226,9 @@ export function MakeReservation() {
       </div>
 
       <div>
-        <Label className="text-base font-medium">Selecione a data:</Label>
+        <Label className="text-base font-medium">Data disponível para reserva:</Label>
         <div className="mt-3 space-y-3">
-          {availableDates.map(({ date, label }) => (
+          {availableDates.map(({ date, label, isToday }) => (
             <Card key={date} className={`cursor-pointer transition-colors ${
               selectedDate === date ? 'ring-2 ring-primary' : ''
             } ${!selectedEquipment || !isAvailable(date, selectedEquipment) ? 'opacity-50' : ''}`}>
@@ -229,6 +248,11 @@ export function MakeReservation() {
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         <span className="font-medium capitalize">{label}</span>
+                        {!isToday && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            Próximo dia útil
+                          </span>
+                        )}
                       </div>
                       {selectedEquipment && (
                         <div className="text-sm text-muted-foreground mt-1">
@@ -249,6 +273,12 @@ export function MakeReservation() {
             </Card>
           ))}
         </div>
+        
+        {!availableDates[0].isToday && (
+          <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded">
+            <strong>Observação:</strong> Como hoje é fim de semana, a data disponível é o próximo dia útil (segunda-feira).
+          </div>
+        )}
       </div>
 
       {selectedEquipment && selectedDate && !isAvailable(selectedDate, selectedEquipment) && (

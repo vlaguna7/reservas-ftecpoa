@@ -272,9 +272,13 @@ export function MakeReservation() {
         <Label className="text-base font-medium">Data disponível para reserva:</Label>
         <div className="mt-3 space-y-3">
           {availableDates.map(({ date, label, isToday }) => (
-            <Card key={date} className={`cursor-pointer transition-colors ${
-              selectedDate === date ? 'ring-2 ring-primary' : ''
-            }`}>
+            <Card 
+              key={date} 
+              className={`cursor-pointer transition-colors ${
+                selectedDate === date ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setSelectedDate(date)}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -283,8 +287,8 @@ export function MakeReservation() {
                       name="date"
                       value={date}
                       checked={selectedDate === date}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="radio"
+                      onChange={() => {}} // Controlled by card click
+                      className="radio pointer-events-none"
                     />
                     <div>
                       <div className="flex items-center gap-2">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,39 @@ export default function Auth() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
+  const [isReady, setIsReady] = useState(false);
+
+  // Fix mobile rendering issue when coming from navigation
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // Force immediate rendering for mobile
+      const forceRender = () => {
+        // Trigger reflow
+        document.body.style.minHeight = '100vh';
+        document.body.offsetHeight;
+        // Force repaint
+        document.documentElement.style.transform = 'translateZ(0)';
+        requestAnimationFrame(() => {
+          document.documentElement.style.transform = '';
+          setIsReady(true);
+        });
+      };
+      
+      forceRender();
+    } else {
+      setIsReady(true);
+    }
+  }, []);
+
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const [loginData, setLoginData] = useState({
     institutionalUser: '',

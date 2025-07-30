@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface AuditoriumReservation {
   id: string;
@@ -224,18 +225,36 @@ export function AuditoriumReservations() {
                       </div>
                       <div className="flex items-center gap-2">
                         {canUserCancelReservation(reservation) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cancelReservation(reservation.id);
-                            }}
-                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-6 w-6"
-                            title="Cancelar reserva"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-6 w-6"
+                                title="Cancelar reserva"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja cancelar a reserva?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Não</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => cancelReservation(reservation.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Sim, cancelar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                         {expandedItems.has(reservation.id) ? (
                           <ChevronDown className="h-4 w-4 flex-shrink-0" />

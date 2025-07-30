@@ -36,64 +36,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let initialCheckDone = false;
 
-    // Set up auth state listener FIRST
+    console.log('🔄 AuthProvider useEffect started');
+
+    // Function to handle session updates
+    const handleSession = (session: Session | null, source: string) => {
+      if (!isMounted) return;
+      
+      console.log(`🔐 Session update from ${source}:`, {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        accessToken: session?.access_token ? 'present' : 'missing'
+      });
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Use setTimeout to avoid blocking the auth state change
+        setTimeout(() => {
+          if (isMounted) {
+            fetchProfile(session.user.id);
+          }
+        }, 0);
+      } else {
+        setProfile(null);
+      }
+    };
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!isMounted) return;
         
-        console.log('🔐 Auth state change:', event, session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
+        console.log('🔐 Auth state change:', event, {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          initialCheckDone
+        });
         
-        if (session?.user) {
-          // Fetch profile for all events where we have a user
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-            // Use setTimeout to avoid deadlock with async operations
-            setTimeout(() => {
-              fetchProfile(session.user.id);
-            }, 0);
-          }
-        } else {
-          setProfile(null);
+        handleSession(session, `onAuthStateChange-${event}`);
+        
+        // Only set loading false after initial check or if we have a definitive session state
+        if (initialCheckDone || event === 'SIGNED_OUT' || session) {
+          setLoading(false);
         }
-        
-        // Set loading to false after processing
-        setLoading(false);
       }
     );
 
-    // THEN check for existing session - this handles page refreshes
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isMounted) return;
-      
-      console.log('🔐 Initial session check:', session?.user?.id);
-      
-      // Only update state if this is different from what onAuthStateChange already set
-      if (session !== null) {
-        setSession(session);
-        setUser(session?.user ?? null);
+    // Check for existing session - this is crucial for page refreshes
+    const checkInitialSession = async () => {
+      try {
+        console.log('🔍 Checking initial session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          fetchProfile(session.user.id).finally(() => {
-            if (isMounted) setLoading(false);
-          });
-        } else {
+        if (error) {
+          console.error('❌ Error getting session:', error);
           setLoading(false);
+          return;
         }
-      } else {
-        // No session found, clear everything
-        setSession(null);
-        setUser(null);
-        setProfile(null);
+        
+        console.log('📋 Initial session result:', {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          accessToken: session?.access_token ? 'present' : 'missing'
+        });
+        
+        handleSession(session, 'initial-check');
+        initialCheckDone = true;
+        
+        // Always set loading to false after initial check
+        setTimeout(() => {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Exception during initial session check:', error);
         setLoading(false);
       }
-    }).catch(() => {
-      // In case of error, stop loading
-      setLoading(false);
-    });
+    };
+
+    // Start initial session check
+    checkInitialSession();
 
     return () => {
+      console.log('🧹 AuthProvider cleanup');
       isMounted = false;
       subscription.unsubscribe();
     };

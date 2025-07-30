@@ -18,6 +18,7 @@ export default function Dashboard() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('reservations');
 
+  // Show loading while authentication is being verified
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -26,8 +27,18 @@ export default function Dashboard() {
     );
   }
 
-  if (!user || !profile) {
+  // Redirect only if we're sure there's no user (authentication failed)
+  if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Show loading while profile is being fetched (user exists but profile not loaded yet)
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (

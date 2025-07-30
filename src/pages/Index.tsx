@@ -110,7 +110,15 @@ const Index = () => {
             <CardContent>
               <Button 
                 size="lg" 
-                onClick={() => navigate(user ? '/dashboard' : '/auth')}
+                onClick={() => {
+                  console.log('Navegando para auth/dashboard');
+                  // Force immediate navigation without state delay
+                  if (user) {
+                    navigate('/dashboard', { replace: true });
+                  } else {
+                    navigate('/auth', { replace: true });
+                  }
+                }}
                 className="px-8 py-3 text-lg font-semibold transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg"
               >
                 {user ? 'Acessar Sistema' : 'Entrar no Sistema'}

@@ -10,12 +10,9 @@ import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 export default function Auth() {
-  console.log('Auth component rendering');
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  
-  console.log('Auth component state:', { loading });
 
   const [loginData, setLoginData] = useState({
     institutionalUser: '',

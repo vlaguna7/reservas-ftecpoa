@@ -10,7 +10,6 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Settings, Users, Calendar, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus } from 'lucide-react';
 import { AdminResetPin } from '@/components/AdminResetPin';
-import { DebugCleanup } from '@/components/DebugCleanup';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1126,9 +1125,6 @@ export function AdminPanel() {
 
       {/* Admin Reset PIN Tool */}
       <AdminResetPin />
-      
-      {/* Debug & Deep Cleanup Tool */}
-      <DebugCleanup />
     </div>
   );
 }

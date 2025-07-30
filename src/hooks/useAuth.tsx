@@ -163,115 +163,179 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Use consistent domain for all users
       const tempEmail = `${normalizedUser}@temp.com`;
 
-      console.log('🔄 Starting signup process for:', normalizedUser);
+      console.log('🔄 Starting comprehensive signup cleanup for:', normalizedUser);
 
-      // PHASE 1: Complete cleanup of any existing data
-      console.log('🧹 Phase 1: Comprehensive cleanup...');
+      // PHASE 1: Complete database cleanup
+      console.log('🧹 Phase 1: Database cleanup...');
       
-      // Find any existing profiles with this institutional_user
-      const { data: existingProfiles } = await supabase
+      // Get all profiles that might conflict
+      const { data: allProfiles } = await supabase
         .from('profiles')
         .select('*');
 
-      if (existingProfiles && existingProfiles.length > 0) {
-        for (const profile of existingProfiles) {
-          const normalizedStored = profile.institutional_user
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
-          
-          // If this profile matches the user we're trying to create
-          if (normalizedStored === normalizedInput) {
-            console.log(`🧹 Found existing profile for ${profile.institutional_user}, removing completely...`);
-            
-            // Delete all reservations first
-            await supabase
-              .from('reservations')
-              .delete()
-              .eq('user_id', profile.user_id);
-            
-            // Delete the profile
-            await supabase
-              .from('profiles')
-              .delete()
-              .eq('id', profile.id);
-            
-            console.log(`🧹 Removed profile and reservations for ${profile.institutional_user}`);
-          }
-        }
+      const conflictingProfiles = allProfiles?.filter(profile => {
+        const storedNormalized = profile.institutional_user
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+        return storedNormalized === normalizedInput || profile.institutional_user === normalizedUser;
+      }) || [];
+
+      console.log(`🧹 Found ${conflictingProfiles.length} conflicting profiles`);
+
+      // Remove all conflicting data
+      for (const profile of conflictingProfiles) {
+        // Delete reservations first
+        await supabase
+          .from('reservations')
+          .delete()
+          .eq('user_id', profile.user_id);
+        
+        // Delete profile
+        await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', profile.id);
+        
+        console.log(`🗑️ Removed profile and reservations for: ${profile.institutional_user}`);
       }
 
-      // PHASE 2: Try to create new auth user (with retries)
-      console.log('🔄 Phase 2: Creating auth user...');
+      // PHASE 2: Auth system cleanup with forced removal
+      console.log('🧹 Phase 2: Auth system cleanup...');
+      
+      try {
+        // Try to get existing auth user by email patterns
+        const emailPatterns = [
+          tempEmail,
+          tempEmail.toLowerCase(),
+          `${normalizedInput}@temp.com`
+        ];
+
+        for (const email of emailPatterns) {
+          try {
+            // Try to sign in to check if user exists
+            const { data: testSignIn } = await supabase.auth.signInWithPassword({
+              email: email,
+              password: '000000' // Dummy password
+            });
+            
+            // If we get here without error, user might exist but we'll handle it differently
+          } catch (testError) {
+            // Expected - user doesn't exist or wrong password
+          }
+        }
+
+        // Force cleanup using admin API if available
+        const { data: authUsers } = await supabase.auth.admin.listUsers();
+        if (authUsers?.users) {
+          for (const email of emailPatterns) {
+            const existingAuthUser = authUsers.users.find((u: any) => u.email === email);
+            if (existingAuthUser) {
+              await supabase.auth.admin.deleteUser(existingAuthUser.id);
+              console.log(`🗑️ Force deleted auth user: ${email}`);
+            }
+          }
+        }
+      } catch (authCleanupError: any) {
+        console.log(`⚠️ Auth cleanup warning: ${authCleanupError.message}`);
+        // Continue anyway
+      }
+
+      // Wait for cleanup to propagate
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // PHASE 3: Create new user with retry mechanism
+      console.log('🔄 Phase 3: Creating new auth user...');
       
       const bcrypt = await import('bcryptjs');
       const pinHash = await bcrypt.hash(pin, 10);
 
+      let createAttempts = 0;
       let authResult = null;
-      let authError = null;
-      let retryCount = 0;
-      const maxRetries = 3;
+      let lastError = null;
 
-      while (retryCount < maxRetries) {
-        console.log(`🔄 Auth creation attempt ${retryCount + 1}/${maxRetries}`);
+      while (createAttempts < 5) { // Increased retry attempts
+        createAttempts++;
+        console.log(`🔄 Auth creation attempt ${createAttempts}/5`);
         
-        const { data, error } = await supabase.auth.signUp({
-          email: tempEmail,
-          password: pin,
-          options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
-            data: {
-              institutional_user: normalizedUser,
-              display_name: displayName
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email: tempEmail,
+            password: pin,
+            options: {
+              emailRedirectTo: `${window.location.origin}/dashboard`,
+              data: {
+                institutional_user: normalizedUser,
+                display_name: displayName
+              }
             }
-          }
-        });
+          });
 
-        if (!error && data.user) {
-          authResult = data;
-          authError = null;
-          console.log('✅ Auth user created successfully');
-          break;
-        } else {
-          authError = error;
-          retryCount++;
-          console.log(`❌ Auth creation attempt ${retryCount} failed:`, error?.message);
-          
-          if (retryCount < maxRetries) {
-            // Wait before retry
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          if (!error && data.user) {
+            authResult = data;
+            console.log('✅ Auth user created successfully');
+            break;
+          } else if (error) {
+            lastError = error;
+            console.log(`❌ Attempt ${createAttempts} failed: ${error.message}`);
+            
+            // If "already registered" error, try to force delete and retry
+            if (error.message.includes('already registered') || error.message.includes('Email already registered')) {
+              console.log('🔧 Trying additional cleanup...');
+              
+               // Try aggressive cleanup
+               try {
+                 const { data: authUsers } = await supabase.auth.admin.listUsers();
+                 if (authUsers?.users) {
+                   const conflictUser = authUsers.users.find((u: any) => u.email === tempEmail);
+                   if (conflictUser) {
+                     await supabase.auth.admin.deleteUser(conflictUser.id);
+                     console.log('🗑️ Force deleted conflicting auth user');
+                     await new Promise(resolve => setTimeout(resolve, 2000));
+                   }
+                 }
+               } catch (forceError: any) {
+                 console.log(`⚠️ Force cleanup failed: ${forceError.message}`);
+               }
+            }
+            
+            // Wait longer between retries
+            await new Promise(resolve => setTimeout(resolve, 3000 * createAttempts));
           }
+        } catch (exception) {
+          lastError = exception;
+          console.log(`❌ Exception in attempt ${createAttempts}: ${exception.message}`);
+          await new Promise(resolve => setTimeout(resolve, 2000 * createAttempts));
         }
       }
 
-      if (authError || !authResult?.user) {
-        console.error('❌ Final auth error:', authError);
-        if (authError?.message.includes('User already registered') || 
-            authError?.message.includes('Email already registered')) {
-          return { error: { message: 'Este usuário institucional já está cadastrado. Faça login em vez de cadastro.' } };
+      if (!authResult || !authResult.user) {
+        console.error('❌ All auth creation attempts failed');
+        if (lastError?.message.includes('already registered')) {
+          return { error: { message: 'Usuário já existe no sistema. Tente fazer login ou use um nome de usuário diferente.' } };
         }
-        return { error: { message: `Erro na criação da conta: ${authError?.message || 'Erro desconhecido'}` } };
+        return { error: { message: `Erro na criação da conta: ${lastError?.message || 'Falha após múltiplas tentativas'}` } };
       }
 
-      // PHASE 3: Confirm user and create profile
-      console.log('🔄 Phase 3: Confirming user and creating profile...');
+      // PHASE 4: Confirm user and create profile
+      console.log('🔄 Phase 4: Confirming user and creating profile...');
       
       try {
-        // Confirm user automatically
+        // Auto-confirm user
         const { error: confirmError } = await supabase.functions.invoke('confirm-user', {
           body: { userId: authResult.user.id }
         });
         
         if (confirmError) {
-          console.warn('⚠️ Auto-confirm failed:', confirmError);
+          console.warn('⚠️ Auto-confirm warning:', confirmError.message);
         } else {
-          console.log('✅ User auto-confirmed successfully');
+          console.log('✅ User confirmed successfully');
         }
         
         // Wait for confirmation to propagate
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Create the profile using RPC function
+        // Create profile using RPC
         const { error: profileError } = await supabase.rpc('handle_signup_with_profile', {
           p_display_name: displayName,
           p_institutional_user: normalizedUser,
@@ -282,7 +346,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profileError) {
           console.error('❌ Profile creation error:', profileError);
           
-          // Cleanup auth user if profile creation fails
+          // Cleanup auth user on profile failure
           try {
             await supabase.auth.admin.deleteUser(authResult.user.id);
           } catch (cleanupError) {
@@ -292,24 +356,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { error: { message: 'Erro ao criar perfil. Tente novamente.' } };
         }
         
-        console.log('✅ Signup process completed successfully');
+        console.log('✅ Signup completed successfully for:', normalizedUser);
         return { error: null };
         
-      } catch (confirmError) {
-        console.error('❌ Confirm/Profile creation failed:', confirmError);
+      } catch (finalError) {
+        console.error('❌ Final phase error:', finalError);
         
-        // Cleanup auth user
+        // Final cleanup
         try {
           await supabase.auth.admin.deleteUser(authResult.user.id);
         } catch (cleanupError) {
-          console.error('Failed to cleanup auth user:', cleanupError);
+          console.error('Failed final cleanup:', cleanupError);
         }
         
-        return { error: { message: 'Erro na confirmação do usuário. Tente novamente.' } };
+        return { error: { message: 'Erro final no processo de cadastro. Tente novamente.' } };
       }
 
     } catch (error) {
-      console.error('❌ Signup error:', error);
+      console.error('❌ Overall signup error:', error);
       return { error: { message: 'Erro interno. Tente novamente.' } };
     }
   };

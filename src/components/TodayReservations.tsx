@@ -98,11 +98,15 @@ export function TodayReservations() {
   };
 
   useEffect(() => {
+    console.log('🔄 TodayReservations: Initializing component...');
     fetchTodayReservations();
     
     // Configurar realtime updates para reservas
+    const channelName = `today-reservations-${Date.now()}`;
+    console.log('📡 TodayReservations: Creating channel:', channelName);
+    
     const channel = supabase
-      .channel('today-reservations-realtime')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -111,17 +115,33 @@ export function TodayReservations() {
           table: 'reservations'
         },
         (payload) => {
-          console.log('🔄 Today Reservations: Real-time change detected:', payload);
+          console.log('🔄 TodayReservations: Real-time change detected:', payload);
+          console.log('🔄 TodayReservations: Event type:', payload.eventType);
+          console.log('🔄 TodayReservations: New record:', payload.new);
+          console.log('🔄 TodayReservations: Old record:', payload.old);
+          
           // Atualização imediata
-          fetchTodayReservations();
+          setTimeout(() => {
+            console.log('🔄 TodayReservations: Fetching updated data...');
+            fetchTodayReservations();
+          }, 100);
+          
           // Segunda atualização para garantir sincronização
           setTimeout(() => {
+            console.log('🔄 TodayReservations: Second fetch for sync...');
             fetchTodayReservations();
-          }, 300);
+          }, 500);
         }
       )
       .subscribe((status) => {
-        console.log('📡 Today Reservations realtime status:', status);
+        console.log('📡 TodayReservations realtime status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ TodayReservations: Successfully subscribed to realtime updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ TodayReservations: Channel error');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏰ TodayReservations: Subscription timed out');
+        }
       });
     
     // Atualizar a cada minuto para verificar mudança de dia
@@ -129,11 +149,13 @@ export function TodayReservations() {
       const now = new Date();
       // Atualizar às 00:01 (início do dia)
       if (now.getHours() === 0 && now.getMinutes() <= 1) {
+        console.log('🌅 TodayReservations: New day detected, refreshing...');
         fetchTodayReservations();
       }
     }, 60000); // 1 minuto
 
     return () => {
+      console.log('🧹 TodayReservations: Cleaning up channel and interval');
       supabase.removeChannel(channel);
       clearInterval(interval);
     };

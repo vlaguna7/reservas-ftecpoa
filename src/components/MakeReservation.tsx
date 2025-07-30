@@ -67,8 +67,11 @@ export function MakeReservation() {
     fetchUserReservations();
 
     // Configurar realtime updates para mudanças nas reservas
+    const channelName = `make-reservation-${Date.now()}`;
+    console.log('📡 MakeReservation: Creating channel:', channelName);
+    
     const channel = supabase
-      .channel('reservation-updates')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -77,14 +80,26 @@ export function MakeReservation() {
           table: 'reservations'
         },
         (payload) => {
-          console.log('🔄 Reservation change detected:', payload);
-          console.log('🔄 Updating availability and user reservations...');
-          fetchAvailability();
-          fetchUserReservations();
+          console.log('🔄 MakeReservation: Real-time change detected:', payload);
+          console.log('🔄 MakeReservation: Event type:', payload.eventType);
+          console.log('🔄 MakeReservation: Updating availability and user reservations...');
+          
+          // Atualizar dados com delay para garantir sincronização
+          setTimeout(() => {
+            fetchAvailability();
+            fetchUserReservations();
+          }, 100);
         }
       )
       .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status);
+        console.log('📡 MakeReservation realtime status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ MakeReservation: Successfully subscribed to realtime updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ MakeReservation: Channel error');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏰ MakeReservation: Subscription timed out');
+        }
       });
 
     return () => {

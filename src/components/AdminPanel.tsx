@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Settings, Users, Calendar, Monitor, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff } from 'lucide-react';
+import { Settings, Users, Calendar, Monitor, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface EquipmentSettings {
   id: string;
@@ -73,6 +82,9 @@ export function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
   const [editingReservation, setEditingReservation] = useState<string | null>(null);
+  const [changingPin, setChangingPin] = useState<string | null>(null);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
   const [settingsForm, setSettingsForm] = useState({
     projector_limit: 0,
     speaker_limit: 0
@@ -305,6 +317,115 @@ export function AdminPanel() {
       title: "Relatório exportado!",
       description: "O arquivo CSV foi baixado com sucesso."
     });
+  };
+
+  const changeUserPin = async (userId: string) => {
+    if (!newPin || newPin.length !== 6 || !/^\d{6}$/.test(newPin)) {
+      toast({
+        title: "PIN inválido",
+        description: "O PIN deve conter exatamente 6 dígitos numéricos.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newPin !== confirmPin) {
+      toast({
+        title: "PINs não coincidem",
+        description: "A confirmação do PIN não confere.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const bcrypt = await import('bcryptjs');
+      const pinHash = await bcrypt.hash(newPin, 10);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ pin_hash: pinHash })
+        .eq('user_id', userId);
+
+      if (error) {
+        toast({
+          title: "Erro ao alterar PIN",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "PIN alterado com sucesso!",
+          description: "O PIN do usuário foi atualizado."
+        });
+        setChangingPin(null);
+        setNewPin('');
+        setConfirmPin('');
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao alterar PIN",
+        description: "Erro interno. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteUser = async (userId: string, userName: string) => {
+    try {
+      // Primeiro, deletar todas as reservas do usuário
+      const { error: reservationsError } = await supabase
+        .from('reservations')
+        .delete()
+        .eq('user_id', userId);
+
+      if (reservationsError) {
+        toast({
+          title: "Erro ao excluir reservas",
+          description: reservationsError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Depois, deletar o perfil
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (profileError) {
+        toast({
+          title: "Erro ao excluir usuário",
+          description: profileError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Por último, deletar o usuário da tabela auth (se necessário)
+      // Nota: Em produção, pode ser melhor desativar ao invés de deletar
+      
+      toast({
+        title: "Usuário excluído!",
+        description: `${userName} foi removido do sistema.`
+      });
+      
+      // Recarregar dados
+      await Promise.all([
+        fetchAllUsers(),
+        fetchSystemStats(),
+        fetchAllReservations()
+      ]);
+      
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Erro ao excluir usuário",
+        description: "Erro interno. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   const updateEquipmentSettings = async () => {
@@ -779,47 +900,156 @@ export function AdminPanel() {
                       {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
                     </TableCell>
                     <TableCell>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className={user.is_admin ? 'text-orange-600 hover:text-orange-600' : 'text-purple-600 hover:text-purple-600'}
-                          >
-                            {user.is_admin ? (
-                              <>
-                                <ShieldOff className="h-3 w-3 mr-2" />
-                                Remover Admin
-                              </>
-                            ) : (
-                              <>
-                                <Shield className="h-3 w-3 mr-2" />
-                                Tornar Admin
-                              </>
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              {user.is_admin ? 'Remover' : 'Conceder'} Privilégios de Administrador
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja {user.is_admin ? 'remover os privilégios de administrador de' : 'tornar'} {user.display_name} {user.is_admin ? '' : 'um administrador'}? 
-                              {user.is_admin ? ' Ele perderá acesso às funções administrativas.' : ' Ele terá acesso completo ao painel administrativo.'}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => toggleUserAdmin(user.user_id, user.is_admin)}
-                              className={user.is_admin ? 'bg-orange-600 hover:bg-orange-700' : 'bg-purple-600 hover:bg-purple-700'}
+                      <div className="flex gap-2">
+                        {/* Change PIN Dialog */}
+                        <Dialog open={changingPin === user.user_id} onOpenChange={(open) => {
+                          if (!open) {
+                            setChangingPin(null);
+                            setNewPin('');
+                            setConfirmPin('');
+                          }
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="text-blue-600 hover:text-blue-600"
+                              onClick={() => setChangingPin(user.user_id)}
                             >
-                              {user.is_admin ? 'Remover Privilégios' : 'Conceder Privilégios'}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <Key className="h-3 w-3 mr-2" />
+                              Alterar PIN
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Alterar PIN do Usuário</DialogTitle>
+                              <DialogDescription>
+                                Definir novo PIN para {user.display_name}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor="new-pin">Novo PIN (6 dígitos)</Label>
+                                <Input
+                                  id="new-pin"
+                                  type="password"
+                                  placeholder="123456"
+                                  maxLength={6}
+                                  value={newPin}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    setNewPin(value);
+                                  }}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor="confirm-pin">Confirmar PIN</Label>
+                                <Input
+                                  id="confirm-pin"
+                                  type="password"
+                                  placeholder="123456"
+                                  maxLength={6}
+                                  value={confirmPin}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    setConfirmPin(value);
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => {
+                                setChangingPin(null);
+                                setNewPin('');
+                                setConfirmPin('');
+                              }}>
+                                Cancelar
+                              </Button>
+                              <Button onClick={() => changeUserPin(user.user_id)}>
+                                Alterar PIN
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+
+                        {/* Toggle Admin */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className={user.is_admin ? 'text-orange-600 hover:text-orange-600' : 'text-purple-600 hover:text-purple-600'}
+                            >
+                              {user.is_admin ? (
+                                <>
+                                  <ShieldOff className="h-3 w-3 mr-2" />
+                                  Remover Admin
+                                </>
+                              ) : (
+                                <>
+                                  <Shield className="h-3 w-3 mr-2" />
+                                  Tornar Admin
+                                </>
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                {user.is_admin ? 'Remover' : 'Conceder'} Privilégios de Administrador
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja {user.is_admin ? 'remover os privilégios de administrador de' : 'tornar'} {user.display_name} {user.is_admin ? '' : 'um administrador'}? 
+                                {user.is_admin ? ' Ele perderá acesso às funções administrativas.' : ' Ele terá acesso completo ao painel administrativo.'}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => toggleUserAdmin(user.user_id, user.is_admin)}
+                                className={user.is_admin ? 'bg-orange-600 hover:bg-orange-700' : 'bg-purple-600 hover:bg-purple-700'}
+                              >
+                                {user.is_admin ? 'Remover Privilégios' : 'Conceder Privilégios'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                        {/* Delete User */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-red-600 hover:text-red-600"
+                            >
+                              <UserMinus className="h-3 w-3 mr-2" />
+                              Excluir
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir permanentemente o usuário {user.display_name}? 
+                                Esta ação irá:
+                                <br />• Excluir todas as reservas do usuário
+                                <br />• Remover o cadastro completamente
+                                <br />• Esta ação não pode ser desfeita
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteUser(user.user_id, user.display_name)}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                Excluir Permanentemente
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

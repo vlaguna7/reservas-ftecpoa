@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Monitor, Speaker, Calendar, Users } from 'lucide-react';
+import { Projector, Speaker, Calendar, Users } from 'lucide-react';
 
 
 const Index = () => {
@@ -61,7 +61,7 @@ const Index = () => {
         <div className="grid md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
           <Card className="text-center card-hover animate-fade-in">
             <CardHeader>
-              <Monitor className="h-12 w-12 mx-auto mb-4 text-primary" />
+              <Projector className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Projetores</CardTitle>
             </CardHeader>
             <CardContent>

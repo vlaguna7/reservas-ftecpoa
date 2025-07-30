@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -13,40 +13,6 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [isReady, setIsReady] = useState(false);
-
-  // Force component to be ready for rendering when coming from navigation
-  useEffect(() => {
-    // Force multiple reflows to ensure rendering on mobile
-    const forceRender = () => {
-      // Method 1: Force style recalculation
-      document.documentElement.style.visibility = 'hidden';
-      document.documentElement.offsetHeight; // Force reflow
-      document.documentElement.style.visibility = 'visible';
-      
-      // Method 2: Force repaint
-      document.body.style.transform = 'translateZ(0)';
-      requestAnimationFrame(() => {
-        document.body.style.transform = '';
-        setIsReady(true);
-      });
-    };
-
-    // Execute immediately and with delay
-    forceRender();
-    const timer = setTimeout(forceRender, 50);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Show loading while component prepares for render
-  if (!isReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   const [loginData, setLoginData] = useState({
     institutionalUser: '',

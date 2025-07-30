@@ -387,22 +387,27 @@ export function MakeReservation() {
         )}
         
         {selectedDate && userReservations[selectedDate]?.length > 0 && (
-          <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded">
-            <strong>Suas reservas para este dia:</strong>
-            <ul className="mt-1 space-y-1">
+          <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <strong className="text-green-800 text-sm">Suas reservas para este dia:</strong>
+            </div>
+            <div className="space-y-2">
               {userReservations[selectedDate].map((reservation, index) => (
-                <li key={index} className="flex items-center justify-between">
-                  <span>• {getEquipmentLabel(reservation.equipment_type)}</span>
+                <div key={index} className="flex items-center justify-between bg-white rounded p-2 border">
+                  <div className="flex items-center gap-2">
+                    {getEquipmentIcon(reservation.equipment_type)}
+                    <span className="text-sm font-medium">{getEquipmentLabel(reservation.equipment_type)}</span>
+                  </div>
                   <button
                     onClick={() => cancelReservation(reservation.id)}
-                    className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition-colors"
+                    className="flex items-center justify-center w-6 h-6 text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-full transition-colors border border-red-200"
                     title="Cancelar reserva"
                   >
                     <X className="h-3 w-3" />
                   </button>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
       </div>

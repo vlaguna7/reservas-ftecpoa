@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Monitor, Speaker, Trash2 } from 'lucide-react';
+import { Calendar, Monitor, Speaker, Trash2, CheckCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -118,6 +118,37 @@ export function MyReservations() {
     }
   };
 
+  const isReservationFinished = (reservationDate: string) => {
+    const today = new Date();
+    const todayDay = today.getDay(); // 0 = domingo, 6 = sábado
+    const reservationDay = parseISO(reservationDate + 'T00:00:00');
+    const reservationDayOfWeek = reservationDay.getDay();
+    
+    // Se a reserva foi feita para segunda-feira (1) e hoje é segunda, terça ou quarta
+    // verificar se foi agendada no fim de semana anterior
+    if (reservationDayOfWeek === 1) { // Segunda-feira
+      const weekendBefore = new Date(reservationDay);
+      weekendBefore.setDate(weekendBefore.getDate() - 1); // Domingo anterior
+      
+      // Se hoje é depois da data da reserva, é finalizada
+      // EXCETO se foi agendada no fim de semana para segunda
+      if (isBefore(reservationDay, startOfDay(today))) {
+        return true;
+      }
+    } else {
+      // Para outras datas, verificar se passou
+      if (isBefore(reservationDay, startOfDay(today))) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  const canCancelReservation = (reservationDate: string) => {
+    return !isReservationFinished(reservationDate);
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -156,13 +187,15 @@ export function MyReservations() {
         console.log('Parsed reservationDate:', reservationDate); // Debug log
         const dayOfWeek = format(reservationDate, 'EEEE', { locale: ptBR });
         const formattedDate = format(reservationDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+        const isFinished = isReservationFinished(reservation.reservation_date);
 
         return (
-          <Card key={reservation.id}>
+          <Card key={reservation.id} className={isFinished ? 'opacity-75' : ''}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
+                    {isFinished && <CheckCircle className="h-4 w-4 text-green-600" />}
                     {getEquipmentIcon(reservation.equipment_type)}
                     <span className="font-medium">
                       {getEquipmentLabel(reservation.equipment_type)}
@@ -170,6 +203,11 @@ export function MyReservations() {
                     <Badge className={getEquipmentColor(reservation.equipment_type)}>
                       {getEquipmentLabel(reservation.equipment_type)}
                     </Badge>
+                    {isFinished && (
+                      <Badge className="bg-green-100 text-green-800">
+                        Finalizado
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
@@ -177,31 +215,33 @@ export function MyReservations() {
                   </div>
                 </div>
                 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Cancelar
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Voltar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => cancelReservation(reservation.id)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Cancelar Reserva
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                {canCancelReservation(reservation.reservation_date) && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Cancelar
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Voltar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => cancelReservation(reservation.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Cancelar Reserva
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
             </CardContent>
           </Card>

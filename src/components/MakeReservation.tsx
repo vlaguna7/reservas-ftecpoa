@@ -335,32 +335,17 @@ export function MakeReservation() {
         description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })}.`
       });
 
-      // Scroll para a dashboard na versão mobile após sucesso
+      // Scroll para o meio da página na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          // Procura diretamente pela reserva do auditório que contém o nome do professor
-          const auditoriumCard = Array.from(document.querySelectorAll('[class*="border rounded-lg"]')).find(card => {
-            return card.textContent?.includes(profile?.display_name || '') && 
-                   card.textContent?.includes('Auditório') || card.closest('[class*="space-y-3"]');
-          });
+          const pageHeight = document.documentElement.scrollHeight;
+          const middlePosition = pageHeight / 2;
           
-          if (auditoriumCard) {
-            // Calcula posição com offset para mostrar bem a reserva
-            const elementTop = auditoriumCard.getBoundingClientRect().top + window.pageYOffset;
-            const offsetPosition = elementTop - 80; // 80px de margem do topo
-            
-            window.scrollTo({
-              top: offsetPosition,
-              behavior: 'smooth'
-            });
-          } else {
-            // Fallback: scroll para a seção de reservas do auditório
-            const auditoriumSection = document.querySelector('h3:contains("Reservas do Auditório"), [class*="CardTitle"]:contains("Auditório")');
-            if (auditoriumSection) {
-              auditoriumSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }
-        }, 2500); // Tempo maior para garantir que a reserva foi renderizada
+          window.scrollTo({
+            top: middlePosition,
+            behavior: 'smooth'
+          });
+        }, 1500);
       }
 
       // Reset form
@@ -484,32 +469,17 @@ export function MakeReservation() {
         className: "bg-blue-900 border-blue-800 text-white [&>*]:text-white animate-scale-in"
       });
       
-      // Scroll para a dashboard na versão mobile após sucesso
+      // Scroll para o meio da página na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          // Procura diretamente pela reserva de equipamento que contém o nome do professor
-          const todayReservationsCard = Array.from(document.querySelectorAll('[class*="border"], [class*="bg-"]')).find(card => {
-            return card.textContent?.includes(profile?.display_name || '') && 
-                   (card.textContent?.includes('Projetor') || card.textContent?.includes('Notebook') || card.textContent?.includes('Hoje'));
-          });
+          const pageHeight = document.documentElement.scrollHeight;
+          const middlePosition = pageHeight / 2;
           
-          if (todayReservationsCard) {
-            // Calcula posição com offset para mostrar bem a reserva
-            const elementTop = todayReservationsCard.getBoundingClientRect().top + window.pageYOffset;
-            const offsetPosition = elementTop - 80; // 80px de margem do topo
-            
-            window.scrollTo({
-              top: offsetPosition,
-              behavior: 'smooth'
-            });
-          } else {
-            // Fallback: scroll para a seção de reservas de hoje
-            const todaySection = document.querySelector('h3:contains("Reservas de Hoje"), [class*="CardTitle"]:contains("Hoje")');
-            if (todaySection) {
-              todaySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }
-        }, 2500); // Tempo maior para garantir que a reserva foi renderizada
+          window.scrollTo({
+            top: middlePosition,
+            behavior: 'smooth'
+          });
+        }, 1500);
       }
       
       setSelectedEquipment('');

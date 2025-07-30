@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Settings, Users, Calendar, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff } from 'lucide-react';
+import { Settings, Users, Calendar, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff, Plus } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -91,6 +91,8 @@ export function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
   const [editingReservation, setEditingReservation] = useState<string | null>(null);
+  const [editingLaboratory, setEditingLaboratory] = useState<string | null>(null);
+  const [addingLaboratory, setAddingLaboratory] = useState(false);
   const [changingPin, setChangingPin] = useState<string | null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -101,6 +103,13 @@ export function AdminPanel() {
   const [editForm, setEditForm] = useState({
     display_name: '',
     institutional_user: ''
+  });
+  const [laboratoryEditForm, setLaboratoryEditForm] = useState({
+    laboratory_name: ''
+  });
+  const [newLaboratoryForm, setNewLaboratoryForm] = useState({
+    laboratory_code: '',
+    laboratory_name: ''
   });
 
   useEffect(() => {
@@ -328,6 +337,111 @@ export function AdminPanel() {
       console.error('Error toggling laboratory status:', error);
       toast({
         title: "Erro ao alterar status",
+        description: "Erro interno. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateLaboratoryName = async (laboratoryId: string) => {
+    if (!laboratoryEditForm.laboratory_name.trim()) {
+      toast({
+        title: "Nome inválido",
+        description: "O nome do laboratório não pode estar vazio.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('laboratory_settings')
+        .update({ laboratory_name: laboratoryEditForm.laboratory_name.trim() })
+        .eq('id', laboratoryId);
+
+      if (error) {
+        toast({
+          title: "Erro ao atualizar nome",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Nome atualizado!",
+        description: "O nome do laboratório foi alterado com sucesso."
+      });
+
+      setEditingLaboratory(null);
+      setLaboratoryEditForm({ laboratory_name: '' });
+      fetchLaboratorySettings();
+    } catch (error) {
+      console.error('Error updating laboratory name:', error);
+      toast({
+        title: "Erro ao atualizar nome",
+        description: "Erro interno. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const createNewLaboratory = async () => {
+    if (!newLaboratoryForm.laboratory_code.trim() || !newLaboratoryForm.laboratory_name.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Código e nome do laboratório são obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verificar se o código já existe
+    const { data: existingLab } = await supabase
+      .from('laboratory_settings')
+      .select('id')
+      .eq('laboratory_code', newLaboratoryForm.laboratory_code.trim())
+      .single();
+
+    if (existingLab) {
+      toast({
+        title: "Código já existe",
+        description: "Já existe um laboratório com este código.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('laboratory_settings')
+        .insert({
+          laboratory_code: newLaboratoryForm.laboratory_code.trim(),
+          laboratory_name: newLaboratoryForm.laboratory_name.trim(),
+          is_active: true
+        });
+
+      if (error) {
+        toast({
+          title: "Erro ao criar laboratório",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Laboratório criado!",
+        description: "Novo laboratório adicionado com sucesso."
+      });
+
+      setAddingLaboratory(false);
+      setNewLaboratoryForm({ laboratory_code: '', laboratory_name: '' });
+      fetchLaboratorySettings();
+    } catch (error) {
+      console.error('Error creating laboratory:', error);
+      toast({
+        title: "Erro ao criar laboratório",
         description: "Erro interno. Tente novamente.",
         variant: "destructive"
       });
@@ -1284,13 +1398,67 @@ export function AdminPanel() {
       {/* Laboratory Management */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5" />
-            Gestão de Laboratórios
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Ativar ou inativar laboratórios para reserva
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FlaskConical className="h-5 w-5" />
+                Gestão de Laboratórios
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Ativar, inativar, renomear laboratórios ou adicionar novos
+              </p>
+            </div>
+            <Dialog open={addingLaboratory} onOpenChange={setAddingLaboratory}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Novo Laboratório
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Adicionar Novo Laboratório</DialogTitle>
+                  <DialogDescription>
+                    Crie um novo laboratório para o sistema de reservas
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="lab-code">Código do Laboratório</Label>
+                    <Input
+                      id="lab-code"
+                      placeholder="Ex: laboratory_201_lab_fisica"
+                      value={newLaboratoryForm.laboratory_code}
+                      onChange={(e) => setNewLaboratoryForm(prev => ({ ...prev, laboratory_code: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use formato: laboratory_numero_descricao (sem espaços, use _ para separar)
+                    </p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="lab-name">Nome do Laboratório</Label>
+                    <Input
+                      id="lab-name"
+                      placeholder="Ex: 201 - LAB FÍSICA"
+                      value={newLaboratoryForm.laboratory_name}
+                      onChange={(e) => setNewLaboratoryForm(prev => ({ ...prev, laboratory_name: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => {
+                    setAddingLaboratory(false);
+                    setNewLaboratoryForm({ laboratory_code: '', laboratory_name: '' });
+                  }}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={createNewLaboratory}>
+                    Criar Laboratório
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           {laboratorySettings.length === 0 ? (
@@ -1308,72 +1476,128 @@ export function AdminPanel() {
               {laboratorySettings.map((lab) => (
                 <Card key={lab.id} className={`transition-all duration-200 ${lab.is_active ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm mb-1">{lab.laboratory_name}</h3>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {lab.laboratory_code}
-                        </p>
-                        <Badge variant={lab.is_active ? "default" : "secondary"} className="text-xs">
-                          {lab.is_active ? (
-                            <>
-                              <Power className="h-3 w-3 mr-1" />
-                              Ativo
-                            </>
-                          ) : (
-                            <>
-                              <PowerOff className="h-3 w-3 mr-1" />
-                              Inativo
-                            </>
-                          )}
-                        </Badge>
-                      </div>
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant={lab.is_active ? "destructive" : "default"}
-                            className="ml-3"
-                          >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        {editingLaboratory === lab.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={laboratoryEditForm.laboratory_name}
+                              onChange={(e) => setLaboratoryEditForm({ laboratory_name: e.target.value })}
+                              className="text-sm"
+                              autoFocus
+                            />
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                onClick={() => updateLaboratoryName(lab.id)}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <Save className="h-3 w-3 mr-1" />
+                                Salvar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingLaboratory(null);
+                                  setLaboratoryEditForm({ laboratory_name: '' });
+                                }}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <X className="h-3 w-3 mr-1" />
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium text-sm truncate">{lab.laboratory_name}</h3>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingLaboratory(lab.id);
+                                  setLaboratoryEditForm({ laboratory_name: lab.laboratory_name });
+                                }}
+                                className="h-5 w-5 p-0 opacity-60 hover:opacity-100"
+                                title="Editar nome"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-2 truncate">
+                              {lab.laboratory_code}
+                            </p>
+                          </>
+                        )}
+                        
+                        {editingLaboratory !== lab.id && (
+                          <Badge variant={lab.is_active ? "default" : "secondary"} className="text-xs">
                             {lab.is_active ? (
                               <>
-                                <PowerOff className="h-3 w-3 mr-1" />
-                                Inativar
+                                <Power className="h-3 w-3 mr-1" />
+                                Ativo
                               </>
                             ) : (
                               <>
-                                <Power className="h-3 w-3 mr-1" />
-                                Ativar
+                                <PowerOff className="h-3 w-3 mr-1" />
+                                Inativo
                               </>
                             )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              {lab.is_active ? 'Inativar' : 'Ativar'} Laboratório
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja {lab.is_active ? 'inativar' : 'ativar'} o laboratório {lab.laboratory_name}?
-                              {lab.is_active && (
-                                <span className="block mt-2 text-yellow-600">
-                                  ⚠️ Ao inativar, novos agendamentos não poderão ser feitos para este laboratório.
-                                </span>
-                              )}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => toggleLaboratoryStatus(lab.id, lab.is_active)}
-                              className={lab.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
-                            >
-                              {lab.is_active ? 'Sim, inativar' : 'Sim, ativar'}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {editingLaboratory !== lab.id && (
+                        <div className="flex flex-col gap-1 ml-2">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant={lab.is_active ? "destructive" : "default"}
+                                className="h-6 px-2 text-xs"
+                              >
+                                {lab.is_active ? (
+                                  <>
+                                    <PowerOff className="h-3 w-3 mr-1" />
+                                    Inativar
+                                  </>
+                                ) : (
+                                  <>
+                                    <Power className="h-3 w-3 mr-1" />
+                                    Ativar
+                                  </>
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  {lab.is_active ? 'Inativar' : 'Ativar'} Laboratório
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja {lab.is_active ? 'inativar' : 'ativar'} o laboratório {lab.laboratory_name}?
+                                  {lab.is_active && (
+                                    <span className="block mt-2 text-yellow-600">
+                                      ⚠️ Ao inativar, novos agendamentos não poderão ser feitos para este laboratório.
+                                    </span>
+                                  )}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => toggleLaboratoryStatus(lab.id, lab.is_active)}
+                                  className={lab.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
+                                >
+                                  {lab.is_active ? 'Sim, inativar' : 'Sim, ativar'}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

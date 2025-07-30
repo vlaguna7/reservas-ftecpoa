@@ -23,6 +23,7 @@ interface AuthContextType {
   signIn: (institutionalUser: string, pin: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
+  resetUserPin: (institutionalUser: string, newPin: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -444,6 +445,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetUserPin = async (institutionalUser: string, newPin: string) => {
+    try {
+      const bcrypt = await import('bcryptjs');
+      
+      // Find the user profile first
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .ilike('institutional_user', institutionalUser.trim())
+        .maybeSingle();
+
+      if (profileError || !profileData) {
+        return { error: { message: 'Usuário não encontrado' } };
+      }
+
+      // Generate new PIN hash
+      const newPinHash = await bcrypt.hash(newPin, 10);
+
+      // Update PIN hash in profiles table
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ pin_hash: newPinHash, updated_at: new Date().toISOString() })
+        .eq('user_id', profileData.user_id);
+
+      if (updateError) {
+        return { error: { message: 'Erro ao atualizar PIN na base de dados' } };
+      }
+
+      // Update password in Auth system using the edge function
+      try {
+        const { error: authUpdateError } = await supabase.functions.invoke('update-user-password', {
+          body: { userId: profileData.user_id, newPassword: newPin }
+        });
+
+        if (authUpdateError) {
+          console.error('Error updating auth password:', authUpdateError);
+          return { error: { message: 'Erro ao atualizar senha de autenticação' } };
+        }
+
+        console.log('✅ PIN reset successful for user:', institutionalUser);
+        return { error: null };
+      } catch (authError) {
+        console.error('Auth update failed:', authError);
+        return { error: { message: 'Erro ao atualizar sistema de autenticação' } };
+      }
+    } catch (error) {
+      console.error('Reset PIN error:', error);
+      return { error: { message: 'Erro interno. Tente novamente.' } };
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -453,7 +505,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUp,
       signIn,
       signOut,
-      updateProfile
+      updateProfile,
+      resetUserPin
     }}>
       {children}
     </AuthContext.Provider>

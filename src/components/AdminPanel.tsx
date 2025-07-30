@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Settings, Users, Calendar, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus } from 'lucide-react';
+import { AdminResetPin } from '@/components/AdminResetPin';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1098,6 +1099,9 @@ export function AdminPanel() {
           )}
         </CardContent>
       </Card>
+
+      {/* Admin Reset PIN Tool */}
+      <AdminResetPin />
     </div>
   );
 }

@@ -9,7 +9,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Monitor, Speaker, AlertCircle, X } from 'lucide-react';
+import { Calendar, Monitor, Speaker, AlertCircle, X, HelpCircle } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface EquipmentSettings {
   projector_limit: number;
@@ -29,6 +31,7 @@ export function MakeReservation() {
   const [availability, setAvailability] = useState<Record<string, ReservationCount>>({});
   const [userReservations, setUserReservations] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(false);
+  const [showFAQ, setShowFAQ] = useState(false);
 
   const getAvailableDate = () => {
     const today = new Date();
@@ -437,6 +440,61 @@ export function MakeReservation() {
       >
         {loading ? 'Reservando...' : 'Confirmar Reserva'}
       </Button>
+
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => setShowFAQ(!showFAQ)}
+          className="text-primary underline text-sm hover:text-primary/80 transition-colors flex items-center gap-1"
+        >
+          <HelpCircle className="h-4 w-4" />
+          Perguntas Frequentes
+        </button>
+        
+        <Collapsible open={showFAQ} onOpenChange={setShowFAQ}>
+          <CollapsibleContent className="mt-3">
+            <div className="border rounded-lg p-4 bg-muted/50">
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                  <AccordionTrigger className="text-left">
+                    📅 Por que aparece apenas o dia de hoje para fazer a reserva?
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    As reservas são disponibilizadas diariamente para garantir que todos os professores tenham a chance de utilizar os equipamentos, como projetores e caixas de som.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-2">
+                  <AccordionTrigger className="text-left">
+                    📚 Posso reservar para todas as minhas aulas do semestre?
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    No momento, não. É necessário acessar o site e realizar a reserva sempre que houver necessidade de uso do equipamento.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-3">
+                  <AccordionTrigger className="text-left">
+                    🔌 O que fazer quando não houver mais projetores disponíveis para reserva?
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    Em casos essenciais, entre em contato diretamente com a Camila para verificar a possibilidade de disponibilização de um equipamento.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-4">
+                  <AccordionTrigger className="text-left">
+                    📞 Tem alguma outra dúvida?
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    Fale com a gente pelo WhatsApp: <a href="#" className="text-primary underline hover:text-primary/80">clique aqui</a>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
     </form>
   );
 }

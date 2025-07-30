@@ -8,6 +8,7 @@ import { ptBR } from 'date-fns/locale';
 interface Reservation {
   id: string;
   equipment_type: string;
+  created_at: string;
   user_profile: {
     display_name: string;
   };
@@ -46,8 +47,9 @@ export function TodayReservations() {
       // Primeira query: buscar reservas
       const { data: reservationData, error: reservationError } = await supabase
         .from('reservations')
-        .select('id, equipment_type, user_id')
-        .eq('reservation_date', dateStr);
+        .select('id, equipment_type, user_id, created_at')
+        .eq('reservation_date', dateStr)
+        .order('created_at', { ascending: true });
 
       if (reservationError) {
         console.error('Error fetching reservations:', reservationError);
@@ -76,6 +78,7 @@ export function TodayReservations() {
       const combinedData = reservationData.map(reservation => ({
         id: reservation.id,
         equipment_type: reservation.equipment_type,
+        created_at: reservation.created_at,
         user_profile: {
           display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
         }
@@ -209,7 +212,10 @@ export function TodayReservations() {
                       className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm"
                     >
                       {getEquipmentIcon(reservation.equipment_type)}
-                      {getEquipmentLabel(reservation.equipment_type)}
+                      <span>{getEquipmentLabel(reservation.equipment_type)}</span>
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({format(new Date(reservation.created_at), 'HH:mm')})
+                      </span>
                     </div>
                   ))}
                 </div>

@@ -65,23 +65,57 @@ export function MyReservations() {
   };
 
   const cancelReservation = async (reservationId: string) => {
-    const { error } = await supabase
-      .from('reservations')
-      .delete()
-      .eq('id', reservationId);
+    try {
+      console.log('Attempting to cancel reservation:', reservationId);
+      
+      const { data, error } = await supabase
+        .from('reservations')
+        .delete()
+        .eq('id', reservationId)
+        .select(); // Retornar dados para confirmar a deleção
 
-    if (error) {
+      console.log('Delete result:', { data, error });
+
+      if (error) {
+        console.error('Error canceling reservation:', error);
+        toast({
+          title: "Erro ao cancelar reserva",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data && data.length > 0) {
+        console.log('Reservation successfully deleted:', data[0]);
+        toast({
+          title: "Reserva cancelada",
+          description: "Sua reserva foi cancelada com sucesso."
+        });
+        
+        // Forçar atualização imediata dos dados
+        await fetchReservations();
+        
+        // Pequeno delay e segunda atualização para garantir sincronização
+        setTimeout(async () => {
+          await fetchReservations();
+        }, 500);
+        
+      } else {
+        console.error('No data returned from delete operation');
+        toast({
+          title: "Erro ao cancelar reserva",
+          description: "A reserva não pôde ser encontrada ou já foi cancelada.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Exception in cancelReservation:', error);
       toast({
         title: "Erro ao cancelar reserva",
-        description: error.message,
+        description: "Erro interno. Tente novamente.",
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Reserva cancelada",
-        description: "Sua reserva foi cancelada com sucesso."
-      });
-      fetchReservations(); // Refresh the list
     }
   };
 

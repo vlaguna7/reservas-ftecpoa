@@ -95,11 +95,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (displayName: string, institutionalUser: string, pin: string) => {
     try {
-      // Check if user already exists
+      // Normalize the institutional user (convert to lowercase for consistency)
+      const normalizedUser = institutionalUser.toLowerCase().trim();
+
+      // Check if user already exists (case-insensitive)
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('institutional_user')
-        .eq('institutional_user', institutionalUser)
+        .ilike('institutional_user', normalizedUser)
         .maybeSingle();
 
       if (existingProfile) {
@@ -110,14 +113,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const pinHash = await bcrypt.hash(pin, 10);
 
       // Create user with temporary email - no email confirmation needed
-      const tempEmail = `${institutionalUser}@temp.com`;
+      const tempEmail = `${normalizedUser}@temp.com`;
       const { data, error: authError } = await supabase.auth.signUp({
         email: tempEmail,
-        password: institutionalUser + pin,
+        password: normalizedUser + pin,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            institutional_user: institutionalUser,
+            institutional_user: normalizedUser,
             display_name: displayName
           }
         }
@@ -132,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Use the database function to create profile
           const { error: profileError } = await supabase.rpc('handle_signup_with_profile', {
             p_display_name: displayName,
-            p_institutional_user: institutionalUser,
+            p_institutional_user: normalizedUser,
             p_pin_hash: pinHash,
             p_user_id: data.user.id
           });
@@ -170,11 +173,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const bcrypt = await import('bcryptjs');
 
-      // First, get the user profile by institutional_user
+      // Convert to lowercase for case-insensitive search
+      const normalizedUser = institutionalUser.toLowerCase().trim();
+
+      // First, get the user profile by institutional_user (case-insensitive)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('institutional_user', institutionalUser)
+        .ilike('institutional_user', normalizedUser)
         .maybeSingle();
 
       if (profileError || !profileData) {
@@ -188,10 +194,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Sign in with temporary credentials - ignore email confirmation
-      const tempEmail = `${institutionalUser}@temp.com`;
+      const tempEmail = `${profileData.institutional_user}@temp.com`;
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: tempEmail,
-        password: institutionalUser + pin
+        password: profileData.institutional_user + pin
       });
 
       if (signInError) {
@@ -212,7 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Try sign in again
             const { error: retryError } = await supabase.auth.signInWithPassword({
               email: tempEmail,
-              password: institutionalUser + pin
+              password: profileData.institutional_user + pin
             });
             
             if (retryError) {

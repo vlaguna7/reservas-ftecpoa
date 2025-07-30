@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Monitor, Speaker, AlertCircle } from 'lucide-react';
+import { Calendar, Monitor, Speaker, AlertCircle, X } from 'lucide-react';
 
 interface EquipmentSettings {
   projector_limit: number;
@@ -27,7 +27,7 @@ export function MakeReservation() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [equipmentSettings, setEquipmentSettings] = useState<EquipmentSettings | null>(null);
   const [availability, setAvailability] = useState<Record<string, ReservationCount>>({});
-  const [userReservations, setUserReservations] = useState<Record<string, string[]>>({});
+  const [userReservations, setUserReservations] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(false);
 
   const getAvailableDate = () => {
@@ -146,7 +146,7 @@ export function MakeReservation() {
     
     const { data, error } = await supabase
       .from('reservations')
-      .select('reservation_date, equipment_type')
+      .select('id, reservation_date, equipment_type')
       .eq('user_id', user.id)
       .in('reservation_date', dateList);
 
@@ -155,14 +155,17 @@ export function MakeReservation() {
       return;
     }
 
-    const userRes: Record<string, string[]> = {};
+    const userRes: Record<string, any[]> = {};
     dateList.forEach(date => {
       userRes[date] = [];
     });
 
     data.forEach(reservation => {
       const dateStr = reservation.reservation_date;
-      userRes[dateStr].push(reservation.equipment_type);
+      userRes[dateStr].push({
+        id: reservation.id,
+        equipment_type: reservation.equipment_type
+      });
     });
 
     setUserReservations(userRes);
@@ -184,7 +187,7 @@ export function MakeReservation() {
   };
 
   const hasUserReservation = (date: string, equipment: string) => {
-    return userReservations[date]?.includes(equipment) || false;
+    return userReservations[date]?.some(res => res.equipment_type === equipment) || false;
   };
 
   const isAvailable = (date: string, equipment: string) => {
@@ -251,6 +254,29 @@ export function MakeReservation() {
     }
 
     setLoading(false);
+  };
+
+  const cancelReservation = async (reservationId: string) => {
+    const { error } = await supabase
+      .from('reservations')
+      .delete()
+      .eq('id', reservationId);
+
+    if (error) {
+      toast({
+        title: "Erro ao cancelar reserva",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Reserva cancelada!",
+        description: "Sua reserva foi cancelada com sucesso."
+      });
+      // Atualizar dados após cancelamento
+      fetchAvailability();
+      fetchUserReservations();
+    }
   };
 
   const getEquipmentIcon = (type: string) => {
@@ -363,9 +389,18 @@ export function MakeReservation() {
         {selectedDate && userReservations[selectedDate]?.length > 0 && (
           <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded">
             <strong>Suas reservas para este dia:</strong>
-            <ul className="mt-1">
-              {userReservations[selectedDate].map((equipType, index) => (
-                <li key={index}>• {getEquipmentLabel(equipType)}</li>
+            <ul className="mt-1 space-y-1">
+              {userReservations[selectedDate].map((reservation, index) => (
+                <li key={index} className="flex items-center justify-between">
+                  <span>• {getEquipmentLabel(reservation.equipment_type)}</span>
+                  <button
+                    onClick={() => cancelReservation(reservation.id)}
+                    className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition-colors"
+                    title="Cancelar reserva"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </li>
               ))}
             </ul>
           </div>

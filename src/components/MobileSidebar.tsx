@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, List, User } from 'lucide-react';
+import { Menu, X, List, User, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -18,6 +18,11 @@ export function MobileSidebar({ onNavigate, currentSection }: MobileSidebarProps
   const [open, setOpen] = useState(false);
 
   const menuItems = [
+    {
+      id: 'make-reservation',
+      label: 'Fazer uma Reserva',
+      icon: Calendar,
+    },
     {
       id: 'my-reservations',
       label: 'Minhas Reservas',

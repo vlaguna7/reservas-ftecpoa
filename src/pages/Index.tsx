@@ -97,13 +97,13 @@ const Index = () => {
         </div>
 
         <div className="text-center">
-          <Card className="inline-block p-8 card-hover animate-fade-in" style={{ animationDelay: '0.3s' }}>
+          <Card className="inline-block p-8 card-hover animate-fade-in border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 shadow-lg hover:shadow-xl ring-2 ring-primary/10" style={{ animationDelay: '0.3s' }}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 justify-center">
-                <Users className="h-6 w-6 text-primary" />
+              <CardTitle className="flex items-center gap-2 justify-center text-primary">
+                <Users className="h-7 w-7 text-primary" />
                 Acesso para Professores
               </CardTitle>
-              <CardDescription className="mb-6">
+              <CardDescription className="mb-6 text-base">
                 Faça login com seu usuário institucional e PIN para acessar o sistema
               </CardDescription>
             </CardHeader>
@@ -111,7 +111,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={() => navigate(user ? '/dashboard' : '/auth')}
-                className="px-8 transition-all duration-300 hover:scale-105"
+                className="px-8 py-3 text-lg font-semibold transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg"
               >
                 {user ? 'Acessar Sistema' : 'Entrar no Sistema'}
               </Button>

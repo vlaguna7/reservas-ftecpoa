@@ -260,13 +260,12 @@ export function MakeReservation() {
     // Se não há reservas, está disponível
     return data.length === 0;
   };
-
+  
   // Função para converter data para string sem problemas de timezone
-  const formatDateToString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const formatDateToLocalString = (date: Date) => {
+    // Criar uma nova data ajustada para o timezone local
+    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+    return localDate.toISOString().split('T')[0];
   };
 
   const confirmAuditoriumReservation = async () => {
@@ -277,7 +276,10 @@ export function MakeReservation() {
 
     try {
       setLoading(true);
-      const dateStr = formatDateToString(auditoriumDate);
+      const dateStr = formatDateToLocalString(auditoriumDate);
+      
+      console.log('Data selecionada:', auditoriumDate);
+      console.log('Data formatada para envio:', dateStr);
       
       // Verificar se já existe reserva para esta data
       const { data: existingReservations, error: checkError } = await supabase
@@ -721,33 +723,41 @@ export function MakeReservation() {
         <CollapsibleContent className="space-y-2 mt-4">
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
-              <AccordionTrigger>Como funciona o sistema de reservas?</AccordionTrigger>
-              <AccordionContent>
-                O sistema permite que você reserve projetores, caixas de som e o auditório da FTEC POA. Para equipamentos, você pode fazer 1 reserva de cada tipo por dia. Para o auditório, apenas uma reserva por dia é permitida por professor.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2">
-              <AccordionTrigger>Posso cancelar minha reserva?</AccordionTrigger>
-              <AccordionContent>
-                Sim! Você pode cancelar suas reservas clicando no botão "X" ao lado da reserva. O cancelamento é imediato e libera o equipamento para outros professores.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3">
-              <AccordionTrigger>Por que só posso reservar para hoje ou próximo dia útil?</AccordionTrigger>
+              <AccordionTrigger>📅 Por que só posso reservar para hoje ou próximo dia útil?</AccordionTrigger>
               <AccordionContent>
                 Para otimizar o uso dos equipamentos e evitar reservas esquecidas, o sistema permite reservas apenas para o dia atual (durante a semana) ou próxima segunda-feira (nos fins de semana).
               </AccordionContent>
             </AccordionItem>
-            <AccordionItem value="item-4">
-              <AccordionTrigger>O que acontece se eu esquecer de pegar o equipamento?</AccordionTrigger>
+            <AccordionItem value="item-2">
+              <AccordionTrigger>📚 Posso reservar para todas as minhas aulas do semestre?</AccordionTrigger>
               <AccordionContent>
-                As reservas são automaticamente removidas do sistema no final do dia, liberando os equipamentos para o próximo dia útil. Não há penalidades, mas recomendamos responsabilidade no uso do sistema.
+                No momento, não. É necessário acessar o site e realizar a reserva sempre que houver necessidade de uso do equipamento.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-3">
+              <AccordionTrigger>🔌 O que fazer quando não houver mais projetores disponíveis para reserva?</AccordionTrigger>
+              <AccordionContent>
+                Em casos essenciais, entre em contato diretamente com a Camila para verificar a possibilidade de disponibilização de um equipamento.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-4">
+              <AccordionTrigger>📅 Como reservar o auditório?</AccordionTrigger>
+              <AccordionContent>
+                Para reservar o auditório, selecione "Auditório" na lista de equipamentos, escolha uma data no calendário e preencha a observação obrigatória descrevendo o motivo da reserva e necessidades específicas.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-5">
-              <AccordionTrigger>Como reservar o auditório?</AccordionTrigger>
+              <AccordionTrigger>📞 Tem alguma outra dúvida?</AccordionTrigger>
               <AccordionContent>
-                Para reservar o auditório, selecione "Auditório" na lista de equipamentos, escolha uma data no calendário e preencha a observação obrigatória descrevendo o motivo da reserva e necessidades específicas.
+                Fale com a gente pelo WhatsApp:{" "}
+                <a 
+                  href="https://wa.me/5551992885496" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  clique aqui
+                </a>
               </AccordionContent>
             </AccordionItem>
           </Accordion>

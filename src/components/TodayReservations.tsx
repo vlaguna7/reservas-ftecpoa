@@ -176,6 +176,11 @@ export function TodayReservations() {
   };
 
   const canUserCancelReservation = (reservation: Reservation) => {
+    // Administradores podem cancelar qualquer reserva
+    if (profile?.is_admin) {
+      return true;
+    }
+    // Usuários normais só podem cancelar suas próprias reservas
     return user && reservation.user_profile?.display_name === profile?.display_name;
   };
 

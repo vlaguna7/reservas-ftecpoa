@@ -261,13 +261,24 @@ export function MakeReservation() {
     return data.length === 0;
   };
   
-  // Função para converter data para string sem problemas de timezone
+  // Função para garantir que a data seja tratada como timezone local
+  const createLocalDate = (year: number, month: number, day: number) => {
+    return new Date(year, month, day);
+  };
+
+  // Função para converter data para string garantindo timezone local
   const formatDateToLocalString = (date: Date) => {
-    // Usar diretamente os métodos da data local sem conversão de timezone
+    // Forçar o uso da data local sem conversões de timezone
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const result = `${year}-${month}-${day}`;
+    
+    console.log('🗓️ Data original selecionada:', date);
+    console.log('🗓️ Ano:', year, 'Mês:', month, 'Dia:', day);
+    console.log('🗓️ String final formatada:', result);
+    
+    return result;
   };
 
   const confirmAuditoriumReservation = async () => {
@@ -541,7 +552,15 @@ export function MakeReservation() {
                   mode="single"
                   selected={auditoriumDate}
                   onSelect={(date) => {
-                    setAuditoriumDate(date);
+                    if (date) {
+                      // Garantir que a data seja criada no timezone local
+                      const localDate = createLocalDate(date.getFullYear(), date.getMonth(), date.getDate());
+                      console.log('📅 Data selecionada no calendário:', date);
+                      console.log('📅 Data local criada:', localDate);
+                      setAuditoriumDate(localDate);
+                    } else {
+                      setAuditoriumDate(date);
+                    }
                     setAuditoriumError(''); // Limpar erro ao selecionar nova data
                     // Fechar automaticamente o popover após seleção
                     if (date) {
@@ -554,11 +573,12 @@ export function MakeReservation() {
                     }
                   }}
                   disabled={(date) => {
-                    // Permitir seleção de hoje em diante
+                    // Permitir seleção de hoje em diante (criando datas locais)
                     const today = new Date();
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    return date <= yesterday;
+                    const todayLocal = createLocalDate(today.getFullYear(), today.getMonth(), today.getDate());
+                    const dateLocal = createLocalDate(date.getFullYear(), date.getMonth(), date.getDate());
+                    
+                    return dateLocal < todayLocal;
                   }}
                   initialFocus
                   className="p-3 pointer-events-auto"

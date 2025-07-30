@@ -9,9 +9,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Projector, Speaker, AlertCircle, X, HelpCircle } from 'lucide-react';
+import { Calendar, Projector, Speaker, AlertCircle, X, HelpCircle, Building } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
 
 interface EquipmentSettings {
   projector_limit: number;
@@ -21,6 +24,7 @@ interface EquipmentSettings {
 interface ReservationCount {
   projector_count: number;
   speaker_count: number;
+  auditorium_count: number;
 }
 
 export function MakeReservation() {
@@ -32,6 +36,8 @@ export function MakeReservation() {
   const [userReservations, setUserReservations] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(false);
   const [showFAQ, setShowFAQ] = useState(false);
+  const [auditoriumDate, setAuditoriumDate] = useState<Date | undefined>();
+  const [observation, setObservation] = useState('');
 
   const getAvailableDate = () => {
     const today = new Date();
@@ -140,7 +146,7 @@ export function MakeReservation() {
     const counts: Record<string, ReservationCount> = {};
     
     dateList.forEach(date => {
-      counts[date] = { projector_count: 0, speaker_count: 0 };
+      counts[date] = { projector_count: 0, speaker_count: 0, auditorium_count: 0 };
     });
 
     data.forEach(reservation => {
@@ -150,6 +156,9 @@ export function MakeReservation() {
       }
       if (reservation.equipment_type === 'speaker') {
         counts[dateStr].speaker_count++;
+      }
+      if (reservation.equipment_type === 'auditorium') {
+        counts[dateStr].auditorium_count++;
       }
     });
 
@@ -192,13 +201,15 @@ export function MakeReservation() {
   const getAvailabilityForDate = (date: string, equipment: string) => {
     if (!equipmentSettings || !availability[date]) return null;
 
-    const { projector_count, speaker_count } = availability[date];
+    const { projector_count, speaker_count, auditorium_count } = availability[date];
     
     switch (equipment) {
       case 'projector':
         return equipmentSettings.projector_limit - projector_count;
       case 'speaker':
         return equipmentSettings.speaker_limit - speaker_count;
+      case 'auditorium':
+        return 1 - auditorium_count; // Apenas 1 auditório disponível por dia
       default:
         return null;
     }
@@ -214,19 +225,75 @@ export function MakeReservation() {
     return available !== null && available > 0 && !userAlreadyHasReservation;
   };
 
+  const checkAuditoriumAvailability = async (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('user_id')
+      .eq('reservation_date', dateStr)
+      .eq('equipment_type', 'auditorium');
+
+    if (error) {
+      console.error('Error checking auditorium availability:', error);
+      return false;
+    }
+
+    // Verificar se já existe uma reserva do auditório para esta data
+    if (data.length > 0) {
+      // Verificar se a reserva é do próprio usuário
+      const userHasReservation = data.some(reservation => reservation.user_id === user!.id);
+      return !userHasReservation; // Não disponível se há reserva e não é do usuário
+    }
+
+    return true; // Disponível se não há reservas
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedEquipment || !selectedDate) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, selecione o equipamento e a data.",
-        variant: "destructive"
-      });
-      return;
+    // Para auditório, validar data e observação
+    if (selectedEquipment === 'auditorium') {
+      if (!auditoriumDate || !observation.trim()) {
+        toast({
+          title: "Campos obrigatórios",
+          description: "Por favor, selecione a data e preencha a observação para reserva do auditório.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (observation.length > 600) {
+        toast({
+          title: "Observação muito longa",
+          description: "A observação deve ter no máximo 600 caracteres.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Verificar disponibilidade do auditório para a data selecionada
+      const isAuditoriumAvailable = await checkAuditoriumAvailability(auditoriumDate);
+      if (!isAuditoriumAvailable) {
+        toast({
+          title: "Auditório indisponível",
+          description: "O auditório já está reservado para esta data ou você já possui uma reserva.",
+          variant: "destructive"
+        });
+        return;
+      }
+    } else {
+      if (!selectedEquipment || !selectedDate) {
+        toast({
+          title: "Campos obrigatórios",
+          description: "Por favor, selecione o equipamento e a data.",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
-    if (hasUserReservation(selectedDate, selectedEquipment)) {
+    if (selectedEquipment !== 'auditorium' && hasUserReservation(selectedDate, selectedEquipment)) {
       toast({
         title: "Reserva já existe",
         description: `Você já possui uma reserva de ${getEquipmentLabel(selectedEquipment)} para esta data.`,
@@ -235,7 +302,7 @@ export function MakeReservation() {
       return;
     }
 
-    if (!isAvailable(selectedDate, selectedEquipment)) {
+    if (selectedEquipment !== 'auditorium' && !isAvailable(selectedDate, selectedEquipment)) {
       toast({
         title: "Indisponível",
         description: "Não há mais unidades disponíveis para esta data. Por favor, escolha outro dia.",
@@ -246,15 +313,22 @@ export function MakeReservation() {
 
     setLoading(true);
 
-    console.log('Saving reservation with date:', selectedDate); // Debug log
+    const finalDate = selectedEquipment === 'auditorium' ? format(auditoriumDate!, 'yyyy-MM-dd') : selectedDate;
+    console.log('Saving reservation with date:', finalDate);
+
+    const reservationData: any = {
+      user_id: user!.id,
+      equipment_type: selectedEquipment,
+      reservation_date: finalDate
+    };
+
+    if (selectedEquipment === 'auditorium') {
+      reservationData.observation = observation.trim();
+    }
 
     const { error } = await supabase
       .from('reservations')
-      .insert({
-        user_id: user!.id,
-        equipment_type: selectedEquipment,
-        reservation_date: selectedDate
-      });
+      .insert(reservationData);
 
     if (error) {
       toast({
@@ -307,6 +381,8 @@ export function MakeReservation() {
       });
       setSelectedEquipment('');
       setSelectedDate('');
+      setAuditoriumDate(undefined);
+      setObservation('');
     }
 
     setLoading(false);
@@ -341,6 +417,8 @@ export function MakeReservation() {
         return <Projector className="h-4 w-4" />;
       case 'speaker':
         return <Speaker className="h-4 w-4" />;
+      case 'auditorium':
+        return <Building className="h-4 w-4" />;
       default:
         return null;
     }
@@ -352,6 +430,8 @@ export function MakeReservation() {
         return 'Projetor';
       case 'speaker':
         return 'Caixa de Som';
+      case 'auditorium':
+        return 'Auditório';
       default:
         return '';
     }
@@ -362,7 +442,7 @@ export function MakeReservation() {
       <div>
         <Label className="text-base font-medium">Selecione o equipamento:</Label>
         <RadioGroup value={selectedEquipment} onValueChange={setSelectedEquipment} className="mt-3">
-          {['projector', 'speaker'].map((type) => (
+          {['projector', 'speaker', 'auditorium'].map((type) => (
             <div key={type} className="flex items-center space-x-2">
               <RadioGroupItem value={type} id={type} />
               <Label htmlFor={type} className="flex items-center gap-2 cursor-pointer">
@@ -373,102 +453,153 @@ export function MakeReservation() {
           ))}
         </RadioGroup>
         <div className="mt-2 text-sm text-muted-foreground">
-          Você pode fazer 1 reserva de cada tipo de equipamento por dia (1 projetor + 1 caixa de som).
+          {selectedEquipment === 'auditorium' 
+            ? 'O auditório pode ser reservado uma vez por dia por professor.'
+            : 'Você pode fazer 1 reserva de cada tipo de equipamento por dia (1 projetor + 1 caixa de som).'
+          }
         </div>
       </div>
 
-      <div>
-        <Label className="text-base font-medium">Data disponível para reserva:</Label>
-        <div className="mt-3 space-y-3">
-          {availableDates.map(({ date, label, isToday }) => (
-            <Card 
-              key={date} 
-              className={`cursor-pointer transition-colors ${
-                selectedDate === date ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => setSelectedDate(date)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="date"
-                      value={date}
-                      checked={selectedDate === date}
-                      onChange={() => {}} // Controlled by card click
-                      className="radio pointer-events-none"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        <span className="font-medium capitalize">{label}</span>
-                        {!isToday && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            Próximo dia útil
-                          </span>
-                        )}
-                      </div>
-                      {selectedEquipment && selectedDate === date && (
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {hasUserReservation(date, selectedEquipment) ? (
-                            <span className="text-amber-600 flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3" />
-                              Você já tem uma reserva de {getEquipmentLabel(selectedEquipment)}
-                            </span>
-                          ) : isAvailable(date, selectedEquipment) ? (
-                            <span className="text-green-600 flex items-center gap-1">
-                              ✓ Disponível ({getAvailabilityForDate(date, selectedEquipment)} unidades restantes)
-                            </span>
-                          ) : (
-                            <span className="text-destructive flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3" />
-                              Indisponível (limite atingido)
+      {/* Interface específica para auditório */}
+      {selectedEquipment === 'auditorium' && (
+        <div className="space-y-4">
+          <div>
+            <Label className="text-base font-medium">Selecione a data para o auditório:</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal mt-2"
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {auditoriumDate ? format(auditoriumDate, "dd/MM/yyyy") : "Escolha uma data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={auditoriumDate}
+                  onSelect={setAuditoriumDate}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div>
+            <Label className="text-base font-medium">Observação (obrigatória):</Label>
+            <Textarea
+              placeholder="Descreva o motivo da reserva, se precisará de equipamentos, apoio técnico, etc. (máximo 600 caracteres)"
+              value={observation}
+              onChange={(e) => setObservation(e.target.value)}
+              maxLength={600}
+              className="mt-2"
+              rows={4}
+            />
+            <div className="text-sm text-muted-foreground mt-1">
+              {observation.length}/600 caracteres
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interface para equipamentos normais */}
+      {selectedEquipment && selectedEquipment !== 'auditorium' && (
+        <div>
+          <Label className="text-base font-medium">Data disponível para reserva:</Label>
+          <div className="mt-3 space-y-3">
+            {availableDates.map(({ date, label, isToday }) => (
+              <Card 
+                key={date} 
+                className={`cursor-pointer transition-colors ${
+                  selectedDate === date ? 'ring-2 ring-primary' : ''
+                }`}
+                onClick={() => setSelectedDate(date)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="radio"
+                        name="date"
+                        value={date}
+                        checked={selectedDate === date}
+                        onChange={() => {}} // Controlled by card click
+                        className="radio pointer-events-none"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          <span className="font-medium capitalize">{label}</span>
+                          {!isToday && (
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              Próximo dia útil
                             </span>
                           )}
                         </div>
-                      )}
+                        {selectedEquipment && selectedDate === date && (
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {hasUserReservation(date, selectedEquipment) ? (
+                              <span className="text-amber-600 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Você já tem uma reserva de {getEquipmentLabel(selectedEquipment)}
+                              </span>
+                            ) : isAvailable(date, selectedEquipment) ? (
+                              <span className="text-green-600 flex items-center gap-1">
+                                ✓ Disponível ({getAvailabilityForDate(date, selectedEquipment)} unidades restantes)
+                              </span>
+                            ) : (
+                              <span className="text-destructive flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Indisponível (limite atingido)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        
-        {!availableDates[0].isToday && (
-          <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded">
-            <strong>Observação:</strong> Como hoje é fim de semana, a data disponível é o próximo dia útil (segunda-feira).
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        )}
-        
-        {selectedDate && userReservations[selectedDate]?.length > 0 && (
-          <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <strong className="text-green-800 text-sm">Suas reservas para este dia:</strong>
+          
+          {!availableDates[0].isToday && (
+            <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded">
+              <strong>Observação:</strong> Como hoje é fim de semana, a data disponível é o próximo dia útil (segunda-feira).
             </div>
-            <div className="space-y-2">
-              {userReservations[selectedDate].map((reservation, index) => (
-                <div key={index} className="flex items-center justify-between bg-white rounded p-2 border">
-                  <div className="flex items-center gap-2">
-                    {getEquipmentIcon(reservation.equipment_type)}
-                    <span className="text-sm font-medium">{getEquipmentLabel(reservation.equipment_type)}</span>
+          )}
+          
+          {selectedDate && userReservations[selectedDate]?.length > 0 && (
+            <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <strong className="text-green-800 text-sm">Suas reservas para este dia:</strong>
+              </div>
+              <div className="space-y-2">
+                {userReservations[selectedDate].map((reservation, index) => (
+                  <div key={index} className="flex items-center justify-between bg-white rounded p-2 border">
+                    <div className="flex items-center gap-2">
+                      {getEquipmentIcon(reservation.equipment_type)}
+                      <span className="text-sm font-medium">{getEquipmentLabel(reservation.equipment_type)}</span>
+                    </div>
+                    <button
+                      onClick={() => cancelReservation(reservation.id)}
+                      className="flex items-center justify-center w-6 h-6 text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-full transition-colors border border-red-200"
+                      title="Cancelar reserva"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => cancelReservation(reservation.id)}
-                    className="flex items-center justify-center w-6 h-6 text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-full transition-colors border border-red-200"
-                    title="Cancelar reserva"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {selectedEquipment && selectedDate && hasUserReservation(selectedDate, selectedEquipment) && (
+      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedDate && hasUserReservation(selectedDate, selectedEquipment) && (
         <Alert variant="default" className="border-amber-200 bg-amber-50">
           <AlertCircle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
@@ -477,7 +608,7 @@ export function MakeReservation() {
         </Alert>
       )}
 
-      {selectedEquipment && selectedDate && !hasUserReservation(selectedDate, selectedEquipment) && !isAvailable(selectedDate, selectedEquipment) && (
+      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedDate && !hasUserReservation(selectedDate, selectedEquipment) && !isAvailable(selectedDate, selectedEquipment) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -488,66 +619,56 @@ export function MakeReservation() {
 
       <Button 
         type="submit" 
-        disabled={loading || !selectedEquipment || !selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)}
+        disabled={loading || !selectedEquipment || 
+          (selectedEquipment === 'auditorium' ? (!auditoriumDate || !observation.trim()) : 
+            (!selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)))}
         className="w-full"
       >
         {loading ? 'Reservando...' : 'Confirmar Reserva'}
       </Button>
 
-      <div className="mt-4">
-        <button
-          type="button"
-          onClick={() => setShowFAQ(!showFAQ)}
-          className="text-primary underline text-sm hover:text-primary/80 transition-colors flex items-center gap-1"
-        >
-          <HelpCircle className="h-4 w-4" />
-          Perguntas Frequentes
-        </button>
-        
-        <Collapsible open={showFAQ} onOpenChange={setShowFAQ}>
-          <CollapsibleContent className="mt-3">
-            <div className="border rounded-lg p-4 bg-muted/50">
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="item-1">
-                  <AccordionTrigger className="text-left">
-                    📅 Por que aparece apenas o dia de hoje para fazer a reserva?
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    As reservas são disponibilizadas diariamente para garantir que todos os professores tenham a chance de utilizar os equipamentos, como projetores e caixas de som.
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="item-2">
-                  <AccordionTrigger className="text-left">
-                    📚 Posso reservar para todas as minhas aulas do semestre?
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    No momento, não. É necessário acessar o site e realizar a reserva sempre que houver necessidade de uso do equipamento.
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="item-3">
-                  <AccordionTrigger className="text-left">
-                    🔌 O que fazer quando não houver mais projetores disponíveis para reserva?
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    Em casos essenciais, entre em contato diretamente com a Camila para verificar a possibilidade de disponibilização de um equipamento.
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="item-4">
-                  <AccordionTrigger className="text-left">
-                    📞 Tem alguma outra dúvida?
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    Fale com a gente pelo WhatsApp: <a href="https://wa.me/5551992885496" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">clique aqui</a>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
+      <Collapsible open={showFAQ} onOpenChange={setShowFAQ}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full">
+            <HelpCircle className="mr-2 h-4 w-4" />
+            Dúvidas Frequentes
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-2 mt-4">
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="item-1">
+              <AccordionTrigger>Como funciona o sistema de reservas?</AccordionTrigger>
+              <AccordionContent>
+                O sistema permite que você reserve projetores, caixas de som e o auditório da FTEC POA. Para equipamentos, você pode fazer 1 reserva de cada tipo por dia. Para o auditório, apenas uma reserva por dia é permitida por professor.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-2">
+              <AccordionTrigger>Posso cancelar minha reserva?</AccordionTrigger>
+              <AccordionContent>
+                Sim! Você pode cancelar suas reservas clicando no botão "X" ao lado da reserva. O cancelamento é imediato e libera o equipamento para outros professores.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-3">
+              <AccordionTrigger>Por que só posso reservar para hoje ou próximo dia útil?</AccordionTrigger>
+              <AccordionContent>
+                Para otimizar o uso dos equipamentos e evitar reservas esquecidas, o sistema permite reservas apenas para o dia atual (durante a semana) ou próxima segunda-feira (nos fins de semana).
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-4">
+              <AccordionTrigger>O que acontece se eu esquecer de pegar o equipamento?</AccordionTrigger>
+              <AccordionContent>
+                As reservas são automaticamente removidas do sistema no final do dia, liberando os equipamentos para o próximo dia útil. Não há penalidades, mas recomendamos responsabilidade no uso do sistema.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-5">
+              <AccordionTrigger>Como reservar o auditório?</AccordionTrigger>
+              <AccordionContent>
+                Para reservar o auditório, selecione "Auditório" na lista de equipamentos, escolha uma data no calendário e preencha a observação obrigatória descrevendo o motivo da reserva e necessidades específicas.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </CollapsibleContent>
+      </Collapsible>
     </form>
   );
 }

@@ -11,6 +11,7 @@ import { MyReservations } from '@/components/MyReservations';
 import { Profile } from '@/components/Profile';
 import { AdminPanel } from '@/components/AdminPanel';
 import { TodayReservations } from '@/components/TodayReservations';
+import { AuditoriumReservations } from '@/components/AuditoriumReservations';
 import { MobileSidebar } from '@/components/MobileSidebar';
 
 export default function Dashboard() {
@@ -148,6 +149,7 @@ export default function Dashboard() {
               </Card>
               
               <TodayReservations />
+              <AuditoriumReservations />
             </div>
           </TabsContent>
 

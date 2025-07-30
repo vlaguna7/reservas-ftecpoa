@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Projector, Speaker, Calendar, X } from 'lucide-react';
+import { Projector, Speaker, Calendar, X, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -167,6 +167,8 @@ export function TodayReservations() {
         return <Projector className="h-4 w-4" />;
       case 'speaker':
         return <Speaker className="h-4 w-4" />;
+      case 'auditorium':
+        return <Building className="h-4 w-4" />;
       default:
         return null;
     }
@@ -178,6 +180,8 @@ export function TodayReservations() {
         return 'Projetor';
       case 'speaker':
         return 'Caixa de Som';
+      case 'auditorium':
+        return 'Auditório';
       default:
         return '';
     }

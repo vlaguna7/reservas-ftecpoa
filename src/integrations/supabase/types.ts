@@ -73,6 +73,7 @@ export type Database = {
           created_at: string
           equipment_type: string
           id: string
+          observation: string | null
           reservation_date: string
           updated_at: string
           user_id: string
@@ -81,6 +82,7 @@ export type Database = {
           created_at?: string
           equipment_type: string
           id?: string
+          observation?: string | null
           reservation_date: string
           updated_at?: string
           user_id: string
@@ -89,6 +91,7 @@ export type Database = {
           created_at?: string
           equipment_type?: string
           id?: string
+          observation?: string | null
           reservation_date?: string
           updated_at?: string
           user_id?: string

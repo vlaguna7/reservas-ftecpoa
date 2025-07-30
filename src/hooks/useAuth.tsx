@@ -46,25 +46,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          fetchProfile(session.user.id);
-        } else if (!session) {
+        if (session?.user) {
+          // Fetch profile for all events where we have a user
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+            // Use setTimeout to avoid deadlock with async operations
+            setTimeout(() => {
+              fetchProfile(session.user.id);
+            }, 0);
+          }
+        } else {
           setProfile(null);
         }
+        
+        // Set loading to false after processing
         setLoading(false);
       }
     );
 
-    // THEN check for existing session
+    // THEN check for existing session - this handles page refreshes
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
       
       console.log('🔐 Initial session check:', session?.user?.id);
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
+      
+      // Only update state if this is different from what onAuthStateChange already set
+      if (session !== null) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          fetchProfile(session.user.id).finally(() => {
+            if (isMounted) setLoading(false);
+          });
+        } else {
+          setLoading(false);
+        }
+      } else {
+        // No session found, clear everything
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
       }
+    }).catch(() => {
+      // In case of error, stop loading
       setLoading(false);
     });
 
@@ -80,14 +105,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
         return;
       }
 
-      setProfile(data);
+      if (data) {
+        setProfile(data);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     }

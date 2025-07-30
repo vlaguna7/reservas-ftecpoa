@@ -333,27 +333,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN incorreto' } };
       }
 
-      // Try sign in with PIN as password first (new format)
+      // Sign in with PIN as password
       const tempEmail = `${profileData.institutional_user}@temp.com`;
+      console.log('🔐 Attempting login with:', { tempEmail, pinLength: pin.length });
       
-      let { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: tempEmail,
         password: pin
       });
 
-      // If PIN login fails, try with old password format
-      if (signInError) {
-        const oldFormatPassword = `FTEC_${profileData.institutional_user}_${pin}_2024!`;
-        const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-          email: tempEmail,
-          password: oldFormatPassword
-        });
-        
-        if (!retryError) {
-          data = retryData;
-          signInError = null;
-        }
-      }
+      console.log('🔐 Login result:', { 
+        success: !signInError, 
+        error: signInError?.message,
+        hasData: !!data 
+      });
 
       if (signInError) {
         // If error is about unconfirmed email, try to confirm and retry

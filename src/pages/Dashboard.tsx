@@ -134,16 +134,18 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <MakeReservation />
-                  <div className="mt-6 pt-4 border-t">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setActiveTab('my-reservations')}
-                      className="w-full flex items-center gap-2"
-                    >
-                      <List className="h-4 w-4" />
-                      Minhas Reservas
-                    </Button>
-                  </div>
+                  {isMobile && (
+                    <div className="mt-6 pt-4 border-t">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setActiveTab('my-reservations')}
+                        className="w-full flex items-center gap-2"
+                      >
+                        <List className="h-4 w-4" />
+                        Minhas Reservas
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               

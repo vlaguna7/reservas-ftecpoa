@@ -387,36 +387,35 @@ export function AdminPanel() {
   };
 
   const createNewLaboratory = async () => {
-    if (!newLaboratoryForm.laboratory_code.trim() || !newLaboratoryForm.laboratory_name.trim()) {
+    if (!newLaboratoryForm.laboratory_name.trim()) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Código e nome do laboratório são obrigatórios.",
+        title: "Campo obrigatório",
+        description: "Nome do laboratório é obrigatório.",
         variant: "destructive"
       });
       return;
     }
 
-    // Verificar se o código já existe
-    const { data: existingLab } = await supabase
-      .from('laboratory_settings')
-      .select('id')
-      .eq('laboratory_code', newLaboratoryForm.laboratory_code.trim())
-      .single();
+    // Gerar um código único baseado no nome
+    const generateLabCode = (name: string) => {
+      const normalized = name.toLowerCase()
+        .replace(/[àáâãäå]/g, 'a')
+        .replace(/[èéêë]/g, 'e')
+        .replace(/[ìíîï]/g, 'i')
+        .replace(/[òóôõö]/g, 'o')
+        .replace(/[ùúûü]/g, 'u')
+        .replace(/[ç]/g, 'c')
+        .replace(/[^a-z0-9]/g, '_');
+      return `laboratory_${normalized}`;
+    };
 
-    if (existingLab) {
-      toast({
-        title: "Código já existe",
-        description: "Já existe um laboratório com este código.",
-        variant: "destructive"
-      });
-      return;
-    }
+    const laboratoryCode = generateLabCode(newLaboratoryForm.laboratory_name.trim());
 
     try {
       const { error } = await supabase
         .from('laboratory_settings')
         .insert({
-          laboratory_code: newLaboratoryForm.laboratory_code.trim(),
+          laboratory_code: laboratoryCode,
           laboratory_name: newLaboratoryForm.laboratory_name.trim(),
           is_active: true
         });

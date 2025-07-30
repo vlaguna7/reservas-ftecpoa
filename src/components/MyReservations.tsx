@@ -136,8 +136,10 @@ export function MyReservations() {
         return 'Projetor';
       case 'speaker':
         return 'Caixa de Som';
+      case 'auditorium':
+        return 'Auditório';
       default:
-        return type;
+        return type.startsWith('laboratory_') ? 'Laboratório' : type;
     }
   };
 

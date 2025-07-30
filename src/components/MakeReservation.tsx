@@ -787,10 +787,10 @@ export function MakeReservation() {
           <div>
             <Label className="text-base font-medium">Selecione o laboratório:</Label>
             <Select value={selectedLaboratory} onValueChange={setSelectedLaboratory}>
-              <SelectTrigger className="mt-2">
+              <SelectTrigger className="mt-2 max-w-md">
                 <SelectValue placeholder={laboratoryOptions.length === 0 ? "Nenhum laboratório ativo disponível" : "Escolha um laboratório"} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60">
                 {laboratoryOptions.length === 0 ? (
                   <div className="p-2 text-center text-muted-foreground">
                     Nenhum laboratório ativo no momento

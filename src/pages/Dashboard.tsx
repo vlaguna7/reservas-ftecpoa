@@ -169,8 +169,8 @@ export default function Dashboard() {
         </Tabs>
       </main>
       
-      <footer className="border-t border-border bg-card mt-8">
-        <div className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
+      <footer className="border-t border-border bg-card mt-16">
+        <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
           Desenvolvido por: Vitor Souza - DTI POA ZN 🚀
         </div>
       </footer>

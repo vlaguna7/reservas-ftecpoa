@@ -111,12 +111,14 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={() => {
-                  console.log('Navegando para auth/dashboard');
-                  // Force immediate navigation without state delay
-                  if (user) {
-                    navigate('/dashboard', { replace: true });
+                  // Add a small delay for mobile to ensure smooth transition
+                  const isMobile = window.innerWidth < 768;
+                  if (isMobile && !user) {
+                    setTimeout(() => {
+                      navigate('/auth', { replace: true });
+                    }, 10);
                   } else {
-                    navigate('/auth', { replace: true });
+                    navigate(user ? '/dashboard' : '/auth', { replace: true });
                   }
                 }}
                 className="px-8 py-3 text-lg font-semibold transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg"

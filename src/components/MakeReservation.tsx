@@ -219,15 +219,44 @@ export function MakeReservation() {
     return userReservations[date]?.some(res => res.equipment_type === equipment) || false;
   };
 
+  const hasUserReservationAsync = async (date: string, equipment: string) => {
+    if (!user) return false;
+    
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('reservation_date', date)
+      .eq('equipment_type', equipment);
+    
+    if (error) {
+      console.error('Error checking user reservation:', error);
+      return false;
+    }
+    
+    return data.length > 0;
+  };
+
   const isAvailable = (date: string, equipment: string) => {
     const available = getAvailabilityForDate(date, equipment);
     const userAlreadyHasReservation = hasUserReservation(date, equipment);
     return available !== null && available > 0 && !userAlreadyHasReservation;
   };
 
-  const checkAuditoriumAvailability = (date: string) => {
-    const auditoriumAvailable = getAvailabilityForDate(date, 'auditorium');
-    return auditoriumAvailable !== null && auditoriumAvailable > 0;
+  const checkAuditoriumAvailability = async (date: string) => {
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('user_id')
+      .eq('reservation_date', date)
+      .eq('equipment_type', 'auditorium');
+
+    if (error) {
+      console.error('Error checking auditorium availability:', error);
+      return false;
+    }
+
+    // Se não há reservas, está disponível
+    return data.length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -255,22 +284,22 @@ export function MakeReservation() {
 
       // Verificar disponibilidade do auditório para a data selecionada
       const dateStr = format(auditoriumDate, 'yyyy-MM-dd');
-      const isAuditoriumAvailable = checkAuditoriumAvailability(dateStr);
-      const hasAuditoriumReservation = hasUserReservation(dateStr, 'auditorium');
-      
-      if (!isAuditoriumAvailable && !hasAuditoriumReservation) {
-        toast({
-          title: "Auditório indisponível",
-          description: "O auditório já está reservado para esta data.",
-          variant: "destructive"
-        });
-        return;
-      }
+      const hasAuditoriumReservation = await hasUserReservationAsync(dateStr, 'auditorium');
       
       if (hasAuditoriumReservation) {
         toast({
           title: "Reserva já existe",
           description: "Você já possui uma reserva do auditório para esta data.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const isAuditoriumAvailable = await checkAuditoriumAvailability(dateStr);
+      if (!isAuditoriumAvailable) {
+        toast({
+          title: "Auditório indisponível",
+          description: "O auditório já está reservado para esta data por outro professor.",
           variant: "destructive"
         });
         return;
@@ -286,22 +315,26 @@ export function MakeReservation() {
       }
     }
 
-    if (selectedEquipment !== 'auditorium' && hasUserReservation(selectedDate, selectedEquipment)) {
-      toast({
-        title: "Reserva já existe",
-        description: `Você já possui uma reserva de ${getEquipmentLabel(selectedEquipment)} para esta data.`,
-        variant: "destructive"
-      });
-      return;
-    }
+    if (selectedEquipment !== 'auditorium') {
+      const hasReservation = await hasUserReservationAsync(selectedDate, selectedEquipment);
+      if (hasReservation) {
+        toast({
+          title: "Reserva já existe",
+          description: `Você já possui uma reserva de ${getEquipmentLabel(selectedEquipment)} para esta data.`,
+          variant: "destructive"
+        });
+        return;
+      }
 
-    if (selectedEquipment !== 'auditorium' && !isAvailable(selectedDate, selectedEquipment)) {
-      toast({
-        title: "Indisponível",
-        description: "Não há mais unidades disponíveis para esta data. Por favor, escolha outro dia.",
-        variant: "destructive"
-      });
-      return;
+      const available = getAvailabilityForDate(selectedDate, selectedEquipment);
+      if (available === null || available <= 0) {
+        toast({
+          title: "Indisponível",
+          description: "Não há mais unidades disponíveis para esta data. Por favor, escolha outro dia.",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     setLoading(true);
@@ -473,7 +506,11 @@ export function MakeReservation() {
                   mode="single"
                   selected={auditoriumDate}
                   onSelect={setAuditoriumDate}
-                  disabled={(date) => date < new Date()}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date < today;
+                  }}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />

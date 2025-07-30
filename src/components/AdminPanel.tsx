@@ -374,14 +374,34 @@ export function AdminPanel() {
 
   const deleteUser = async (userId: string, userName: string) => {
     try {
-      console.log('🗑️ Starting user deletion process for:', { userId, userName });
+      console.log('🗑️ Starting detailed user deletion for:', { userId, userName });
       
-      // Primeiro, deletar todas as reservas do usuário
+      // Verificar se o usuário existe antes da exclusão
+      const { data: userBeforeDelete, error: userCheckError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (userCheckError || !userBeforeDelete) {
+        console.error('❌ User not found before deletion:', userCheckError);
+        toast({
+          title: "Usuário não encontrado",
+          description: "O usuário não existe ou já foi excluído.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('✅ User found before deletion:', userBeforeDelete);
+
+      // Step 1: Delete all user reservations
       console.log('🗑️ Step 1: Deleting user reservations...');
-      const { error: reservationsError } = await supabase
+      const { data: deletedReservations, error: reservationsError } = await supabase
         .from('reservations')
         .delete()
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select(); // Return deleted rows for confirmation
 
       if (reservationsError) {
         console.error('❌ Error deleting reservations:', reservationsError);
@@ -392,61 +412,94 @@ export function AdminPanel() {
         });
         return;
       }
-      console.log('✅ Reservations deleted successfully');
 
-      // Segundo, deletar o perfil
+      console.log(`✅ Deleted ${deletedReservations?.length || 0} reservations:`, deletedReservations);
+
+      // Step 2: Delete the user profile
       console.log('🗑️ Step 2: Deleting user profile...');
-      const { error: profileError } = await supabase
+      const { data: deletedProfile, error: profileError } = await supabase
         .from('profiles')
         .delete()
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select(); // Return deleted rows for confirmation
 
       if (profileError) {
         console.error('❌ Error deleting profile:', profileError);
         toast({
-          title: "Erro ao excluir usuário",
-          description: profileError.message,
+          title: "Erro ao excluir perfil",
+          description: `Erro detalhado: ${profileError.message}. Code: ${profileError.code}`,
           variant: "destructive"
         });
         return;
       }
-      console.log('✅ Profile deleted successfully');
 
-      // Terceiro, deletar o usuário do sistema de autenticação
-      console.log('🗑️ Step 3: Deleting auth user...');
+      if (!deletedProfile || deletedProfile.length === 0) {
+        console.error('❌ No profile was deleted. This might indicate RLS policy issues.');
+        toast({
+          title: "Erro na exclusão",
+          description: "Nenhum perfil foi excluído. Pode ser um problema de permissões.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('✅ Successfully deleted profile:', deletedProfile[0]);
+
+      // Step 3: Delete from auth system
+      console.log('🗑️ Step 3: Deleting from auth system...');
       try {
-        const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId);
+        const { data: authDeleteResult, error: authDeleteError } = await supabase.auth.admin.deleteUser(userId);
         
         if (authDeleteError) {
-          console.warn('⚠️ Warning: Could not delete auth user:', authDeleteError.message);
-          // Não bloquear o processo se a exclusão do auth falhar
+          console.warn('⚠️ Warning deleting auth user:', authDeleteError.message);
+          // Don't fail the entire process for auth deletion issues
         } else {
-          console.log('✅ Auth user deleted successfully');
+          console.log('✅ Successfully deleted from auth system:', authDeleteResult);
         }
-      } catch (authError) {
-        console.warn('⚠️ Warning: Exception deleting auth user:', authError);
-        // Não bloquear o processo se a exclusão do auth falhar
+      } catch (authException) {
+        console.warn('⚠️ Exception during auth deletion:', authException);
+        // Don't fail the entire process
       }
-      
+
+      // Step 4: Verify deletion
+      console.log('🔍 Step 4: Verifying deletion...');
+      const { data: verifyProfile, error: verifyError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (verifyProfile) {
+        console.error('❌ Profile still exists after deletion!', verifyProfile);
+        toast({
+          title: "Erro na verificação",
+          description: "O perfil ainda existe após a tentativa de exclusão.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('✅ Deletion verified - profile no longer exists');
+
       toast({
-        title: "Usuário excluído!",
+        title: "Usuário excluído com sucesso!",
         description: `${userName} foi removido completamente do sistema.`
       });
       
-      console.log('✅ User deletion process completed successfully');
+      console.log('🎉 User deletion process completed successfully');
       
-      // Recarregar dados
+      // Reload all data to refresh the UI
       await Promise.all([
         fetchAllUsers(),
         fetchSystemStats(),
         fetchAllReservations()
       ]);
       
-    } catch (error) {
-      console.error('❌ Error in deleteUser:', error);
+    } catch (exception) {
+      console.error('❌ Exception in deleteUser:', exception);
       toast({
-        title: "Erro ao excluir usuário",
-        description: "Erro interno. Tente novamente.",
+        title: "Erro crítico na exclusão",
+        description: `Erro interno: ${exception.message}`,
         variant: "destructive"
       });
     }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +29,9 @@ export function Profile() {
     setLoading(true);
 
     try {
-      // Handle PIN change separately if provided
+      console.log('🔐 Starting profile save process...');
+
+      // Handle PIN change if provided
       if (formData.newPin || formData.confirmPin) {
         if (!validatePin(formData.newPin)) {
           toast({
@@ -50,27 +53,76 @@ export function Profile() {
           return;
         }
 
-        console.log('🔐 Changing PIN for user:', profile.institutional_user);
+        console.log('🔐 Updating PIN for user:', profile.institutional_user);
         
-        // Use resetUserPin to update both profile hash and auth password
-        const { error: pinError } = await resetUserPin(profile.institutional_user, formData.newPin);
-        
-        if (pinError) {
-          console.error('❌ Error changing PIN:', pinError);
+        try {
+          // Hash the new PIN
+          const bcrypt = await import('bcryptjs');
+          const newPinHash = await bcrypt.hash(formData.newPin, 10);
+          
+          // Update PIN hash in profiles table using direct supabase call
+          const { error: pinHashError } = await supabase
+            .from('profiles')
+            .update({ pin_hash: newPinHash })
+            .eq('user_id', profile.user_id);
+          
+          if (pinHashError) {
+            console.error('❌ Error updating PIN hash:', pinHashError);
+            toast({
+              title: "Erro ao alterar PIN",
+              description: `Erro na base de dados: ${pinHashError.message}`,
+              variant: "destructive"
+            });
+            setLoading(false);
+            return;
+          }
+
+          console.log('✅ PIN hash updated in profiles table');
+
+          // Try to update password in Auth system using edge function
+          try {
+            const { error: authUpdateError } = await supabase.functions.invoke('update-user-password', {
+              body: { 
+                userId: profile.user_id, 
+                newPassword: formData.newPin 
+              }
+            });
+
+            if (authUpdateError) {
+              console.warn('⚠️ Auth password update failed:', authUpdateError);
+              // Don't fail the entire process - the hash was updated successfully
+              toast({
+                title: "PIN parcialmente atualizado",
+                description: "PIN atualizado na base de dados. Você pode precisar fazer logout/login.",
+                variant: "default"
+              });
+            } else {
+              console.log('✅ Auth password updated successfully');
+              toast({
+                title: "PIN alterado com sucesso!",
+                description: "Seu PIN foi atualizado completamente."
+              });
+            }
+          } catch (authError: any) {
+            console.warn('⚠️ Auth update exception:', authError);
+            // Don't fail - hash was updated
+            toast({
+              title: "PIN parcialmente atualizado",
+              description: "PIN atualizado na base de dados. Faça logout e login novamente.",
+              variant: "default"
+            });
+          }
+
+        } catch (pinError: any) {
+          console.error('❌ Error in PIN update process:', pinError);
           toast({
             title: "Erro ao alterar PIN",
-            description: pinError.message,
+            description: `Erro interno: ${pinError.message}`,
             variant: "destructive"
           });
           setLoading(false);
           return;
         }
-
-        console.log('✅ PIN changed successfully');
-        toast({
-          title: "PIN alterado!",
-          description: "Seu PIN foi atualizado com sucesso."
-        });
       }
 
       // Handle other profile updates (name, institutional_user)
@@ -100,10 +152,13 @@ export function Profile() {
         }
 
         console.log('✅ Profile updated successfully');
-        toast({
-          title: "Perfil atualizado!",
-          description: "Suas informações foram salvas com sucesso."
-        });
+        
+        if (!formData.newPin) {
+          toast({
+            title: "Perfil atualizado!",
+            description: "Suas informações foram salvas com sucesso."
+          });
+        }
       }
 
       if (!formData.newPin && !hasOtherUpdates) {

@@ -159,8 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, ''); // Remove accents
 
-      // Use institutional domain to avoid Google alerts
-      const institutionalEmail = `${normalizedUser}@institucional.ftec.edu.br`;
+      // Use a valid domain for email (required by Supabase)
+      const tempEmail = `${normalizedUser}@ftecpoa.com`;
 
       // First, clean up any orphaned profiles (profiles without valid auth users)
       console.log('🧹 Checking for orphaned profiles...');
@@ -206,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const strongPassword = `FTEC_${normalizedUser}_${pin}_2024!`;
       
       const { data, error: authError } = await supabase.auth.signUp({
-        email: institutionalEmail,
+        email: tempEmail,
         password: strongPassword,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
@@ -331,12 +331,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN incorreto' } };
       }
 
-      // Sign in with institutional credentials - using institutional domain
-      const institutionalEmail = `${profileData.institutional_user}@institucional.ftec.edu.br`;
+      // Sign in with temporary email credentials
+      const tempEmail = `${profileData.institutional_user}@ftecpoa.com`;
       const strongPassword = `FTEC_${profileData.institutional_user}_${pin}_2024!`;
       
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: institutionalEmail,
+        email: tempEmail,
         password: strongPassword
       });
 
@@ -357,7 +357,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             // Try sign in again with same credentials
             const { error: retryError } = await supabase.auth.signInWithPassword({
-              email: institutionalEmail,
+              email: tempEmail,
               password: strongPassword
             });
             

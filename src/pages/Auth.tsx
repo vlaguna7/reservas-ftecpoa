@@ -130,7 +130,7 @@ export default function Auth() {
           </div>
           <CardTitle className="text-2xl">Sistema de Reservas</CardTitle>
           <CardDescription>
-            Primeira vez? Crie seu cadastro primeiro!
+            É sua primeira vez aqui? Cadastre-se antes de continuar
           </CardDescription>
         </CardHeader>
         <CardContent>

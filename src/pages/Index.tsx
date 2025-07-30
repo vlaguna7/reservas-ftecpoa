@@ -10,12 +10,8 @@ const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && user) {
-      console.log('User authenticated, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, loading, navigate]);
+  // Usuários autenticados podem acessar a página inicial normalmente
+  // O redirecionamento para dashboard só acontece quando clicam no botão
 
   if (loading) {
     return (
@@ -114,10 +110,10 @@ const Index = () => {
             <CardContent>
               <Button 
                 size="lg" 
-                onClick={() => navigate('/auth')}
+                onClick={() => navigate(user ? '/dashboard' : '/auth')}
                 className="px-8 transition-all duration-300 hover:scale-105"
               >
-                Entrar no Sistema
+                {user ? 'Acessar Sistema' : 'Entrar no Sistema'}
               </Button>
             </CardContent>
           </Card>

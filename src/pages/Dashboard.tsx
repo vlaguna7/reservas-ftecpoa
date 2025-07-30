@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,9 +11,12 @@ import { MyReservations } from '@/components/MyReservations';
 import { Profile } from '@/components/Profile';
 import { AdminPanel } from '@/components/AdminPanel';
 import { TodayReservations } from '@/components/TodayReservations';
+import { MobileSidebar } from '@/components/MobileSidebar';
 
 export default function Dashboard() {
   const { user, profile, loading, signOut } = useAuth();
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState('reservations');
 
   if (loading) {
     return (
@@ -40,28 +45,40 @@ export default function Dashboard() {
               )}
             </p>
           </div>
-          <Button variant="outline" onClick={signOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            {isMobile && (
+              <MobileSidebar 
+                onNavigate={setActiveTab} 
+                currentSection={activeTab}
+              />
+            )}
+            <Button variant="outline" onClick={signOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="reservations" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} ${isMobile ? 'md:hidden' : ''}`}>
             <TabsTrigger value="reservations" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               Fazer Reserva
             </TabsTrigger>
-            <TabsTrigger value="my-reservations" className="flex items-center gap-2">
-              <List className="h-4 w-4" />
-              Minhas Reservas
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Meu Perfil
-            </TabsTrigger>
+            {!isMobile && (
+              <>
+                <TabsTrigger value="my-reservations" className="flex items-center gap-2">
+                  <List className="h-4 w-4" />
+                  Minhas Reservas
+                </TabsTrigger>
+                <TabsTrigger value="profile" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Meu Perfil
+                </TabsTrigger>
+              </>
+            )}
             {profile.is_admin && (
               <TabsTrigger value="admin" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />

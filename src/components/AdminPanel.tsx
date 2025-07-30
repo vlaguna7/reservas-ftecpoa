@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Settings, Users, Calendar, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus } from 'lucide-react';
+import { Settings, Users, Calendar, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -75,10 +75,18 @@ interface SystemStats {
   speakerReservations: number;
 }
 
+interface LaboratorySetting {
+  id: string;
+  laboratory_code: string;
+  laboratory_name: string;
+  is_active: boolean;
+}
+
 export function AdminPanel() {
   const [equipmentSettings, setEquipmentSettings] = useState<EquipmentSettings | null>(null);
   const [reservations, setReservations] = useState<ReservationWithProfile[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [laboratorySettings, setLaboratorySettings] = useState<LaboratorySetting[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
@@ -99,6 +107,7 @@ export function AdminPanel() {
     fetchEquipmentSettings();
     fetchAllReservations();
     fetchAllUsers();
+    fetchLaboratorySettings();
     fetchSystemStats();
   }, []);
 
@@ -173,6 +182,20 @@ export function AdminPanel() {
     }
 
     setUsers(data || []);
+  };
+
+  const fetchLaboratorySettings = async () => {
+    const { data, error } = await supabase
+      .from('laboratory_settings')
+      .select('*')
+      .order('laboratory_name', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching laboratory settings:', error);
+      return;
+    }
+
+    setLaboratorySettings(data || []);
   };
 
   const fetchSystemStats = async () => {
@@ -273,6 +296,38 @@ export function AdminPanel() {
       console.error('Exception in toggleUserAdmin:', error);
       toast({
         title: "Erro ao alterar permissão",
+        description: "Erro interno. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleLaboratoryStatus = async (laboratoryId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('laboratory_settings')
+        .update({ is_active: !currentStatus })
+        .eq('id', laboratoryId);
+
+      if (error) {
+        toast({
+          title: "Erro ao alterar status",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Status alterado!",
+        description: `Laboratório ${!currentStatus ? 'ativado' : 'inativado'} com sucesso.`
+      });
+
+      fetchLaboratorySettings();
+    } catch (error) {
+      console.error('Error toggling laboratory status:', error);
+      toast({
+        title: "Erro ao alterar status",
         description: "Erro interno. Tente novamente.",
         variant: "destructive"
       });
@@ -1222,6 +1277,108 @@ export function AdminPanel() {
                 ))}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Laboratory Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FlaskConical className="h-5 w-5" />
+            Gestão de Laboratórios
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Ativar ou inativar laboratórios para reserva
+          </p>
+        </CardHeader>
+        <CardContent>
+          {laboratorySettings.length === 0 ? (
+            <div className="text-center py-8">
+              <FlaskConical className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                Nenhum laboratório encontrado
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Carregando configurações dos laboratórios...
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {laboratorySettings.map((lab) => (
+                <Card key={lab.id} className={`transition-all duration-200 ${lab.is_active ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-sm mb-1">{lab.laboratory_name}</h3>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          {lab.laboratory_code}
+                        </p>
+                        <Badge variant={lab.is_active ? "default" : "secondary"} className="text-xs">
+                          {lab.is_active ? (
+                            <>
+                              <Power className="h-3 w-3 mr-1" />
+                              Ativo
+                            </>
+                          ) : (
+                            <>
+                              <PowerOff className="h-3 w-3 mr-1" />
+                              Inativo
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant={lab.is_active ? "destructive" : "default"}
+                            className="ml-3"
+                          >
+                            {lab.is_active ? (
+                              <>
+                                <PowerOff className="h-3 w-3 mr-1" />
+                                Inativar
+                              </>
+                            ) : (
+                              <>
+                                <Power className="h-3 w-3 mr-1" />
+                                Ativar
+                              </>
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {lab.is_active ? 'Inativar' : 'Ativar'} Laboratório
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja {lab.is_active ? 'inativar' : 'ativar'} o laboratório {lab.laboratory_name}?
+                              {lab.is_active && (
+                                <span className="block mt-2 text-yellow-600">
+                                  ⚠️ Ao inativar, novos agendamentos não poderão ser feitos para este laboratório.
+                                </span>
+                              )}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => toggleLaboratoryStatus(lab.id, lab.is_active)}
+                              className={lab.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
+                            >
+                              {lab.is_active ? 'Sim, inativar' : 'Sim, ativar'}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

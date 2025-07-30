@@ -35,6 +35,33 @@ export type Database = {
         }
         Relationships: []
       }
+      laboratory_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          laboratory_code: string
+          laboratory_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          laboratory_code: string
+          laboratory_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          laboratory_code?: string
+          laboratory_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

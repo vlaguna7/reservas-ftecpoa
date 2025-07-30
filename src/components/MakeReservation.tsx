@@ -49,6 +49,7 @@ export function MakeReservation() {
   const [needsSupplies, setNeedsSupplies] = useState<boolean | null>(null);
   const [laboratoryObservation, setLaboratoryObservation] = useState('');
   const [laboratoryError, setLaboratoryError] = useState('');
+  const [activeLaboratories, setActiveLaboratories] = useState<string[]>([]);
   
   const isMobile = useIsMobile();
 
@@ -67,7 +68,7 @@ export function MakeReservation() {
     { value: 'laboratory_103_lab', label: '103 - LAB' },
     { value: 'laboratory_105_lab_hidraulica', label: '105 - LAB HIDRÁULICA' },
     { value: 'laboratory_106_lab_informatica', label: '106 - LAB INFORMÁTICA' }
-  ];
+  ].filter(lab => activeLaboratories.includes(lab.value));
 
   const getAvailableDate = () => {
     const today = new Date();
@@ -101,6 +102,7 @@ export function MakeReservation() {
     fetchEquipmentSettings();
     fetchAvailability();
     fetchUserReservations();
+    fetchActiveLaboratories();
 
     // Configurar realtime updates para mudanças nas reservas
     const channelName = `make-reservation-${Date.now()}`;
@@ -124,6 +126,7 @@ export function MakeReservation() {
           setTimeout(() => {
             fetchAvailability();
             fetchUserReservations();
+            fetchActiveLaboratories(); // Atualizar laboratórios ativos também
           }, 100);
         }
       )
@@ -155,6 +158,21 @@ export function MakeReservation() {
     }
 
     setEquipmentSettings(data);
+  };
+
+  const fetchActiveLaboratories = async () => {
+    const { data, error } = await supabase
+      .from('laboratory_settings')
+      .select('laboratory_code')
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching active laboratories:', error);
+      return;
+    }
+
+    const activeCodes = data?.map(lab => lab.laboratory_code) || [];
+    setActiveLaboratories(activeCodes);
   };
 
   const fetchAvailability = async () => {
@@ -782,14 +800,20 @@ export function MakeReservation() {
             <Label className="text-base font-medium">Selecione o laboratório:</Label>
             <Select value={selectedLaboratory} onValueChange={setSelectedLaboratory}>
               <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Escolha um laboratório" />
+                <SelectValue placeholder={laboratoryOptions.length === 0 ? "Nenhum laboratório ativo disponível" : "Escolha um laboratório"} />
               </SelectTrigger>
               <SelectContent>
-                {laboratoryOptions.map((lab) => (
-                  <SelectItem key={lab.value} value={lab.value}>
-                    {lab.label}
-                  </SelectItem>
-                ))}
+                {laboratoryOptions.length === 0 ? (
+                  <div className="p-2 text-center text-muted-foreground">
+                    Nenhum laboratório ativo no momento
+                  </div>
+                ) : (
+                  laboratoryOptions.map((lab) => (
+                    <SelectItem key={lab.value} value={lab.value}>
+                      {lab.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

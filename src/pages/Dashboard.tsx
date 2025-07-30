@@ -33,16 +33,34 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <img 
-              src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
-              alt="FTEC Logo" 
-              className="h-12 object-contain"
-            />
-            <div>
-              <h1 className="text-2xl font-bold">Sistema de Reservas</h1>
-              <p className="text-muted-foreground">
+        <div className="container mx-auto px-4 py-4">
+          {/* Layout Mobile */}
+          <div className="md:hidden">
+            {/* Logo centralizada no topo */}
+            <div className="text-center mb-4">
+              <img 
+                src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
+                alt="FTEC Logo" 
+                className="h-10 object-contain mx-auto"
+              />
+            </div>
+            
+            {/* Linha com menu e botão sair */}
+            <div className="flex justify-between items-center mb-2">
+              <MobileSidebar 
+                onNavigate={setActiveTab} 
+                currentSection={activeTab}
+              />
+              <Button variant="outline" onClick={signOut} size="sm">
+                <LogOut className="h-4 w-4 mr-1" />
+                Sair
+              </Button>
+            </div>
+            
+            {/* Título e saudação */}
+            <div className="text-center">
+              <h1 className="text-lg font-bold">Sistema de Reservas</h1>
+              <p className="text-sm text-muted-foreground">
                 Olá, {profile.display_name}
                 {profile.is_admin && (
                   <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
@@ -52,13 +70,27 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {isMobile && (
-              <MobileSidebar 
-                onNavigate={setActiveTab} 
-                currentSection={activeTab}
+
+          {/* Layout Desktop */}
+          <div className="hidden md:flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <img 
+                src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
+                alt="FTEC Logo" 
+                className="h-12 object-contain"
               />
-            )}
+              <div>
+                <h1 className="text-2xl font-bold">Sistema de Reservas</h1>
+                <p className="text-muted-foreground">
+                  Olá, {profile.display_name}
+                  {profile.is_admin && (
+                    <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
+                      Admin
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
             <Button variant="outline" onClick={signOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Sair

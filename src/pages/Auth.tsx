@@ -108,8 +108,11 @@ export default function Auth() {
         description: "Você pode fazer login agora."
       });
       setSignupData({ displayName: '', institutionalUser: '', pin: '', confirmPin: '' });
-      // Redirecionar automaticamente para a aba de login
-      setActiveTab('login');
+      
+      // Redirecionar automaticamente para a aba de login com delay para mobile
+      setTimeout(() => {
+        setActiveTab('login');
+      }, 100);
     }
     
     setLoading(false);

@@ -27,17 +27,15 @@ export function AuditoriumReservations() {
 
   const fetchAuditoriumReservations = async () => {
     try {
-      // Buscar reservas do auditório dos próximos 30 dias
+      // Buscar todas as reservas do auditório a partir de hoje (sem limitação de data futura)
       const today = new Date();
-      const futureDate = new Date();
-      futureDate.setDate(today.getDate() + 30);
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
       const { data: reservationData, error: reservationError } = await supabase
         .from('reservations')
         .select('id, reservation_date, observation, user_id, created_at')
         .eq('equipment_type', 'auditorium')
-        .gte('reservation_date', format(today, 'yyyy-MM-dd'))
-        .lte('reservation_date', format(futureDate, 'yyyy-MM-dd'))
+        .gte('reservation_date', todayStr)
         .order('reservation_date', { ascending: true });
 
       if (reservationError) {
@@ -191,7 +189,7 @@ export function AuditoriumReservations() {
           Reservas do Auditório
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Próximas reservas do auditório nos próximos 30 dias
+          Todas as reservas futuras do auditório
         </p>
       </CardHeader>
       <CardContent>

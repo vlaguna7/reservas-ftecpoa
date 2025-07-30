@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,22 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+
+  // Force reflow/repaint to fix blank screen issue
+  useEffect(() => {
+    // Force immediate repaint
+    const forceRepaint = () => {
+      document.body.style.display = 'none';
+      document.body.offsetHeight; // Force reflow
+      document.body.style.display = '';
+    };
+    
+    // Execute immediately and after a small delay
+    forceRepaint();
+    const timer = setTimeout(forceRepaint, 10);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const [loginData, setLoginData] = useState({
     institutionalUser: '',

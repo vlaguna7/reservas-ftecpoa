@@ -338,29 +338,29 @@ export function MakeReservation() {
       // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          // Procura pelo botão "x" (cancelar) da reserva do professor atual
-          const cancelButtons = document.querySelectorAll('button[aria-label="Cancelar reserva"], button:has([data-lucide="x"])');
-          let targetButton = null;
-          
-          // Encontra o botão de cancelar da reserva recém-criada
-          cancelButtons.forEach(button => {
-            const reservationCard = button.closest('[class*="border"]');
-            if (reservationCard && reservationCard.textContent?.includes(profile.display_name)) {
-              targetButton = button;
-            }
+          // Procura diretamente pela reserva do auditório que contém o nome do professor
+          const auditoriumCard = Array.from(document.querySelectorAll('[class*="border rounded-lg"]')).find(card => {
+            return card.textContent?.includes(profile?.display_name || '') && 
+                   card.textContent?.includes('Auditório') || card.closest('[class*="space-y-3"]');
           });
           
-          if (targetButton) {
-            // Calcula posição com offset para mostrar bem o botão de cancelar
-            const elementTop = targetButton.getBoundingClientRect().top + window.pageYOffset;
-            const offsetPosition = elementTop - 100; // 100px de margem do topo para ver melhor
+          if (auditoriumCard) {
+            // Calcula posição com offset para mostrar bem a reserva
+            const elementTop = auditoriumCard.getBoundingClientRect().top + window.pageYOffset;
+            const offsetPosition = elementTop - 80; // 80px de margem do topo
             
             window.scrollTo({
               top: offsetPosition,
               behavior: 'smooth'
             });
+          } else {
+            // Fallback: scroll para a seção de reservas do auditório
+            const auditoriumSection = document.querySelector('h3:contains("Reservas do Auditório"), [class*="CardTitle"]:contains("Auditório")');
+            if (auditoriumSection) {
+              auditoriumSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
           }
-        }, 2000); // Aumenta o tempo para garantir que a reserva foi renderizada
+        }, 2500); // Tempo maior para garantir que a reserva foi renderizada
       }
 
       // Reset form
@@ -487,29 +487,29 @@ export function MakeReservation() {
       // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          // Procura pelo botão "x" (cancelar) da reserva do professor atual
-          const cancelButtons = document.querySelectorAll('button[aria-label="Cancelar reserva"], button:has([data-lucide="x"])');
-          let targetButton = null;
-          
-          // Encontra o botão de cancelar da reserva recém-criada
-          cancelButtons.forEach(button => {
-            const reservationCard = button.closest('[class*="border"]');
-            if (reservationCard && reservationCard.textContent?.includes(profile.display_name)) {
-              targetButton = button;
-            }
+          // Procura diretamente pela reserva de equipamento que contém o nome do professor
+          const todayReservationsCard = Array.from(document.querySelectorAll('[class*="border"], [class*="bg-"]')).find(card => {
+            return card.textContent?.includes(profile?.display_name || '') && 
+                   (card.textContent?.includes('Projetor') || card.textContent?.includes('Notebook') || card.textContent?.includes('Hoje'));
           });
           
-          if (targetButton) {
-            // Calcula posição com offset para mostrar bem o botão de cancelar
-            const elementTop = targetButton.getBoundingClientRect().top + window.pageYOffset;
-            const offsetPosition = elementTop - 100; // 100px de margem do topo para ver melhor
+          if (todayReservationsCard) {
+            // Calcula posição com offset para mostrar bem a reserva
+            const elementTop = todayReservationsCard.getBoundingClientRect().top + window.pageYOffset;
+            const offsetPosition = elementTop - 80; // 80px de margem do topo
             
             window.scrollTo({
               top: offsetPosition,
               behavior: 'smooth'
             });
+          } else {
+            // Fallback: scroll para a seção de reservas de hoje
+            const todaySection = document.querySelector('h3:contains("Reservas de Hoje"), [class*="CardTitle"]:contains("Hoje")');
+            if (todaySection) {
+              todaySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
           }
-        }, 2000); // Aumenta o tempo para garantir que a reserva foi renderizada
+        }, 2500); // Tempo maior para garantir que a reserva foi renderizada
       }
       
       setSelectedEquipment('');

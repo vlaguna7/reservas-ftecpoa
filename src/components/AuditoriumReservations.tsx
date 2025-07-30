@@ -238,9 +238,9 @@ export function AuditoriumReservations() {
                           </Button>
                         )}
                         {expandedItems.has(reservation.id) ? (
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-4 w-4 flex-shrink-0" />
                         ) : (
-                          <ChevronRight className="h-4 w-4" />
+                          <ChevronRight className="h-4 w-4 flex-shrink-0" />
                         )}
                       </div>
                     </Button>

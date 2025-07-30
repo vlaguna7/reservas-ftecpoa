@@ -73,13 +73,16 @@ export function MakeReservation() {
           schema: 'public',
           table: 'reservations'
         },
-        () => {
-          console.log('Reservation change detected, updating availability...');
+        (payload) => {
+          console.log('🔄 Reservation change detected:', payload);
+          console.log('🔄 Updating availability and user reservations...');
           fetchAvailability();
           fetchUserReservations();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -101,6 +104,7 @@ export function MakeReservation() {
   };
 
   const fetchAvailability = async () => {
+    console.log('📊 Fetching availability for dates:', availableDates.map(d => d.date));
     const dateList = availableDates.map(d => d.date);
     
     const { data, error } = await supabase
@@ -109,9 +113,11 @@ export function MakeReservation() {
       .in('reservation_date', dateList);
 
     if (error) {
-      console.error('Error fetching availability:', error);
+      console.error('❌ Error fetching availability:', error);
       return;
     }
+
+    console.log('📊 Reservation data:', data);
 
     const counts: Record<string, ReservationCount> = {};
     
@@ -129,6 +135,7 @@ export function MakeReservation() {
       }
     });
 
+    console.log('📊 Calculated counts:', counts);
     setAvailability(counts);
   };
 

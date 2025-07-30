@@ -205,17 +205,20 @@ export function TodayReservations() {
             {Object.entries(groupedReservations).map(([teacherName, teacherReservations]) => (
               <div key={teacherName} className="border rounded-lg p-4">
                 <h3 className="font-semibold text-lg mb-3">{teacherName}</h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-3">
                   {teacherReservations.map((reservation) => (
                     <div
                       key={reservation.id}
-                      className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm"
+                      className="flex items-center justify-between bg-primary/10 rounded-lg p-3"
                     >
-                      {getEquipmentIcon(reservation.equipment_type)}
-                      <span>{getEquipmentLabel(reservation.equipment_type)}</span>
-                      <span className="text-xs text-muted-foreground ml-1">
-                        ({format(new Date(reservation.created_at), 'HH:mm')})
-                      </span>
+                      <div className="flex items-center gap-2 text-primary">
+                        {getEquipmentIcon(reservation.equipment_type)}
+                        <span className="font-medium">{getEquipmentLabel(reservation.equipment_type)}</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <span className="font-medium">Horário da solicitação:</span>{" "}
+                        <span>{format(new Date(reservation.created_at), 'HH:mm')}</span>
+                      </div>
                     </div>
                   ))}
                 </div>

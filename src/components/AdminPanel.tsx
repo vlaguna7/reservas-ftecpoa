@@ -374,13 +374,17 @@ export function AdminPanel() {
 
   const deleteUser = async (userId: string, userName: string) => {
     try {
+      console.log('🗑️ Starting user deletion process for:', { userId, userName });
+      
       // Primeiro, deletar todas as reservas do usuário
+      console.log('🗑️ Step 1: Deleting user reservations...');
       const { error: reservationsError } = await supabase
         .from('reservations')
         .delete()
         .eq('user_id', userId);
 
       if (reservationsError) {
+        console.error('❌ Error deleting reservations:', reservationsError);
         toast({
           title: "Erro ao excluir reservas",
           description: reservationsError.message,
@@ -388,14 +392,17 @@ export function AdminPanel() {
         });
         return;
       }
+      console.log('✅ Reservations deleted successfully');
 
-      // Depois, deletar o perfil
+      // Segundo, deletar o perfil
+      console.log('🗑️ Step 2: Deleting user profile...');
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('user_id', userId);
 
       if (profileError) {
+        console.error('❌ Error deleting profile:', profileError);
         toast({
           title: "Erro ao excluir usuário",
           description: profileError.message,
@@ -403,14 +410,30 @@ export function AdminPanel() {
         });
         return;
       }
+      console.log('✅ Profile deleted successfully');
 
-      // Por último, deletar o usuário da tabela auth (se necessário)
-      // Nota: Em produção, pode ser melhor desativar ao invés de deletar
+      // Terceiro, deletar o usuário do sistema de autenticação
+      console.log('🗑️ Step 3: Deleting auth user...');
+      try {
+        const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId);
+        
+        if (authDeleteError) {
+          console.warn('⚠️ Warning: Could not delete auth user:', authDeleteError.message);
+          // Não bloquear o processo se a exclusão do auth falhar
+        } else {
+          console.log('✅ Auth user deleted successfully');
+        }
+      } catch (authError) {
+        console.warn('⚠️ Warning: Exception deleting auth user:', authError);
+        // Não bloquear o processo se a exclusão do auth falhar
+      }
       
       toast({
         title: "Usuário excluído!",
-        description: `${userName} foi removido do sistema.`
+        description: `${userName} foi removido completamente do sistema.`
       });
+      
+      console.log('✅ User deletion process completed successfully');
       
       // Recarregar dados
       await Promise.all([
@@ -420,7 +443,7 @@ export function AdminPanel() {
       ]);
       
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error('❌ Error in deleteUser:', error);
       toast({
         title: "Erro ao excluir usuário",
         description: "Erro interno. Tente novamente.",

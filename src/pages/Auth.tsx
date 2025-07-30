@@ -175,6 +175,17 @@ export default function Auth() {
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Entrar
                 </Button>
+                
+                <div className="text-center mt-3">
+                  <a 
+                    href="https://wa.me/5551992885496"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-muted-foreground underline hover:text-primary transition-colors"
+                  >
+                    esqueci meu pin
+                  </a>
+                </div>
               </form>
             </TabsContent>
             

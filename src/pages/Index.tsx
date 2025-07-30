@@ -118,16 +118,6 @@ const Index = () => {
               >
                 Entrar no Sistema
               </Button>
-              <div className="mt-3">
-                <a 
-                  href="https://wa.me/5551992885496"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-muted-foreground underline hover:text-primary transition-colors"
-                >
-                  esqueci meu pin
-                </a>
-              </div>
             </CardContent>
           </Card>
         </div>

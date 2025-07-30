@@ -225,30 +225,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               body: { userId: data.user.id }
             });
             console.log('✅ User auto-confirmed successfully');
-            
-            // Force a session refresh after confirmation for mobile compatibility
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Attempt to sign in immediately after signup for mobile
-            const safeEmailUser = normalizedUser
-              .toLowerCase()
-              .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '') // Remove accents
-              .replace(/[^a-z0-9.]/g, ''); // Keep only letters, numbers, and dots
-            const tempEmail = `${safeEmailUser}@temp.com`;
-            
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-              email: tempEmail,
-              password: normalizedUser + pin
-            });
-            
-            if (signInError) {
-              console.warn('Auto sign-in after signup failed:', signInError);
-              // Continue anyway, user can manually log in
-            } else {
-              console.log('✅ Auto sign-in after signup successful');
-            }
-            
           } catch (confirmError) {
             console.warn('Auto-confirm failed, but continuing:', confirmError);
           }

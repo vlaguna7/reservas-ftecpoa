@@ -241,11 +241,6 @@ export function MakeReservation() {
       });
       setSelectedEquipment('');
       setSelectedDate('');
-      // Aguardar um pouco antes de atualizar para garantir que a inserção foi processada
-      setTimeout(() => {
-        fetchAvailability();
-        fetchUserReservations();
-      }, 500);
     }
 
     setLoading(false);

@@ -37,6 +37,8 @@ export function MakeReservation() {
   const [loading, setLoading] = useState(false);
   const [showFAQ, setShowFAQ] = useState(false);
   const [auditoriumDate, setAuditoriumDate] = useState<Date | undefined>();
+  const [auditoriumObservation, setAuditoriumObservation] = useState('');
+  const [auditoriumError, setAuditoriumError] = useState('');
   const [observation, setObservation] = useState('');
 
   const getAvailableDate = () => {
@@ -259,60 +261,80 @@ export function MakeReservation() {
     return data.length === 0;
   };
 
+  const confirmAuditoriumReservation = async () => {
+    if (!auditoriumDate || !auditoriumObservation.trim()) {
+      setAuditoriumError('Por favor, selecione uma data e adicione uma observação.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const dateStr = format(auditoriumDate, 'yyyy-MM-dd');
+      
+      // Verificar se já existe reserva para esta data
+      const { data: existingReservations, error: checkError } = await supabase
+        .from('reservations')
+        .select('id')
+        .eq('equipment_type', 'auditorium')
+        .eq('reservation_date', dateStr);
+
+      if (checkError) {
+        throw checkError;
+      }
+
+      if (existingReservations && existingReservations.length > 0) {
+        setAuditoriumError('Atenção: o auditório já está reservado para esta data. Por favor, selecione outro dia disponível.');
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('reservations')
+        .insert({
+          user_id: user.id,
+          equipment_type: 'auditorium',
+          reservation_date: dateStr,
+          observation: auditoriumObservation.trim()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Reserva confirmada!",
+        description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })}.`
+      });
+
+      // Reset form
+      setAuditoriumDate(undefined);
+      setAuditoriumObservation('');
+      setAuditoriumError('');
+    } catch (error: any) {
+      console.error('Error creating auditorium reservation:', error);
+      setAuditoriumError(error.message || 'Erro ao criar reserva. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Para auditório, validar data e observação
+    // Para auditório, usar função específica
     if (selectedEquipment === 'auditorium') {
-      if (!auditoriumDate || !observation.trim()) {
-        toast({
-          title: "Campos obrigatórios",
-          description: "Por favor, selecione a data e preencha a observação para reserva do auditório.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (observation.length > 600) {
-        toast({
-          title: "Observação muito longa",
-          description: "A observação deve ter no máximo 600 caracteres.",
-          variant: "destructive"
-        });
-        return;
-      }
+      await confirmAuditoriumReservation();
+      return;
+    }
 
-      // Verificar disponibilidade do auditório para a data selecionada
-      const dateStr = format(auditoriumDate, 'yyyy-MM-dd');
-      const hasAuditoriumReservation = await hasUserReservationAsync(dateStr, 'auditorium');
-      
-      if (hasAuditoriumReservation) {
-        toast({
-          title: "Reserva já existe",
-          description: "Você já possui uma reserva do auditório para esta data.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      const isAuditoriumAvailable = await checkAuditoriumAvailability(dateStr);
-      if (!isAuditoriumAvailable) {
-        toast({
-          title: "Auditório indisponível",
-          description: "O auditório já está reservado para esta data por outro professor.",
-          variant: "destructive"
-        });
-        return;
-      }
-    } else {
-      if (!selectedEquipment || !selectedDate) {
-        toast({
-          title: "Campos obrigatórios",
-          description: "Por favor, selecione o equipamento e a data.",
-          variant: "destructive"
-        });
-        return;
-      }
+    if (!selectedEquipment || !selectedDate) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, selecione o equipamento e a data.",
+        variant: "destructive"
+      });
+      return;
     }
 
     if (selectedEquipment !== 'auditorium') {
@@ -348,8 +370,8 @@ export function MakeReservation() {
       reservation_date: finalDate
     };
 
-    if (selectedEquipment === 'auditorium' || (observation && observation.trim())) {
-      reservationData.observation = observation.trim() || null;
+    if (observation && observation.trim()) {
+      reservationData.observation = observation.trim();
     }
 
     const { error } = await supabase
@@ -408,6 +430,7 @@ export function MakeReservation() {
       setSelectedEquipment('');
       setSelectedDate('');
       setAuditoriumDate(undefined);
+      setAuditoriumObservation('');
       setObservation('');
     }
 
@@ -505,7 +528,19 @@ export function MakeReservation() {
                 <CalendarComponent
                   mode="single"
                   selected={auditoriumDate}
-                  onSelect={setAuditoriumDate}
+                  onSelect={(date) => {
+                    setAuditoriumDate(date);
+                    setAuditoriumError(''); // Limpar erro ao selecionar nova data
+                    // Fechar automaticamente o popover após seleção
+                    if (date) {
+                      setTimeout(() => {
+                        const closeButton = document.querySelector('[data-state="open"]');
+                        if (closeButton) {
+                          (closeButton as HTMLElement).click();
+                        }
+                      }, 100);
+                    }
+                  }}
                   disabled={(date) => {
                     // Permitir seleção de hoje em diante
                     const today = new Date();
@@ -524,15 +559,24 @@ export function MakeReservation() {
             <Label className="text-base font-medium">Observação (obrigatória):</Label>
             <Textarea
               placeholder="Descreva o motivo da reserva, se precisará de equipamentos, apoio técnico, etc. (máximo 600 caracteres)"
-              value={observation}
-              onChange={(e) => setObservation(e.target.value)}
+              value={auditoriumObservation}
+              onChange={(e) => {
+                setAuditoriumObservation(e.target.value);
+                setAuditoriumError(''); // Limpar erro ao digitar
+              }}
               maxLength={600}
               className="mt-2"
               rows={4}
             />
             <div className="text-sm text-muted-foreground mt-1">
-              {observation.length}/600 caracteres
+              {auditoriumObservation.length}/600 caracteres
             </div>
+            {auditoriumError && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{auditoriumError}</AlertDescription>
+              </Alert>
+            )}
           </div>
         </div>
       )}
@@ -652,7 +696,7 @@ export function MakeReservation() {
       <Button 
         type="submit" 
         disabled={loading || !selectedEquipment || 
-          (selectedEquipment === 'auditorium' ? (!auditoriumDate || !observation.trim()) : 
+          (selectedEquipment === 'auditorium' ? (!auditoriumDate || !auditoriumObservation.trim()) : 
             (!selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)))}
         className="w-full"
       >

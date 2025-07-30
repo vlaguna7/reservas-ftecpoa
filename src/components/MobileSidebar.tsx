@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, List, User, Calendar } from 'lucide-react';
+import { Menu, X, List, User, Calendar, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -12,9 +12,10 @@ import {
 interface MobileSidebarProps {
   onNavigate: (section: string) => void;
   currentSection: string;
+  isAdmin?: boolean;
 }
 
-export function MobileSidebar({ onNavigate, currentSection }: MobileSidebarProps) {
+export function MobileSidebar({ onNavigate, currentSection, isAdmin = false }: MobileSidebarProps) {
   const [open, setOpen] = useState(false);
 
   const menuItems = [
@@ -33,6 +34,11 @@ export function MobileSidebar({ onNavigate, currentSection }: MobileSidebarProps
       label: 'Meu Perfil',
       icon: User,
     },
+    ...(isAdmin ? [{
+      id: 'admin',
+      label: 'Admin',
+      icon: Settings,
+    }] : []),
   ];
 
   const handleNavigate = (section: string) => {

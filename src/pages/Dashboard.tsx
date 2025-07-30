@@ -61,6 +61,7 @@ export default function Dashboard() {
               <MobileSidebar 
                 onNavigate={setActiveTab} 
                 currentSection={activeTab}
+                isAdmin={profile.is_admin}
               />
               <Button variant="outline" onClick={signOut} size="sm">
                 <LogOut className="h-4 w-4 mr-1" />
@@ -130,7 +131,7 @@ export default function Dashboard() {
             {profile.is_admin && (
               <TabsTrigger value="admin" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
-                Administração
+                Admin
               </TabsTrigger>
             )}
           </TabsList>

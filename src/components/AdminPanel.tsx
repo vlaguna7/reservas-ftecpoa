@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Settings, Users, Calendar, Monitor, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus } from 'lucide-react';
+import { Settings, Users, Calendar, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -556,7 +556,7 @@ export function AdminPanel() {
   const getEquipmentIcon = (type: string) => {
     switch (type) {
       case 'projector':
-        return <Monitor className="h-4 w-4" />;
+        return <Projector className="h-4 w-4" />;
       case 'speaker':
         return <Speaker className="h-4 w-4" />;
       case 'both':
@@ -625,7 +625,7 @@ export function AdminPanel() {
                 />
               ) : (
                 <div className="p-2 bg-muted rounded-md flex items-center gap-2">
-                  <Monitor className="h-4 w-4" />
+                  <Projector className="h-4 w-4" />
                   {equipmentSettings?.projector_limit} unidades
                 </div>
               )}
@@ -861,7 +861,7 @@ export function AdminPanel() {
             
             <div className="p-4 bg-muted rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Monitor className="h-4 w-4 text-blue-600" />
+                <Projector className="h-4 w-4 text-blue-600" />
                 <span className="text-sm font-medium">Projetores Reservados</span>
               </div>
               <div className="text-2xl font-bold">{stats?.projectorReservations || 0}</div>

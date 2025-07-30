@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Monitor, Speaker, Trash2, CheckCircle } from 'lucide-react';
+import { Calendar, Projector, Speaker, Trash2, CheckCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -122,11 +122,11 @@ export function MyReservations() {
   const getEquipmentIcon = (type: string) => {
     switch (type) {
       case 'projector':
-        return <Monitor className="h-4 w-4" />;
+        return <Projector className="h-4 w-4" />;
       case 'speaker':
         return <Speaker className="h-4 w-4" />;
       default:
-        return <Monitor className="h-4 w-4" />;
+        return <Projector className="h-4 w-4" />;
     }
   };
 

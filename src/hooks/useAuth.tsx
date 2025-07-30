@@ -112,8 +112,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const bcrypt = await import('bcryptjs');
       const pinHash = await bcrypt.hash(pin, 10);
 
-      // Create user with temporary email - no email confirmation needed
-      const tempEmail = `${normalizedUser}@temp.com`;
+      // Create user with temporary email - normalize for valid email format
+      const safeEmailUser = normalizedUser
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^a-z0-9.]/g, ''); // Keep only letters, numbers, and dots
+      const tempEmail = `${safeEmailUser}@temp.com`;
       const { data, error: authError } = await supabase.auth.signUp({
         email: tempEmail,
         password: normalizedUser + pin,
@@ -193,8 +198,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN incorreto' } };
       }
 
-      // Sign in with temporary credentials - ignore email confirmation
-      const tempEmail = `${profileData.institutional_user}@temp.com`;
+      // Sign in with temporary credentials - normalize email format
+      const safeEmailUser = profileData.institutional_user
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^a-z0-9.]/g, ''); // Keep only letters, numbers, and dots
+      const tempEmail = `${safeEmailUser}@temp.com`;
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: tempEmail,
         password: profileData.institutional_user + pin

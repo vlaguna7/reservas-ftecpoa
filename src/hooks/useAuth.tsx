@@ -202,12 +202,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const bcrypt = await import('bcryptjs');
       const pinHash = await bcrypt.hash(pin, 10);
 
-      // Create user with institutional email and strong password
-      const strongPassword = `FTEC_${normalizedUser}_${pin}_2024!`;
-      
+      // Create user with PIN as password
       const { data, error: authError } = await supabase.auth.signUp({
         email: tempEmail,
-        password: strongPassword,
+        password: pin,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
@@ -331,13 +329,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN incorreto' } };
       }
 
-      // Sign in with temporary email credentials - use consistent domain
+      // Sign in with PIN as password
       const tempEmail = `${profileData.institutional_user}@temp.com`;
-      const strongPassword = `FTEC_${profileData.institutional_user}_${pin}_2024!`;
       
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: tempEmail,
-        password: strongPassword
+        password: pin
       });
 
       if (signInError) {
@@ -358,7 +355,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Try sign in again with same credentials
             const { error: retryError } = await supabase.auth.signInWithPassword({
               email: tempEmail,
-              password: strongPassword
+              password: pin
             });
             
             if (retryError) {

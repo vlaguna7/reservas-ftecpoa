@@ -57,12 +57,10 @@ export default function Auth() {
       toast({
         title: "Login realizado!",
         description: "Redirecionando para o sistema...",
-        duration: 1000, // 1 segundo
+        duration: 1000,
       });
-      // Force redirect after successful login
       setTimeout(() => {
         navigate('/dashboard');
-        window.scrollTo(0, 0); // Garantir que inicie no topo da página
         setLoading(false);
       }, 1000);
     }
@@ -111,7 +109,6 @@ export default function Auth() {
       });
       setSignupData({ displayName: '', institutionalUser: '', pin: '', confirmPin: '' });
       
-      // Redirecionar automaticamente para a aba de login com delay para mobile
       setTimeout(() => {
         setActiveTab('login');
       }, 100);

@@ -107,7 +107,7 @@ const Index = () => {
                 Acesso para Professores
               </CardTitle>
               <CardDescription className="mb-4 md:mb-8 text-base md:text-lg font-medium text-foreground">
-                Faça login com seu usuário institucional e PIN para acessar o sistema
+                Primeira vez? Crie seu cadastro primeiro!
               </CardDescription>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -118,6 +118,16 @@ const Index = () => {
               >
                 Entrar no Sistema
               </Button>
+              <div className="mt-3">
+                <a 
+                  href="https://wa.me/5551992885496"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground underline hover:text-primary transition-colors"
+                >
+                  esqueci meu pin
+                </a>
+              </div>
             </CardContent>
           </Card>
         </div>

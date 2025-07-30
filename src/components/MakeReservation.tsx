@@ -815,6 +815,15 @@ export function MakeReservation() {
                       onSelect={(date) => {
                         setLaboratoryDate(date);
                         setLaboratoryError('');
+                        // Fechar automaticamente o popover após seleção
+                        if (date) {
+                          setTimeout(() => {
+                            const closeButton = document.querySelector('[data-state="open"]');
+                            if (closeButton) {
+                              (closeButton as HTMLElement).click();
+                            }
+                          }, 100);
+                        }
                       }}
                       disabled={(date) => {
                         const today = new Date();

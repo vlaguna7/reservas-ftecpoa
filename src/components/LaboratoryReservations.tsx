@@ -2,36 +2,114 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { toast } from '@/hooks/use-toast';
+import { FlaskConical, Calendar, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronDown, ChevronRight, X, FlaskConical } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-interface Reservation {
+interface LaboratoryReservation {
   id: string;
-  user_id: string;
   reservation_date: string;
-  observation?: string;
+  observation: string;
+  created_at: string;
   equipment_type: string;
-  display_name: string;
+  user_profile: {
+    display_name: string;
+  };
 }
+
+// Lista dos laboratórios para conversão de nomes
+const laboratoryNames: Record<string, string> = {
+  'laboratory_08_npj_psico': '08 - NPJ/PSICO',
+  'laboratory_13_lab_informatica': '13 - LAB INFORMÁTICA',
+  'laboratory_15_lab_quimica': '15 - LAB QUÍMICA',
+  'laboratory_16_lab_informatica': '16 - LAB INFORMÁTICA',
+  'laboratory_17_lab_projetos': '17 - LAB PROJETOS',
+  'laboratory_18_lab': '18 - LAB',
+  'laboratory_19_lab': '19 - LAB',
+  'laboratory_20_lab_informatica': '20 - LAB INFORMÁTICA',
+  'laboratory_22_lab': '22 - LAB',
+  'laboratory_28_lab_eng': '28 - LAB ENG.',
+  'laboratory_103_lab': '103 - LAB',
+  'laboratory_105_lab_hidraulica': '105 - LAB HIDRÁULICA',
+  'laboratory_106_lab_informatica': '106 - LAB INFORMÁTICA'
+};
 
 export function LaboratoryReservations() {
   const { user, profile } = useAuth();
-  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [reservations, setReservations] = useState<LaboratoryReservation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const fetchLaboratoryReservations = async () => {
+    try {
+      // Buscar todas as reservas de laboratório a partir de hoje
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      // Lista dos valores válidos de laboratório
+      const laboratoryValues = Object.keys(laboratoryNames);
+
+      const { data: reservationData, error: reservationError } = await supabase
+        .from('reservations')
+        .select('id, reservation_date, observation, user_id, created_at, equipment_type')
+        .in('equipment_type', laboratoryValues)
+        .gte('reservation_date', todayStr)
+        .order('reservation_date', { ascending: true });
+
+      if (reservationError) {
+        console.error('Error fetching laboratory reservations:', reservationError);
+        return;
+      }
+
+      if (!reservationData || reservationData.length === 0) {
+        console.log('No laboratory reservations found');
+        setReservations([]);
+        return;
+      }
+
+      // Buscar perfis dos usuários
+      const userIds = reservationData.map(r => r.user_id);
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, display_name')
+        .in('user_id', userIds);
+
+      if (profileError) {
+        console.error('Error fetching profiles:', profileError);
+        return;
+      }
+
+      // Combinar dados
+      const profileMap = new Map(profileData?.map(p => [p.user_id, p]) || []);
+      const combinedData = reservationData.map(reservation => ({
+        id: reservation.id,
+        reservation_date: reservation.reservation_date,
+        observation: reservation.observation || '',
+        created_at: reservation.created_at,
+        equipment_type: reservation.equipment_type,
+        user_profile: {
+          display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
+        }
+      }));
+
+      console.log('Laboratory reservations loaded:', combinedData);
+      setReservations(combinedData);
+    } catch (error) {
+      console.error('Error fetching laboratory reservations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchReservations();
+    fetchLaboratoryReservations();
 
     // Configurar realtime updates
     const channelName = `laboratory-reservations-${Date.now()}`;
-    console.log('📡 LaboratoryReservations: Creating channel:', channelName);
     
     const channel = supabase
       .channel(channelName)
@@ -50,131 +128,74 @@ export function LaboratoryReservations() {
           
           if (newEquipmentType?.startsWith('laboratory_') || 
               oldEquipmentType?.startsWith('laboratory_')) {
-            fetchReservations();
+            setTimeout(() => {
+              fetchLaboratoryReservations();
+            }, 100);
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 LaboratoryReservations realtime status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
-  const fetchReservations = async () => {
-    setLoading(true);
-    
-    // Lista dos valores válidos de laboratório
-    const laboratoryValues = [
-      'laboratory_08_npj_psico',
-      'laboratory_13_lab_informatica', 
-      'laboratory_15_lab_quimica',
-      'laboratory_16_lab_informatica',
-      'laboratory_17_lab_projetos',
-      'laboratory_18_lab',
-      'laboratory_19_lab',
-      'laboratory_20_lab_informatica',
-      'laboratory_22_lab',
-      'laboratory_28_lab_eng',
-      'laboratory_103_lab',
-      'laboratory_105_lab_hidraulica',
-      'laboratory_106_lab_informatica'
-    ];
-    
-    const { data, error } = await supabase
-      .from('reservations')
-      .select(`
-        id,
-        user_id,
-        reservation_date,
-        observation,
-        equipment_type,
-        profiles!inner(display_name)
-      `)
-      .in('equipment_type', laboratoryValues)
-      .order('reservation_date', { ascending: true });
+  const cancelReservation = async (reservationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('reservations')
+        .delete()
+        .eq('id', reservationId);
 
-    if (error) {
-      console.error('Error fetching laboratory reservations:', error);
-      console.error('Query was:', 'SELECT with laboratory equipment types');
-      
-      // Se for um erro de dados não encontrados, não mostrar toast de erro
-      if (error.message?.includes('No rows found') || error.code === 'PGRST116') {
-        console.log('No laboratory reservations found, this is normal');
-        setReservations([]);
-        setLoading(false);
+      if (error) {
+        toast({
+          title: "Erro ao cancelar reserva",
+          description: error.message,
+          variant: "destructive"
+        });
         return;
       }
-      
+
       toast({
-        title: "Erro ao carregar reservas",
-        description: "Não foi possível carregar as reservas de laboratório.",
-        variant: "destructive"
+        title: "Reserva cancelada!",
+        description: "A reserva do laboratório foi cancelada com sucesso."
       });
-      setLoading(false);
-      return;
-    }
-
-    const formattedReservations: Reservation[] = data.map((reservation: any) => ({
-      id: reservation.id,
-      user_id: reservation.user_id,
-      reservation_date: reservation.reservation_date,
-      observation: reservation.observation,
-      equipment_type: reservation.equipment_type,
-      display_name: reservation.profiles.display_name
-    }));
-
-    setReservations(formattedReservations);
-    setLoading(false);
-  };
-
-  const getLaboratoryName = (equipmentType: string) => {
-    // Extrair o nome do laboratório do equipment_type
-    return equipmentType.replace('laboratory_', '').replace(/_/g, ' ').toUpperCase();
-  };
-
-  const cancelReservation = async (reservationId: string) => {
-    const { error } = await supabase
-      .from('reservations')
-      .delete()
-      .eq('id', reservationId);
-
-    if (error) {
+      
+      await fetchLaboratoryReservations();
+    } catch (error) {
+      console.error('Exception in cancelReservation:', error);
       toast({
         title: "Erro ao cancelar reserva",
-        description: error.message,
+        description: "Erro interno. Tente novamente.",
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Reserva cancelada",
-        description: "A reserva foi cancelada com sucesso."
-      });
-      fetchReservations();
     }
   };
 
-  const canCancelReservation = (reservation: Reservation) => {
-    return user && (reservation.user_id === user.id || profile?.is_admin);
+  const canUserCancelReservation = (reservation: LaboratoryReservation) => {
+    // Administradores podem cancelar qualquer reserva
+    if (profile?.is_admin) {
+      return true;
+    }
+    // Usuários normais só podem cancelar suas próprias reservas
+    return user && reservation.user_profile?.display_name === profile?.display_name;
   };
 
-  const getStatusBadge = (date: string) => {
-    const today = new Date();
-    const reservationDate = new Date(date);
-    
-    // Comparar apenas as datas, ignorando horário
-    today.setHours(0, 0, 0, 0);
-    reservationDate.setHours(0, 0, 0, 0);
-    
-    if (reservationDate.getTime() === today.getTime()) {
-      return <Badge variant="default">Hoje</Badge>;
-    } else if (reservationDate > today) {
-      return <Badge variant="secondary">Agendado</Badge>;
-    } else {
-      return <Badge variant="outline">Finalizado</Badge>;
-    }
+  const toggleExpanded = (reservationId: string) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(reservationId)) {
+        newSet.delete(reservationId);
+      } else {
+        newSet.add(reservationId);
+      }
+      return newSet;
+    });
+  };
+
+  const getLaboratoryDisplayName = (equipmentType: string) => {
+    return laboratoryNames[equipmentType] || equipmentType;
   };
 
   if (loading) {
@@ -187,8 +208,8 @@ export function LaboratoryReservations() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="text-center text-muted-foreground">
+            Carregando reservas de laboratórios...
           </div>
         </CardContent>
       </Card>
@@ -198,47 +219,59 @@ export function LaboratoryReservations() {
   return (
     <Card>
       <CardHeader>
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CollapsibleTrigger asChild>
-            <div className="flex items-center justify-between cursor-pointer">
-              <CardTitle className="flex items-center gap-2">
-                <FlaskConical className="h-5 w-5" />
-                Reservas de Laboratórios ({reservations.length})
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                {isOpen ? (
-                  <ChevronDown className="h-4 w-4 flex-shrink-0" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 flex-shrink-0" />
-                )}
-              </div>
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-3 pt-4">
-              {reservations.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">
-                  Nenhuma reserva de laboratório encontrada.
-                </p>
-              ) : (
-                reservations.map((reservation) => (
-                  <div key={reservation.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-semibold text-primary">
-                          {getLaboratoryName(reservation.equipment_type)}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {reservation.display_name}
-                        </p>
+        <CardTitle className="flex items-center gap-2">
+          <FlaskConical className="h-5 w-5" />
+          Reservas de Laboratórios
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Todas as reservas futuras de laboratórios
+        </p>
+      </CardHeader>
+      <CardContent>
+        {reservations.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            <FlaskConical className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Nenhuma reserva de laboratório encontrada</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {reservations.map((reservation) => (
+              <div key={reservation.id} className="border rounded-lg">
+                <Collapsible
+                  open={expandedItems.has(reservation.id)}
+                  onOpenChange={() => toggleExpanded(reservation.id)}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-between p-4 h-auto"
+                    >
+                      <div className="flex items-center gap-3 text-left">
+                        <FlaskConical className="h-4 w-4 text-primary" />
+                        <div>
+                          <div className="font-medium">
+                            {getLaboratoryDisplayName(reservation.equipment_type)}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(reservation.reservation_date + 'T12:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {reservation.user_profile.display_name}
+                          </div>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {getStatusBadge(reservation.reservation_date)}
-                        {canCancelReservation(reservation) && (
+                        {canUserCancelReservation(reservation) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground">
-                                <X className="h-4 w-4" />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-6 w-6"
+                                title="Cancelar reserva"
+                              >
+                                <X className="h-3 w-3" />
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -250,32 +283,44 @@ export function LaboratoryReservations() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Não</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => cancelReservation(reservation.id)}>
+                                <AlertDialogAction
+                                  onClick={() => cancelReservation(reservation.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
                                   Sim, cancelar
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
                         )}
+                        {expandedItems.has(reservation.id) ? (
+                          <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                        )}
+                      </div>
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-4 pb-4 border-t bg-muted/20">
+                      <div className="mt-3">
+                        <h4 className="font-medium text-sm mb-2">Observação:</h4>
+                        <div className="bg-white p-3 rounded border text-sm">
+                          {reservation.observation || 'Nenhuma observação fornecida.'}
+                        </div>
+                      </div>
+                      <div className="mt-3 text-xs text-muted-foreground">
+                        <span className="font-medium">Reserva feita em:</span>{" "}
+                        {format(new Date(reservation.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-sm">
-                        <strong>Data:</strong> {format(new Date(reservation.reservation_date), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                      {reservation.observation && (
-                        <p className="text-sm">
-                          <strong>Observação:</strong> {reservation.observation}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </CardHeader>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 }

@@ -338,12 +338,20 @@ export function MakeReservation() {
       // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          const reservationsSection = document.querySelector('[value="my-reservations"]');
-          if (reservationsSection) {
-            reservationsSection.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start' 
-            });
+          // Primeiro muda para a aba "Minhas Reservas"
+          const myReservationsTab = document.querySelector('[value="my-reservations"]');
+          if (myReservationsTab) {
+            (myReservationsTab as HTMLElement).click();
+            // Aguarda a mudança de aba e então faz scroll para o conteúdo
+            setTimeout(() => {
+              const myReservationsContent = document.querySelector('[data-state="active"][data-orientation="horizontal"]');
+              if (myReservationsContent) {
+                myReservationsContent.scrollIntoView({ 
+                  behavior: 'smooth', 
+                  block: 'start' 
+                });
+              }
+            }, 300);
           }
         }, 1500);
       }
@@ -472,12 +480,20 @@ export function MakeReservation() {
       // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          const reservationsSection = document.querySelector('[value="my-reservations"]');
-          if (reservationsSection) {
-            reservationsSection.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start' 
-            });
+          // Primeiro muda para a aba "Minhas Reservas"
+          const myReservationsTab = document.querySelector('[value="my-reservations"]');
+          if (myReservationsTab) {
+            (myReservationsTab as HTMLElement).click();
+            // Aguarda a mudança de aba e então faz scroll para o conteúdo
+            setTimeout(() => {
+              const myReservationsContent = document.querySelector('[data-state="active"][data-orientation="horizontal"]');
+              if (myReservationsContent) {
+                myReservationsContent.scrollIntoView({ 
+                  behavior: 'smooth', 
+                  block: 'start' 
+                });
+              }
+            }, 300);
           }
         }, 1500);
       }

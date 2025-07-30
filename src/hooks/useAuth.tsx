@@ -95,8 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (displayName: string, institutionalUser: string, pin: string) => {
     try {
-      // Normalize the institutional user (convert to lowercase for consistency)
-      const normalizedUser = institutionalUser.toLowerCase().trim();
+      // Normalize the institutional user (convert to lowercase for consistency, but preserve accents)
+      const normalizedUser = institutionalUser.trim();
 
       // Check if user already exists (case-insensitive)
       const { data: existingProfile } = await supabase

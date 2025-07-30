@@ -200,7 +200,7 @@ export default function Auth() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="signup-pin">PIN (6 dígitos)</Label>
+                  <Label htmlFor="signup-pin">Criar PIN (6 dígitos)</Label>
                   <Input
                     id="signup-pin"
                     type="password"

@@ -487,7 +487,7 @@ export function MakeReservation() {
                     📞 Tem alguma outra dúvida?
                   </AccordionTrigger>
                   <AccordionContent>
-                    Fale com a gente pelo WhatsApp: <a href="#" className="text-primary underline hover:text-primary/80">clique aqui</a>
+                    Fale com a gente pelo WhatsApp: <a href="https://wa.me/5551992885496" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">clique aqui</a>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

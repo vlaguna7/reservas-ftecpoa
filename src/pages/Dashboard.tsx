@@ -34,16 +34,23 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Sistema de Reservas</h1>
-            <p className="text-muted-foreground">
-              Olá, {profile.display_name}
-              {profile.is_admin && (
-                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
-                  Admin
-                </span>
-              )}
-            </p>
+          <div className="flex items-center gap-4">
+            <img 
+              src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
+              alt="FTEC Logo" 
+              className="h-12 object-contain"
+            />
+            <div>
+              <h1 className="text-2xl font-bold">Sistema de Reservas</h1>
+              <p className="text-muted-foreground">
+                Olá, {profile.display_name}
+                {profile.is_admin && (
+                  <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
+                    Admin
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {isMobile && (
@@ -131,6 +138,12 @@ export default function Dashboard() {
           )}
         </Tabs>
       </main>
+      
+      <footer className="border-t border-border bg-card mt-8">
+        <div className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
+          Desenvolvido por: Vitor Souza - DTI POA ZN 🚀
+        </div>
+      </footer>
     </div>
   );
 }

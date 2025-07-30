@@ -119,6 +119,10 @@ const Index = () => {
           </Card>
         </div>
       </div>
+      
+      <footer className="fixed bottom-0 left-0 right-0 text-center py-4 text-sm text-muted-foreground bg-background/80 backdrop-blur-sm border-t">
+        Desenvolvido por: Vitor Souza - DTI POA ZN 🚀
+      </footer>
     </div>
   );
 };

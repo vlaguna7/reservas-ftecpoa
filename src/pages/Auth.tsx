@@ -133,7 +133,7 @@ export default function Auth() {
                   <Input
                     id="institutional-user"
                     type="text"
-                    placeholder="usuário da ftec"
+                    placeholder="Usuário da Ftec"
                     value={loginData.institutionalUser}
                     onChange={(e) => setLoginData(prev => ({ ...prev, institutionalUser: e.target.value }))}
                     required
@@ -171,7 +171,7 @@ export default function Auth() {
                   <Input
                     id="display-name"
                     type="text"
-                    placeholder="Prof. Vinicius Souza"
+                    placeholder="João Silva"
                     value={signupData.displayName}
                     onChange={(e) => setSignupData(prev => ({ ...prev, displayName: e.target.value }))}
                     required
@@ -183,7 +183,7 @@ export default function Auth() {
                   <Input
                     id="signup-institutional-user"
                     type="text"
-                    placeholder="usuário da ftec"
+                    placeholder="Usuário da Ftec"
                     value={signupData.institutionalUser}
                     onChange={(e) => setSignupData(prev => ({ ...prev, institutionalUser: e.target.value }))}
                     required
@@ -233,6 +233,10 @@ export default function Auth() {
           </Tabs>
         </CardContent>
       </Card>
+      
+      <footer className="fixed bottom-0 left-0 right-0 text-center py-4 text-sm text-muted-foreground bg-background/80 backdrop-blur-sm border-t">
+        Desenvolvido por: Vitor Souza - DTI POA ZN 🚀
+      </footer>
     </div>
   );
 }

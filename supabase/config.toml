@@ -55,3 +55,6 @@ enable_signup = true
 
 [functions.confirm-user]
 verify_jwt = false
+
+[functions.update-user-password]
+verify_jwt = false

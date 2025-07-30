@@ -81,23 +81,63 @@ export function Profile() {
 
           // Try to update password in Auth system using edge function
           try {
-            const { error: authUpdateError } = await supabase.functions.invoke('update-user-password', {
+            console.log('🔐 Calling update-user-password edge function...');
+            const { data: authData, error: authUpdateError } = await supabase.functions.invoke('update-user-password', {
               body: { 
                 userId: profile.user_id, 
                 newPassword: formData.newPin 
               }
             });
 
+            console.log('🔐 Edge function response:', { authData, authUpdateError });
+
             if (authUpdateError) {
               console.warn('⚠️ Auth password update failed:', authUpdateError);
-              // Don't fail the entire process - the hash was updated successfully
-              toast({
-                title: "PIN parcialmente atualizado",
-                description: "PIN atualizado na base de dados. Você pode precisar fazer logout/login.",
-                variant: "default"
-              });
+              
+              // Check if it's a 404 (function not found) or other error
+              if (authUpdateError.message?.includes('404') || authUpdateError.message?.includes('Not Found')) {
+                console.warn('⚠️ Edge function not available, using direct admin API...');
+                
+                // Fallback: try direct admin API call
+                try {
+                  const { data: directAuthData, error: directAuthError } = await supabase.auth.admin.updateUserById(
+                    profile.user_id,
+                    { password: formData.newPin }
+                  );
+                  
+                  console.log('🔐 Direct admin API result:', { directAuthData, directAuthError });
+                  
+                  if (directAuthError) {
+                    console.error('❌ Direct admin API also failed:', directAuthError);
+                    toast({
+                      title: "PIN parcialmente atualizado",
+                      description: "PIN atualizado na base de dados. Faça logout e login novamente para sincronizar.",
+                      variant: "default"
+                    });
+                  } else {
+                    console.log('✅ Password updated via direct admin API');
+                    toast({
+                      title: "PIN alterado com sucesso!",
+                      description: "Seu PIN foi atualizado completamente."
+                    });
+                  }
+                } catch (directError: any) {
+                  console.error('❌ Direct admin API exception:', directError);
+                  toast({
+                    title: "PIN parcialmente atualizado",
+                    description: "PIN atualizado na base de dados. Faça logout e login para sincronizar.",
+                    variant: "default"
+                  });
+                }
+              } else {
+                toast({
+                  title: "PIN parcialmente atualizado",
+                  description: "PIN atualizado na base de dados. Você pode precisar fazer logout/login.",
+                  variant: "default"
+                });
+              }
             } else {
-              console.log('✅ Auth password updated successfully');
+              console.log('✅ Auth password updated successfully via edge function');
               toast({
                 title: "PIN alterado com sucesso!",
                 description: "Seu PIN foi atualizado completamente."
@@ -105,12 +145,39 @@ export function Profile() {
             }
           } catch (authError: any) {
             console.warn('⚠️ Auth update exception:', authError);
-            // Don't fail - hash was updated
-            toast({
-              title: "PIN parcialmente atualizado",
-              description: "PIN atualizado na base de dados. Faça logout e login novamente.",
-              variant: "default"
-            });
+            
+            // Try direct admin API as fallback
+            try {
+              console.log('🔐 Trying direct admin API as fallback...');
+              const { data: fallbackData, error: fallbackError } = await supabase.auth.admin.updateUserById(
+                profile.user_id,
+                { password: formData.newPin }
+              );
+              
+              console.log('🔐 Fallback admin API result:', { fallbackData, fallbackError });
+              
+              if (fallbackError) {
+                console.error('❌ Fallback also failed:', fallbackError);
+                toast({
+                  title: "PIN parcialmente atualizado",
+                  description: "PIN atualizado na base de dados. Faça logout e login para sincronizar.",
+                  variant: "default"
+                });
+              } else {
+                console.log('✅ Password updated via fallback admin API');
+                toast({
+                  title: "PIN alterado com sucesso!",
+                  description: "Seu PIN foi atualizado completamente."
+                });
+              }
+            } catch (fallbackError: any) {
+              console.error('❌ Fallback exception:', fallbackError);
+              toast({
+                title: "PIN parcialmente atualizado",
+                description: "PIN atualizado na base de dados. Faça logout e login para sincronizar.",
+                variant: "default"
+              });
+            }
           }
 
         } catch (pinError: any) {

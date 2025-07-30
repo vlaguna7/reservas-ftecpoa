@@ -97,17 +97,20 @@ const Index = () => {
         </div>
 
         <div className="text-center">
-          <Card className="inline-block p-8 card-hover animate-fade-in border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 shadow-lg hover:shadow-xl ring-2 ring-primary/10" style={{ animationDelay: '0.3s' }}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 justify-center text-primary">
-                <Users className="h-7 w-7 text-primary" />
+          <Card className="inline-block p-12 animate-fade-in border-4 border-primary bg-gradient-to-br from-primary/20 via-primary/10 to-background shadow-2xl hover:shadow-3xl ring-4 ring-primary/20 hover:ring-primary/40 transition-all duration-500 hover:scale-105 hover:border-primary/80 relative overflow-hidden" style={{ animationDelay: '0.3s' }}>
+            {/* Efeito de brilho animado */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 opacity-0 hover:opacity-100 transition-opacity duration-700 transform translate-x-[-100%] hover:translate-x-[200%] animate-pulse"></div>
+            
+            <CardHeader className="relative z-10">
+              <CardTitle className="flex items-center gap-3 justify-center text-primary text-2xl font-bold mb-2">
+                <Users className="h-8 w-8 text-primary animate-pulse" />
                 Acesso para Professores
               </CardTitle>
-              <CardDescription className="mb-6 text-base">
+              <CardDescription className="mb-8 text-lg font-medium text-foreground">
                 Faça login com seu usuário institucional e PIN para acessar o sistema
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               <Button 
                 size="lg" 
                 onClick={() => {
@@ -121,7 +124,7 @@ const Index = () => {
                     navigate(user ? '/dashboard' : '/auth', { replace: true });
                   }
                 }}
-                className="px-8 py-3 text-lg font-semibold transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg"
+                className="px-12 py-4 text-xl font-bold transition-all duration-300 hover:scale-110 shadow-xl hover:shadow-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-primary-foreground border-2 border-primary-foreground/20 hover:border-primary-foreground/40 animate-pulse hover:animate-none"
               >
                 {user ? 'Acessar Sistema' : 'Entrar no Sistema'}
               </Button>

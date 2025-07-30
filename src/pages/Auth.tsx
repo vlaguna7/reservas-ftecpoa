@@ -13,6 +13,7 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('login');
 
   const [loginData, setLoginData] = useState({
     institutionalUser: '',
@@ -107,6 +108,8 @@ export default function Auth() {
         description: "Você pode fazer login agora."
       });
       setSignupData({ displayName: '', institutionalUser: '', pin: '', confirmPin: '' });
+      // Redirecionar automaticamente para a aba de login
+      setActiveTab('login');
     }
     
     setLoading(false);
@@ -129,7 +132,7 @@ export default function Auth() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Cadastro</TabsTrigger>

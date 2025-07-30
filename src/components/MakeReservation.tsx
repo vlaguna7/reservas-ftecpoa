@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface EquipmentSettings {
   projector_limit: number;
@@ -40,6 +41,7 @@ export function MakeReservation() {
   const [auditoriumObservation, setAuditoriumObservation] = useState('');
   const [auditoriumError, setAuditoriumError] = useState('');
   const [observation, setObservation] = useState('');
+  const isMobile = useIsMobile();
 
   const getAvailableDate = () => {
     const today = new Date();
@@ -333,6 +335,26 @@ export function MakeReservation() {
         description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })}.`
       });
 
+      // Scroll para as reservas na versão mobile após sucesso
+      if (isMobile) {
+        setTimeout(() => {
+          const myReservationsTab = document.querySelector('[data-value="my-reservations"]');
+          if (myReservationsTab) {
+            (myReservationsTab as HTMLElement).click();
+            // Aguardar a aba mudar e fazer scroll
+            setTimeout(() => {
+              const reservationsSection = document.querySelector('[value="my-reservations"]');
+              if (reservationsSection) {
+                reservationsSection.scrollIntoView({ 
+                  behavior: 'smooth', 
+                  block: 'start' 
+                });
+              }
+            }, 300);
+          }
+        }, 1500);
+      }
+
       // Reset form
       setAuditoriumDate(undefined);
       setAuditoriumObservation('');
@@ -453,6 +475,27 @@ export function MakeReservation() {
         description: "Sua reserva foi confirmada com sucesso.",
         className: "bg-blue-900 border-blue-800 text-white [&>*]:text-white animate-scale-in"
       });
+      
+      // Scroll para as reservas na versão mobile após sucesso
+      if (isMobile) {
+        setTimeout(() => {
+          const myReservationsTab = document.querySelector('[data-value="my-reservations"]');
+          if (myReservationsTab) {
+            (myReservationsTab as HTMLElement).click();
+            // Aguardar a aba mudar e fazer scroll
+            setTimeout(() => {
+              const reservationsSection = document.querySelector('[value="my-reservations"]');
+              if (reservationsSection) {
+                reservationsSection.scrollIntoView({ 
+                  behavior: 'smooth', 
+                  block: 'start' 
+                });
+              }
+            }, 300);
+          }
+        }, 1500);
+      }
+      
       setSelectedEquipment('');
       setSelectedDate('');
       setAuditoriumDate(undefined);

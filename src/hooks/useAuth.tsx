@@ -159,8 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, ''); // Remove accents
 
-      // Use a valid domain for email (required by Supabase)
-      const tempEmail = `${normalizedUser}@ftecpoa.com`;
+      // Use consistent domain for all users
+      const tempEmail = `${normalizedUser}@temp.com`;
 
       // First, clean up any orphaned profiles (profiles without valid auth users)
       console.log('🧹 Checking for orphaned profiles...');
@@ -331,8 +331,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN incorreto' } };
       }
 
-      // Sign in with temporary email credentials
-      const tempEmail = `${profileData.institutional_user}@ftecpoa.com`;
+      // Sign in with temporary email credentials - use consistent domain
+      const tempEmail = `${profileData.institutional_user}@temp.com`;
       const strongPassword = `FTEC_${profileData.institutional_user}_${pin}_2024!`;
       
       const { data, error: signInError } = await supabase.auth.signInWithPassword({

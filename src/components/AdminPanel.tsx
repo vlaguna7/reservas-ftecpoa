@@ -292,7 +292,7 @@ export function AdminPanel() {
     const csvContent = [
       ['Nome', 'Usuário Institucional', 'Equipamento', 'Data', 'Dia da Semana', 'Criado em'].join(','),
       ...reservations.map(reservation => {
-        const reservationDate = new Date(reservation.reservation_date);
+        const reservationDate = new Date(reservation.reservation_date + 'T12:00:00');
         const dayOfWeek = format(reservationDate, 'EEEE', { locale: ptBR });
         const formattedDate = format(reservationDate, "dd/MM/yyyy");
         const createdAt = format(new Date(reservation.created_at), "dd/MM/yyyy HH:mm");
@@ -833,7 +833,7 @@ export function AdminPanel() {
               </TableHeader>
               <TableBody>
                 {reservations.map((reservation) => {
-                  const reservationDate = new Date(reservation.reservation_date);
+                  const reservationDate = new Date(reservation.reservation_date + 'T12:00:00');
                   const dayOfWeek = format(reservationDate, 'EEEE', { locale: ptBR });
                   const formattedDate = format(reservationDate, "dd/MM/yyyy", { locale: ptBR });
                   

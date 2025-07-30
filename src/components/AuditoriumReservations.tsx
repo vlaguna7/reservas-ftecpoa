@@ -215,7 +215,7 @@ export function AuditoriumReservations() {
                         <Calendar className="h-4 w-4 text-primary" />
                         <div>
                           <div className="font-medium">
-                            {format(new Date(reservation.reservation_date), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                            {format(new Date(reservation.reservation_date + 'T12:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {reservation.user_profile.display_name}

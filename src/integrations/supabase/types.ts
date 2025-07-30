@@ -40,7 +40,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
-          laboratory_code: string
+          laboratory_code: string | null
           laboratory_name: string
           updated_at: string
         }
@@ -48,7 +48,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
-          laboratory_code: string
+          laboratory_code?: string | null
           laboratory_name: string
           updated_at?: string
         }
@@ -56,7 +56,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
-          laboratory_code?: string
+          laboratory_code?: string | null
           laboratory_name?: string
           updated_at?: string
         }

@@ -290,8 +290,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (institutionalUser: string, pin: string) => {
     try {
-      const bcrypt = await import('bcryptjs');
-
       // Normalize user input (remove accents, lowercase)
       const normalizedInput = institutionalUser.trim()
         .toLowerCase()
@@ -327,15 +325,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'Usuário não encontrado' } };
       }
 
-      // Check PIN
-      const isValidPin = await bcrypt.compare(pin, profileData.pin_hash);
-      if (!isValidPin) {
-        return { error: { message: 'PIN incorreto' } };
+      // Validate PIN format (6 digits)
+      if (!/^\d{6}$/.test(pin)) {
+        return { error: { message: 'PIN deve ter exatamente 6 dígitos' } };
       }
 
-      // Sign in with PIN as password
+      // Sign in with PIN as password (PIN is stored as plaintext in Auth)
       const tempEmail = `${profileData.institutional_user}@temp.com`;
-      console.log('🔐 Attempting login with:', { tempEmail, pinLength: pin.length });
+      console.log('🔐 Attempting login with:', { 
+        tempEmail, 
+        pinLength: pin.length,
+        institutionalUser: profileData.institutional_user 
+      });
       
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: tempEmail,
@@ -345,7 +346,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔐 Login result:', { 
         success: !signInError, 
         error: signInError?.message,
-        hasData: !!data 
+        hasData: !!data,
+        userId: data?.user?.id
       });
 
       if (signInError) {
@@ -355,13 +357,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             signInError.message?.includes('not confirmed')) {
           
           try {
-            // Auto-confirm the user
+            console.log('🔧 Auto-confirming user:', profileData.user_id);
             await supabase.functions.invoke('confirm-user', {
               body: { userId: profileData.user_id }
             });
             
             // Wait a moment for the confirmation to process
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 1500));
             
             // Try sign in again with same credentials
             const { error: retryError } = await supabase.auth.signInWithPassword({
@@ -370,20 +372,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
             
             if (retryError) {
+              console.error('🔧 Retry failed:', retryError);
               return { error: { message: 'Erro de autenticação. Tente novamente.' } };
             }
+            
+            console.log('🔧 Auto-confirm and retry successful');
           } catch (confirmError) {
             console.error('Auto-confirm failed:', confirmError);
             return { error: { message: 'Erro de autenticação. Tente novamente.' } };
           }
+        } else if (signInError.message?.includes('Invalid login credentials')) {
+          return { error: { message: 'PIN incorreto ou usuário não encontrado' } };
         } else {
-          return { error: signInError };
+          return { error: { message: signInError.message } };
         }
       }
 
       return { error: null };
     } catch (error) {
-      return { error };
+      console.error('SignIn error:', error);
+      return { error: { message: 'Erro interno. Tente novamente.' } };
     }
   };
 

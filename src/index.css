@@ -31,6 +31,9 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     
+    /* Tab active background */
+    --tab-active: 225 65% 39%;
+    
     /* Academic gradient backgrounds */
     --gradient-academic: linear-gradient(135deg, hsl(225 73% 31% / 0.1), hsl(225 73% 31% / 0.05));
     --gradient-academic-card: linear-gradient(145deg, hsl(225 73% 31% / 0.02), hsl(225 73% 31% / 0.08));
@@ -63,6 +66,9 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    
+    /* Tab active background */
+    --tab-active: 225 65% 45%;
     
     /* Academic dark mode gradients */
     --gradient-academic: linear-gradient(135deg, hsl(225 73% 45% / 0.1), hsl(225 73% 45% / 0.05));

@@ -5,9 +5,20 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: "./", // Para garantir caminhos relativos no Apache
   server: {
     host: "::",
     port: 8080,
+  },
+  build: {
+    outDir: "dist",
+    assetsDir: "assets",
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined, // Evitar problemas com chunks no Apache
+      },
+    },
   },
   plugins: [
     react(),

@@ -40,12 +40,18 @@ export function LaboratoryReservations() {
         {
           event: '*',
           schema: 'public',
-          table: 'reservations',
-          filter: 'equipment_type=like.*laboratory*'
+          table: 'reservations'
         },
         (payload) => {
           console.log('🔄 LaboratoryReservations: Real-time change detected:', payload);
-          fetchReservations();
+          // Verificar se é uma mudança relacionada a laboratório
+          const newEquipmentType = (payload.new as any)?.equipment_type;
+          const oldEquipmentType = (payload.old as any)?.equipment_type;
+          
+          if (newEquipmentType?.startsWith('laboratory_') || 
+              oldEquipmentType?.startsWith('laboratory_')) {
+            fetchReservations();
+          }
         }
       )
       .subscribe((status) => {
@@ -60,6 +66,23 @@ export function LaboratoryReservations() {
   const fetchReservations = async () => {
     setLoading(true);
     
+    // Lista dos valores válidos de laboratório
+    const laboratoryValues = [
+      'laboratory_08_npj_psico',
+      'laboratory_13_lab_informatica', 
+      'laboratory_15_lab_quimica',
+      'laboratory_16_lab_informatica',
+      'laboratory_17_lab_projetos',
+      'laboratory_18_lab',
+      'laboratory_19_lab',
+      'laboratory_20_lab_informatica',
+      'laboratory_22_lab',
+      'laboratory_28_lab_eng',
+      'laboratory_103_lab',
+      'laboratory_105_lab_hidraulica',
+      'laboratory_106_lab_informatica'
+    ];
+    
     const { data, error } = await supabase
       .from('reservations')
       .select(`
@@ -70,11 +93,21 @@ export function LaboratoryReservations() {
         equipment_type,
         profiles!inner(display_name)
       `)
-      .like('equipment_type', 'laboratory%')
+      .in('equipment_type', laboratoryValues)
       .order('reservation_date', { ascending: true });
 
     if (error) {
       console.error('Error fetching laboratory reservations:', error);
+      console.error('Query was:', 'SELECT with laboratory equipment types');
+      
+      // Se for um erro de dados não encontrados, não mostrar toast de erro
+      if (error.message?.includes('No rows found') || error.code === 'PGRST116') {
+        console.log('No laboratory reservations found, this is normal');
+        setReservations([]);
+        setLoading(false);
+        return;
+      }
+      
       toast({
         title: "Erro ao carregar reservas",
         description: "Não foi possível carregar as reservas de laboratório.",

@@ -21,22 +21,8 @@ interface LaboratoryReservation {
   };
 }
 
-// Lista dos laboratórios para conversão de nomes
-const laboratoryNames: Record<string, string> = {
-  'laboratory_08_npj_psico': '08 - NPJ/PSICO',
-  'laboratory_13_lab_informatica': '13 - LAB INFORMÁTICA',
-  'laboratory_15_lab_quimica': '15 - LAB QUÍMICA',
-  'laboratory_16_lab_informatica': '16 - LAB INFORMÁTICA',
-  'laboratory_17_lab_projetos': '17 - LAB PROJETOS',
-  'laboratory_18_lab': '18 - LAB',
-  'laboratory_19_lab': '19 - LAB',
-  'laboratory_20_lab_informatica': '20 - LAB INFORMÁTICA',
-  'laboratory_22_lab': '22 - LAB',
-  'laboratory_28_lab_eng': '28 - LAB ENG.',
-  'laboratory_103_lab': '103 - LAB',
-  'laboratory_105_lab_hidraulica': '105 - LAB HIDRÁULICA',
-  'laboratory_106_lab_informatica': '106 - LAB INFORMÁTICA'
-};
+// Lista dinâmica dos laboratórios que será carregada do banco
+let laboratoryNames: Record<string, string> = {};
 
 export function LaboratoryReservations() {
   const { user, profile } = useAuth();
@@ -46,6 +32,21 @@ export function LaboratoryReservations() {
 
   const fetchLaboratoryReservations = async () => {
     try {
+      // Primeiro, buscar todos os laboratórios para criar o mapeamento de nomes
+      const { data: labData, error: labError } = await supabase
+        .from('laboratory_settings')
+        .select('laboratory_code, laboratory_name');
+
+      if (labError) {
+        console.error('Error fetching laboratory names:', labError);
+      } else {
+        // Atualizar o mapeamento global de nomes
+        laboratoryNames = {};
+        labData?.forEach(lab => {
+          laboratoryNames[lab.laboratory_code] = lab.laboratory_name;
+        });
+      }
+
       // Buscar todas as reservas de laboratório a partir de hoje
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;

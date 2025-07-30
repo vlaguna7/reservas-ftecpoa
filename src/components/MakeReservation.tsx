@@ -49,26 +49,9 @@ export function MakeReservation() {
   const [needsSupplies, setNeedsSupplies] = useState<boolean | null>(null);
   const [laboratoryObservation, setLaboratoryObservation] = useState('');
   const [laboratoryError, setLaboratoryError] = useState('');
-  const [activeLaboratories, setActiveLaboratories] = useState<string[]>([]);
+  const [laboratoryOptions, setLaboratoryOptions] = useState<Array<{value: string, label: string}>>([]);
   
   const isMobile = useIsMobile();
-
-  // Lista de laboratórios disponíveis
-  const laboratoryOptions = [
-    { value: 'laboratory_08_npj_psico', label: '08 - NPJ/PSICO' },
-    { value: 'laboratory_13_lab_informatica', label: '13 - LAB INFORMÁTICA' },
-    { value: 'laboratory_15_lab_quimica', label: '15 - LAB QUÍMICA' },
-    { value: 'laboratory_16_lab_informatica', label: '16 - LAB INFORMÁTICA' },
-    { value: 'laboratory_17_lab_projetos', label: '17 - LAB PROJETOS' },
-    { value: 'laboratory_18_lab', label: '18 - LAB' },
-    { value: 'laboratory_19_lab', label: '19 - LAB' },
-    { value: 'laboratory_20_lab_informatica', label: '20 - LAB INFORMÁTICA' },
-    { value: 'laboratory_22_lab', label: '22 - LAB' },
-    { value: 'laboratory_28_lab_eng', label: '28 - LAB ENG.' },
-    { value: 'laboratory_103_lab', label: '103 - LAB' },
-    { value: 'laboratory_105_lab_hidraulica', label: '105 - LAB HIDRÁULICA' },
-    { value: 'laboratory_106_lab_informatica', label: '106 - LAB INFORMÁTICA' }
-  ].filter(lab => activeLaboratories.includes(lab.value));
 
   const getAvailableDate = () => {
     const today = new Date();
@@ -163,16 +146,21 @@ export function MakeReservation() {
   const fetchActiveLaboratories = async () => {
     const { data, error } = await supabase
       .from('laboratory_settings')
-      .select('laboratory_code')
-      .eq('is_active', true);
+      .select('laboratory_code, laboratory_name')
+      .eq('is_active', true)
+      .order('laboratory_name', { ascending: true });
 
     if (error) {
       console.error('Error fetching active laboratories:', error);
       return;
     }
 
-    const activeCodes = data?.map(lab => lab.laboratory_code) || [];
-    setActiveLaboratories(activeCodes);
+    const labOptions = data?.map(lab => ({
+      value: lab.laboratory_code,
+      label: lab.laboratory_name
+    })) || [];
+    
+    setLaboratoryOptions(labOptions);
   };
 
   const fetchAvailability = async () => {

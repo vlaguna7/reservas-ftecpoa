@@ -261,6 +261,14 @@ export function MakeReservation() {
     return data.length === 0;
   };
 
+  // Função para converter data para string sem problemas de timezone
+  const formatDateToString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const confirmAuditoriumReservation = async () => {
     if (!auditoriumDate || !auditoriumObservation.trim()) {
       setAuditoriumError('Por favor, selecione uma data e adicione uma observação.');
@@ -269,7 +277,7 @@ export function MakeReservation() {
 
     try {
       setLoading(true);
-      const dateStr = format(auditoriumDate, 'yyyy-MM-dd');
+      const dateStr = formatDateToString(auditoriumDate);
       
       // Verificar se já existe reserva para esta data
       const { data: existingReservations, error: checkError } = await supabase

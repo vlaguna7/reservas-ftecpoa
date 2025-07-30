@@ -455,20 +455,51 @@ export function AdminPanel() {
 
       console.log('✅ Successfully deleted profile:', deletedProfile[0]);
 
-      // Step 3: Delete from auth system
-      console.log('🗑️ Step 3: Deleting from auth system...');
+      // Step 3: Delete from auth system using edge function
+      console.log('🗑️ Step 3: Deleting from auth system using edge function...');
       try {
-        const { data: authDeleteResult, error: authDeleteError } = await supabase.auth.admin.deleteUser(userId);
+        const { data: authDeleteResult, error: authDeleteError } = await supabase.functions.invoke('admin-auth-manager', {
+          body: { 
+            userId: userId,
+            operation: 'delete'
+          }
+        });
+        
+        console.log('🔐 Auth deletion edge function result:', { authDeleteResult, authDeleteError });
         
         if (authDeleteError) {
-          console.warn('⚠️ Warning deleting auth user:', authDeleteError.message);
-          // Don't fail the entire process for auth deletion issues
+          console.warn('⚠️ Warning deleting auth user via edge function:', authDeleteError);
+          
+          // Try direct admin API as fallback
+          try {
+            console.log('🔄 Trying direct admin API as fallback...');
+            const { data: directResult, error: directError } = await supabase.auth.admin.deleteUser(userId);
+            
+            console.log('🔐 Direct admin API result:', { directResult, directError });
+            
+            if (directError) {
+              console.warn('⚠️ Direct admin API also failed:', directError.message);
+              // Don't fail the entire process - profile was already deleted
+            } else {
+              console.log('✅ Successfully deleted from auth system via direct API');
+            }
+          } catch (directException) {
+            console.warn('⚠️ Direct admin API exception:', directException);
+          }
         } else {
-          console.log('✅ Successfully deleted from auth system:', authDeleteResult);
+          console.log('✅ Successfully deleted from auth system via edge function');
         }
       } catch (authException) {
         console.warn('⚠️ Exception during auth deletion:', authException);
-        // Don't fail the entire process
+        
+        // Try direct admin API as final fallback
+        try {
+          console.log('🔄 Final fallback: direct admin API...');
+          const { data: finalResult, error: finalError } = await supabase.auth.admin.deleteUser(userId);
+          console.log('🔐 Final fallback result:', { finalResult, finalError });
+        } catch (finalException) {
+          console.warn('⚠️ All auth deletion methods failed:', finalException);
+        }
       }
 
       // Step 4: Verify deletion

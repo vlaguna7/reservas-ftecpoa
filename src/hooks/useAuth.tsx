@@ -159,13 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, ''); // Remove accents
 
-      // Generate email early to check for duplicates
-      const safeEmailUser = normalizedUser
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove accents
-        .replace(/[^a-z0-9.]/g, ''); // Keep only letters, numbers, and dots
-      const tempEmail = `${safeEmailUser}@temp.com`;
+      // Use institutional domain to avoid Google alerts
+      const institutionalEmail = `${normalizedUser}@institucional.ftec.edu.br`;
 
       // First, clean up any orphaned profiles (profiles without valid auth users)
       console.log('🧹 Checking for orphaned profiles...');
@@ -207,12 +202,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const bcrypt = await import('bcryptjs');
       const pinHash = await bcrypt.hash(pin, 10);
 
-      // Create user with temporary email using previously defined variables
+      // Create user with institutional email and strong password
+      const strongPassword = `FTEC_${normalizedUser}_${pin}_2024!`;
+      
       const { data, error: authError } = await supabase.auth.signUp({
-        email: tempEmail,
-        password: normalizedUser + pin,
+        email: institutionalEmail,
+        password: strongPassword,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             institutional_user: normalizedUser,
             display_name: displayName
@@ -221,14 +218,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (authError) {
+        console.error('Auth error:', authError);
         // Handle specific error cases
-        if (authError.message.includes('User already registered')) {
+        if (authError.message.includes('User already registered') || 
+            authError.message.includes('Email already registered')) {
           return { error: { message: 'Este usuário institucional já está cadastrado. Faça login em vez de cadastro.' } };
         }
-        if (authError.message.includes('Email already registered')) {
-          return { error: { message: 'Este usuário institucional já está cadastrado. Faça login em vez de cadastro.' } };
-        }
-        return { error: authError };
+        return { error: { message: `Erro na criação da conta: ${authError.message}` } };
       }
 
       // Check if signup was successful but user already exists
@@ -335,16 +331,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN incorreto' } };
       }
 
-      // Sign in with temporary credentials - normalize email format
-      const safeEmailUser = profileData.institutional_user
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove accents
-        .replace(/[^a-z0-9.]/g, ''); // Keep only letters, numbers, and dots
-      const tempEmail = `${safeEmailUser}@temp.com`;
+      // Sign in with institutional credentials - using institutional domain
+      const institutionalEmail = `${profileData.institutional_user}@institucional.ftec.edu.br`;
+      const strongPassword = `FTEC_${profileData.institutional_user}_${pin}_2024!`;
+      
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: tempEmail,
-        password: profileData.institutional_user + pin
+        email: institutionalEmail,
+        password: strongPassword
       });
 
       if (signInError) {
@@ -362,10 +355,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Wait a moment for the confirmation to process
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Try sign in again
+            // Try sign in again with same credentials
             const { error: retryError } = await supabase.auth.signInWithPassword({
-              email: tempEmail,
-              password: profileData.institutional_user + pin
+              email: institutionalEmail,
+              password: strongPassword
             });
             
             if (retryError) {

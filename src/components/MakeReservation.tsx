@@ -338,20 +338,13 @@ export function MakeReservation() {
       // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          // Primeiro muda para a aba "Minhas Reservas"
-          const myReservationsTab = document.querySelector('[value="my-reservations"]');
-          if (myReservationsTab) {
-            (myReservationsTab as HTMLElement).click();
-            // Aguarda a mudança de aba e então faz scroll para o conteúdo
-            setTimeout(() => {
-              const myReservationsContent = document.querySelector('[data-state="active"][data-orientation="horizontal"]');
-              if (myReservationsContent) {
-                myReservationsContent.scrollIntoView({ 
-                  behavior: 'smooth', 
-                  block: 'start' 
-                });
-              }
-            }, 300);
+          // Faz scroll para a seção das reservas de hoje
+          const todayReservationsSection = document.querySelector('.space-y-6 > div:nth-child(2)');
+          if (todayReservationsSection) {
+            todayReservationsSection.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start' 
+            });
           }
         }, 1500);
       }
@@ -480,20 +473,13 @@ export function MakeReservation() {
       // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          // Primeiro muda para a aba "Minhas Reservas"
-          const myReservationsTab = document.querySelector('[value="my-reservations"]');
-          if (myReservationsTab) {
-            (myReservationsTab as HTMLElement).click();
-            // Aguarda a mudança de aba e então faz scroll para o conteúdo
-            setTimeout(() => {
-              const myReservationsContent = document.querySelector('[data-state="active"][data-orientation="horizontal"]');
-              if (myReservationsContent) {
-                myReservationsContent.scrollIntoView({ 
-                  behavior: 'smooth', 
-                  block: 'start' 
-                });
-              }
-            }, 300);
+          // Faz scroll para a seção das reservas de hoje
+          const todayReservationsSection = document.querySelector('.space-y-6 > div:nth-child(2)');
+          if (todayReservationsSection) {
+            todayReservationsSection.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start' 
+            });
           }
         }, 1500);
       }

@@ -8,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { User, Edit3, Save, X } from 'lucide-react';
 
 export function Profile() {
-  const { profile, updateProfile } = useAuth();
+  const { profile, updateProfile, resetUserPin } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -25,56 +25,108 @@ export function Profile() {
   };
 
   const handleSave = async () => {
-    if (formData.newPin || formData.confirmPin) {
-      if (!validatePin(formData.newPin)) {
-        toast({
-          title: "PIN inválido",
-          description: "O PIN deve conter exatamente 6 dígitos numéricos.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (formData.newPin !== formData.confirmPin) {
-        toast({
-          title: "PINs não coincidem",
-          description: "Os PINs digitados não são iguais.",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-
     setLoading(true);
 
-    const updates: any = {
-      display_name: formData.display_name,
-      institutional_user: formData.institutional_user
-    };
+    try {
+      // Handle PIN change separately if provided
+      if (formData.newPin || formData.confirmPin) {
+        if (!validatePin(formData.newPin)) {
+          toast({
+            title: "PIN inválido",
+            description: "O PIN deve conter exatamente 6 dígitos numéricos.",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
 
-    if (formData.newPin) {
-      const bcrypt = await import('bcryptjs');
-      updates.pin_hash = await bcrypt.hash(formData.newPin, 10);
-    }
+        if (formData.newPin !== formData.confirmPin) {
+          toast({
+            title: "PINs não coincidem",
+            description: "Os PINs digitados não são iguais.",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
 
-    const { error } = await updateProfile(updates);
+        console.log('🔐 Changing PIN for user:', profile.institutional_user);
+        
+        // Use resetUserPin to update both profile hash and auth password
+        const { error: pinError } = await resetUserPin(profile.institutional_user, formData.newPin);
+        
+        if (pinError) {
+          console.error('❌ Error changing PIN:', pinError);
+          toast({
+            title: "Erro ao alterar PIN",
+            description: pinError.message,
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
 
-    if (error) {
-      toast({
-        title: "Erro ao atualizar perfil",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Perfil atualizado!",
-        description: "Suas informações foram salvas com sucesso."
-      });
+        console.log('✅ PIN changed successfully');
+        toast({
+          title: "PIN alterado!",
+          description: "Seu PIN foi atualizado com sucesso."
+        });
+      }
+
+      // Handle other profile updates (name, institutional_user)
+      const hasOtherUpdates = 
+        formData.display_name !== profile.display_name || 
+        formData.institutional_user !== profile.institutional_user;
+
+      if (hasOtherUpdates) {
+        console.log('📝 Updating profile information...');
+        
+        const updates = {
+          display_name: formData.display_name,
+          institutional_user: formData.institutional_user
+        };
+
+        const { error: profileError } = await updateProfile(updates);
+
+        if (profileError) {
+          console.error('❌ Error updating profile:', profileError);
+          toast({
+            title: "Erro ao atualizar perfil",
+            description: profileError.message,
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ Profile updated successfully');
+        toast({
+          title: "Perfil atualizado!",
+          description: "Suas informações foram salvas com sucesso."
+        });
+      }
+
+      if (!formData.newPin && !hasOtherUpdates) {
+        toast({
+          title: "Nenhuma alteração",
+          description: "Não foram feitas alterações para salvar.",
+          variant: "default"
+        });
+      }
+
       setIsEditing(false);
       setFormData(prev => ({ ...prev, newPin: '', confirmPin: '' }));
-    }
 
-    setLoading(false);
+    } catch (error: any) {
+      console.error('❌ Exception in handleSave:', error);
+      toast({
+        title: "Erro interno",
+        description: "Erro inesperado ao salvar. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {

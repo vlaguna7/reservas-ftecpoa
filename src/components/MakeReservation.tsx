@@ -261,22 +261,25 @@ export function MakeReservation() {
     return data.length === 0;
   };
   
-  // Função para garantir que a data seja tratada como timezone local
-  const createLocalDate = (year: number, month: number, day: number) => {
-    return new Date(year, month, day);
-  };
-
-  // Função para converter data para string garantindo timezone local
+  // Função para forçar data local sem problemas de timezone
   const formatDateToLocalString = (date: Date) => {
-    // Forçar o uso da data local sem conversões de timezone
+    // Abordagem mais drástica: extrair componentes e construir string diretamente
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const result = `${year}-${month}-${day}`;
     
-    console.log('🗓️ Data original selecionada:', date);
-    console.log('🗓️ Ano:', year, 'Mês:', month, 'Dia:', day);
-    console.log('🗓️ String final formatada:', result);
+    const dayStr = day.toString().padStart(2, '0');
+    const monthStr = month.toString().padStart(2, '0');
+    const yearStr = year.toString();
+    
+    const result = `${yearStr}-${monthStr}-${dayStr}`;
+    
+    console.log('🔍 DEBUG - Data recebida:', date);
+    console.log('🔍 DEBUG - Dia extraído:', day);
+    console.log('🔍 DEBUG - Mês extraído:', month);
+    console.log('🔍 DEBUG - Ano extraído:', year);
+    console.log('🔍 DEBUG - String final:', result);
+    console.log('🔍 DEBUG - Timezone offset:', date.getTimezoneOffset());
     
     return result;
   };
@@ -553,15 +556,15 @@ export function MakeReservation() {
                   selected={auditoriumDate}
                   onSelect={(date) => {
                     if (date) {
-                      // Garantir que a data seja criada no timezone local
-                      const localDate = createLocalDate(date.getFullYear(), date.getMonth(), date.getDate());
-                      console.log('📅 Data selecionada no calendário:', date);
-                      console.log('📅 Data local criada:', localDate);
-                      setAuditoriumDate(localDate);
-                    } else {
-                      setAuditoriumDate(date);
+                      console.log('📅 SELEÇÃO - Data original do calendário:', date);
+                      console.log('📅 SELEÇÃO - Data em ISO:', date.toISOString());
+                      console.log('📅 SELEÇÃO - Data local string:', date.toLocaleDateString());
+                      console.log('📅 SELEÇÃO - getDate():', date.getDate());
+                      console.log('📅 SELEÇÃO - getMonth():', date.getMonth());
+                      console.log('📅 SELEÇÃO - getFullYear():', date.getFullYear());
                     }
-                    setAuditoriumError(''); // Limpar erro ao selecionar nova data
+                    setAuditoriumDate(date);
+                    setAuditoriumError('');
                     // Fechar automaticamente o popover após seleção
                     if (date) {
                       setTimeout(() => {
@@ -573,12 +576,10 @@ export function MakeReservation() {
                     }
                   }}
                   disabled={(date) => {
-                    // Permitir seleção de hoje em diante (criando datas locais)
                     const today = new Date();
-                    const todayLocal = createLocalDate(today.getFullYear(), today.getMonth(), today.getDate());
-                    const dateLocal = createLocalDate(date.getFullYear(), date.getMonth(), date.getDate());
-                    
-                    return dateLocal < todayLocal;
+                    today.setHours(0, 0, 0, 0);
+                    date.setHours(0, 0, 0, 0);
+                    return date < today;
                   }}
                   initialFocus
                   className="p-3 pointer-events-auto"

@@ -375,6 +375,16 @@ export function AdminPanel() {
   const deleteUser = async (userId: string, userName: string) => {
     try {
       console.log('🗑️ Starting detailed user deletion for:', { userId, userName });
+      console.log('🔐 Current user permissions check...');
+      
+      // First verify current user is admin and has permission
+      const { data: currentUserProfile } = await supabase
+        .from('profiles')
+        .select('is_admin, institutional_user')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+      
+      console.log('👤 Current user admin status:', currentUserProfile);
       
       // Verificar se o usuário existe antes da exclusão
       const { data: userBeforeDelete, error: userCheckError } = await supabase

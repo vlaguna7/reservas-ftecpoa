@@ -515,7 +515,7 @@ export function MakeReservation() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <Label className="text-base font-medium">Selecione o equipamento:</Label>
+        <Label className="text-base font-medium">Selecione uma opção:</Label>
         <RadioGroup value={selectedEquipment} onValueChange={setSelectedEquipment} className="mt-3">
           {['projector', 'speaker', 'auditorium'].map((type) => (
             <div key={type} className="flex items-center space-x-2">

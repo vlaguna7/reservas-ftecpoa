@@ -225,28 +225,9 @@ export function MakeReservation() {
     return available !== null && available > 0 && !userAlreadyHasReservation;
   };
 
-  const checkAuditoriumAvailability = async (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    
-    const { data, error } = await supabase
-      .from('reservations')
-      .select('user_id')
-      .eq('reservation_date', dateStr)
-      .eq('equipment_type', 'auditorium');
-
-    if (error) {
-      console.error('Error checking auditorium availability:', error);
-      return false;
-    }
-
-    // Verificar se já existe uma reserva do auditório para esta data
-    if (data.length > 0) {
-      // Verificar se a reserva é do próprio usuário
-      const userHasReservation = data.some(reservation => reservation.user_id === user!.id);
-      return !userHasReservation; // Não disponível se há reserva e não é do usuário
-    }
-
-    return true; // Disponível se não há reservas
+  const checkAuditoriumAvailability = (date: string) => {
+    const auditoriumAvailable = getAvailabilityForDate(date, 'auditorium');
+    return auditoriumAvailable !== null && auditoriumAvailable > 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -273,11 +254,23 @@ export function MakeReservation() {
       }
 
       // Verificar disponibilidade do auditório para a data selecionada
-      const isAuditoriumAvailable = await checkAuditoriumAvailability(auditoriumDate);
-      if (!isAuditoriumAvailable) {
+      const dateStr = format(auditoriumDate, 'yyyy-MM-dd');
+      const isAuditoriumAvailable = checkAuditoriumAvailability(dateStr);
+      const hasAuditoriumReservation = hasUserReservation(dateStr, 'auditorium');
+      
+      if (!isAuditoriumAvailable && !hasAuditoriumReservation) {
         toast({
           title: "Auditório indisponível",
-          description: "O auditório já está reservado para esta data ou você já possui uma reserva.",
+          description: "O auditório já está reservado para esta data.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (hasAuditoriumReservation) {
+        toast({
+          title: "Reserva já existe",
+          description: "Você já possui uma reserva do auditório para esta data.",
           variant: "destructive"
         });
         return;
@@ -322,8 +315,8 @@ export function MakeReservation() {
       reservation_date: finalDate
     };
 
-    if (selectedEquipment === 'auditorium') {
-      reservationData.observation = observation.trim();
+    if (selectedEquipment === 'auditorium' || (observation && observation.trim())) {
+      reservationData.observation = observation.trim() || null;
     }
 
     const { error } = await supabase

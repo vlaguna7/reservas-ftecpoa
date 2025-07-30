@@ -47,7 +47,7 @@ export function MyReservations() {
       .select('*')
       .eq('user_id', user.id)
       .gte('reservation_date', format(twoDaysAgo, 'yyyy-MM-dd'))
-      .order('reservation_date', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching reservations:', error);

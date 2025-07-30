@@ -507,9 +507,11 @@ export function MakeReservation() {
                   selected={auditoriumDate}
                   onSelect={setAuditoriumDate}
                   disabled={(date) => {
+                    // Permitir seleção de hoje em diante
                     const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    return date < today;
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    return date <= yesterday;
                   }}
                   initialFocus
                   className="p-3 pointer-events-auto"

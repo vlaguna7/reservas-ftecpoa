@@ -55,7 +55,8 @@ export default function Auth() {
     } else {
       toast({
         title: "Login realizado!",
-        description: "Redirecionando para o sistema..."
+        description: "Redirecionando para o sistema...",
+        duration: 1000, // 1 segundo
       });
       // Force redirect after successful login
       setTimeout(() => {

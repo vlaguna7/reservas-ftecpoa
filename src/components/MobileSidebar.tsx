@@ -19,7 +19,7 @@ export function MobileSidebar({ onNavigate, currentSection }: MobileSidebarProps
 
   const menuItems = [
     {
-      id: 'make-reservation',
+      id: 'reservations',
       label: 'Fazer uma Reserva',
       icon: Calendar,
     },

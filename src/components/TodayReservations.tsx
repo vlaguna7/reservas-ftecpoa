@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Monitor, Speaker, Calendar } from 'lucide-react';
+import { Monitor, Speaker, Calendar, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from '@/hooks/use-toast';
 
 interface Reservation {
   id: string;
@@ -15,6 +18,7 @@ interface Reservation {
 }
 
 export function TodayReservations() {
+  const { user, profile } = useAuth();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -150,6 +154,31 @@ export function TodayReservations() {
     }
   };
 
+  const cancelReservation = async (reservationId: string) => {
+    const { error } = await supabase
+      .from('reservations')
+      .delete()
+      .eq('id', reservationId);
+
+    if (error) {
+      toast({
+        title: "Erro ao cancelar reserva",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Reserva cancelada!",
+        description: "A reserva foi cancelada com sucesso."
+      });
+      fetchTodayReservations();
+    }
+  };
+
+  const canUserCancelReservation = (reservation: Reservation) => {
+    return user && reservation.user_profile?.display_name === profile?.display_name;
+  };
+
   const targetDate = getTodayDate();
   const isWeekend = [0, 6].includes(new Date().getDay());
 
@@ -206,21 +235,34 @@ export function TodayReservations() {
               <div key={teacherName} className="border rounded-lg p-4">
                 <h3 className="font-semibold text-lg mb-3">{teacherName}</h3>
                 <div className="space-y-3">
-                  {teacherReservations.map((reservation) => (
-                     <div
-                       key={reservation.id}
-                       className="bg-primary/10 rounded-lg p-3"
-                     >
-                       <div className="flex items-center gap-2 text-primary mb-2">
-                         {getEquipmentIcon(reservation.equipment_type)}
-                         <span className="font-medium">{getEquipmentLabel(reservation.equipment_type)}</span>
-                       </div>
-                       <div className="text-sm text-muted-foreground">
-                         <span className="font-medium">Horário da solicitação:</span>{" "}
-                         <span>{format(new Date(reservation.created_at), 'HH:mm')}</span>
-                       </div>
-                     </div>
-                  ))}
+                   {teacherReservations.map((reservation) => (
+                      <div
+                        key={reservation.id}
+                        className="bg-primary/10 rounded-lg p-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-primary mb-2">
+                            {getEquipmentIcon(reservation.equipment_type)}
+                            <span className="font-medium">{getEquipmentLabel(reservation.equipment_type)}</span>
+                          </div>
+                          {canUserCancelReservation(reservation) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => cancelReservation(reservation.id)}
+                              className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-6 w-6"
+                              title="Cancelar reserva"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Horário da solicitação:</span>{" "}
+                          <span>{format(new Date(reservation.created_at), 'HH:mm')}</span>
+                        </div>
+                      </div>
+                   ))}
                 </div>
               </div>
             ))}

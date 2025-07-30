@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Settings, Users, Calendar, Monitor, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X } from 'lucide-react';
+import { Settings, Users, Calendar, Monitor, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,9 +47,29 @@ interface ReservationWithProfile {
   };
 }
 
+interface UserProfile {
+  id: string;
+  user_id: string;
+  display_name: string;
+  institutional_user: string;
+  is_admin: boolean;
+  created_at: string;
+}
+
+interface SystemStats {
+  totalUsers: number;
+  totalReservations: number;
+  totalAdmins: number;
+  reservationsThisWeek: number;
+  projectorReservations: number;
+  speakerReservations: number;
+}
+
 export function AdminPanel() {
   const [equipmentSettings, setEquipmentSettings] = useState<EquipmentSettings | null>(null);
   const [reservations, setReservations] = useState<ReservationWithProfile[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [stats, setStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
   const [editingReservation, setEditingReservation] = useState<string | null>(null);
@@ -65,6 +85,8 @@ export function AdminPanel() {
   useEffect(() => {
     fetchEquipmentSettings();
     fetchAllReservations();
+    fetchAllUsers();
+    fetchSystemStats();
   }, []);
 
   const fetchEquipmentSettings = async () => {
@@ -124,6 +146,134 @@ export function AdminPanel() {
     );
 
     setReservations(reservationsWithProfiles);
+  };
+
+  const fetchAllUsers = async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching users:', error);
+      return;
+    }
+
+    setUsers(data || []);
+  };
+
+  const fetchSystemStats = async () => {
+    try {
+      // Total users
+      const { count: totalUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      // Total reservations
+      const { count: totalReservations } = await supabase
+        .from('reservations')
+        .select('*', { count: 'exact', head: true });
+
+      // Total admins
+      const { count: totalAdmins } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_admin', true);
+
+      // Reservations this week
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const { count: reservationsThisWeek } = await supabase
+        .from('reservations')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', oneWeekAgo.toISOString());
+
+      // Projector reservations
+      const { count: projectorReservations } = await supabase
+        .from('reservations')
+        .select('*', { count: 'exact', head: true })
+        .eq('equipment_type', 'projector');
+
+      // Speaker reservations
+      const { count: speakerReservations } = await supabase
+        .from('reservations')
+        .select('*', { count: 'exact', head: true })
+        .eq('equipment_type', 'speaker');
+
+      setStats({
+        totalUsers: totalUsers || 0,
+        totalReservations: totalReservations || 0,
+        totalAdmins: totalAdmins || 0,
+        reservationsThisWeek: reservationsThisWeek || 0,
+        projectorReservations: projectorReservations || 0,
+        speakerReservations: speakerReservations || 0
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const toggleUserAdmin = async (userId: string, currentAdminStatus: boolean) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_admin: !currentAdminStatus })
+      .eq('user_id', userId);
+
+    if (error) {
+      toast({
+        title: "Erro ao alterar permissão",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Permissão alterada!",
+        description: `Usuário ${!currentAdminStatus ? 'promovido a' : 'removido de'} administrador.`
+      });
+      fetchAllUsers();
+      fetchSystemStats();
+    }
+  };
+
+  const exportReservations = () => {
+    if (reservations.length === 0) {
+      toast({
+        title: "Nenhum dado para exportar",
+        description: "Não há reservas para exportar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const csvContent = [
+      ['Nome', 'Usuário Institucional', 'Equipamento', 'Data', 'Dia da Semana', 'Criado em'].join(','),
+      ...reservations.map(reservation => {
+        const reservationDate = new Date(reservation.reservation_date);
+        const dayOfWeek = format(reservationDate, 'EEEE', { locale: ptBR });
+        const formattedDate = format(reservationDate, "dd/MM/yyyy");
+        const createdAt = format(new Date(reservation.created_at), "dd/MM/yyyy HH:mm");
+        
+        return [
+          `"${reservation.profiles.display_name}"`,
+          `"${reservation.profiles.institutional_user}"`,
+          `"${getEquipmentLabel(reservation.equipment_type)}"`,
+          `"${formattedDate}"`,
+          `"${dayOfWeek}"`,
+          `"${createdAt}"`
+        ].join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `reservas_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+
+    toast({
+      title: "Relatório exportado!",
+      description: "O arquivo CSV foi baixado com sucesso."
+    });
   };
 
   const updateEquipmentSettings = async () => {
@@ -465,6 +615,183 @@ export function AdminPanel() {
                     </TableRow>
                   );
                 })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* System Statistics */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Estatísticas do Sistema
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={exportReservations}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar Relatório
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium">Total de Usuários</span>
+              </div>
+              <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+            </div>
+            
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium">Total de Reservas</span>
+              </div>
+              <div className="text-2xl font-bold">{stats?.totalReservations || 0}</div>
+            </div>
+            
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-purple-600" />
+                <span className="text-sm font-medium">Administradores</span>
+              </div>
+              <div className="text-2xl font-bold">{stats?.totalAdmins || 0}</div>
+            </div>
+            
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Activity className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-medium">Reservas esta Semana</span>
+              </div>
+              <div className="text-2xl font-bold">{stats?.reservationsThisWeek || 0}</div>
+            </div>
+            
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Monitor className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium">Projetores Reservados</span>
+              </div>
+              <div className="text-2xl font-bold">{stats?.projectorReservations || 0}</div>
+            </div>
+            
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Speaker className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium">Caixas de Som Reservadas</span>
+              </div>
+              <div className="text-2xl font-bold">{stats?.speakerReservations || 0}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* User Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCheck className="h-5 w-5" />
+            Gestão de Usuários
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {users.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                Nenhum usuário encontrado
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Ainda não há usuários cadastrados no sistema.
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Usuário Institucional</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Cadastrado em</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="font-medium">{user.display_name}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-muted-foreground">
+                        {user.institutional_user}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={user.is_admin ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}>
+                        <div className="flex items-center gap-1">
+                          {user.is_admin ? (
+                            <>
+                              <Shield className="h-3 w-3" />
+                              Administrador
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="h-3 w-3" />
+                              Usuário
+                            </>
+                          )}
+                        </div>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                    </TableCell>
+                    <TableCell>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className={user.is_admin ? 'text-orange-600 hover:text-orange-600' : 'text-purple-600 hover:text-purple-600'}
+                          >
+                            {user.is_admin ? (
+                              <>
+                                <ShieldOff className="h-3 w-3 mr-2" />
+                                Remover Admin
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="h-3 w-3 mr-2" />
+                                Tornar Admin
+                              </>
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {user.is_admin ? 'Remover' : 'Conceder'} Privilégios de Administrador
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja {user.is_admin ? 'remover os privilégios de administrador de' : 'tornar'} {user.display_name} {user.is_admin ? '' : 'um administrador'}? 
+                              {user.is_admin ? ' Ele perderá acesso às funções administrativas.' : ' Ele terá acesso completo ao painel administrativo.'}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => toggleUserAdmin(user.user_id, user.is_admin)}
+                              className={user.is_admin ? 'bg-orange-600 hover:bg-orange-700' : 'bg-purple-600 hover:bg-purple-700'}
+                            >
+                              {user.is_admin ? 'Remover Privilégios' : 'Conceder Privilégios'}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           )}

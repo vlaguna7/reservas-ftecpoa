@@ -338,12 +338,16 @@ export function MakeReservation() {
       // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          // Faz scroll para a seção das reservas de hoje
-          const todayReservationsSection = document.querySelector('.space-y-6 > div:nth-child(2)');
-          if (todayReservationsSection) {
-            todayReservationsSection.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start' 
+          // Faz scroll para a seção das reservas de auditório (onde aparece a reserva)
+          const auditoriumReservationsSection = document.querySelector('.space-y-6 > div:nth-child(3)');
+          if (auditoriumReservationsSection) {
+            // Calcula posição com offset para mostrar bem a reserva
+            const elementTop = auditoriumReservationsSection.getBoundingClientRect().top + window.pageYOffset;
+            const offsetPosition = elementTop - 20; // 20px de margem do topo
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
             });
           }
         }, 1500);
@@ -473,12 +477,16 @@ export function MakeReservation() {
       // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          // Faz scroll para a seção das reservas de hoje
+          // Faz scroll para a seção das reservas de hoje (onde aparece a reserva de equipamento)
           const todayReservationsSection = document.querySelector('.space-y-6 > div:nth-child(2)');
           if (todayReservationsSection) {
-            todayReservationsSection.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start' 
+            // Calcula posição com offset para mostrar bem a reserva
+            const elementTop = todayReservationsSection.getBoundingClientRect().top + window.pageYOffset;
+            const offsetPosition = elementTop - 20; // 20px de margem do topo
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
             });
           }
         }, 1500);

@@ -167,22 +167,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .replace(/[^a-z0-9.]/g, ''); // Keep only letters, numbers, and dots
       const tempEmail = `${safeEmailUser}@temp.com`;
 
-      // Check if user already exists using normalized comparison
+      // First, clean up any orphaned profiles (profiles without valid auth users)
+      console.log('🧹 Checking for orphaned profiles...');
       const { data: allProfiles } = await supabase
         .from('profiles')
-        .select('institutional_user');
+        .select('id, user_id, institutional_user');
 
-      if (allProfiles) {
-        const existingUser = allProfiles.find(profile => {
+      if (allProfiles && allProfiles.length > 0) {
+        // Check each profile to see if the corresponding auth user exists
+        for (const profile of allProfiles) {
           const normalizedStored = profile.institutional_user
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
-          return normalizedStored === normalizedInput;
-        });
-        
-        if (existingUser) {
-          return { error: { message: 'Usuário institucional já cadastrado. Faça login em vez de cadastro.' } };
+          
+          // If this profile matches the user we're trying to create
+          if (normalizedStored === normalizedInput) {
+            try {
+              // Check if the auth user still exists
+              const { data: authUserCheck } = await supabase.auth.admin.getUserById(profile.user_id);
+              
+              if (authUserCheck?.user) {
+                // User exists, this institutional_user is truly taken
+                return { error: { message: 'Usuário institucional já cadastrado. Faça login em vez de cadastro.' } };
+              } else {
+                // Auth user doesn't exist, this is an orphaned profile - delete it
+                console.log(`🧹 Removing orphaned profile for ${profile.institutional_user}`);
+                await supabase.from('profiles').delete().eq('id', profile.id);
+              }
+            } catch (authCheckError) {
+              // If we can't check auth user, assume it's orphaned and delete
+              console.log(`🧹 Removing potentially orphaned profile for ${profile.institutional_user}`);
+              await supabase.from('profiles').delete().eq('id', profile.id);
+            }
+          }
         }
       }
 
@@ -227,7 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('✅ User auto-confirmed successfully');
           
           // Wait a bit for the confirmation to propagate
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
           
           // Now create the profile after user is confirmed
           const { error: profileError } = await supabase.rpc('handle_signup_with_profile', {
@@ -239,12 +257,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (profileError) {
             console.error('Profile creation error:', profileError);
+            
+            // If profile creation fails, clean up the auth user
+            try {
+              await supabase.auth.admin.deleteUser(data.user.id);
+            } catch (cleanupError) {
+              console.error('Failed to cleanup auth user:', cleanupError);
+            }
+            
             return { error: { message: 'Erro ao criar perfil. Tente novamente.' } };
           }
           
           return { error: null };
         } catch (confirmError) {
           console.warn('Auto-confirm failed:', confirmError);
+          
+          // Clean up auth user if confirm fails
+          try {
+            await supabase.auth.admin.deleteUser(data.user.id);
+          } catch (cleanupError) {
+            console.error('Failed to cleanup auth user:', cleanupError);
+          }
+          
           return { error: { message: 'Erro na confirmação do usuário. Tente novamente.' } };
         }
       }

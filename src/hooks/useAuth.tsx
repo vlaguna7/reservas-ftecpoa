@@ -206,7 +206,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         try {
-          // Use the database function to create profile
+          // Confirm user automatically first to ensure user exists in auth.users
+          await supabase.functions.invoke('confirm-user', {
+            body: { userId: data.user.id }
+          });
+          console.log('✅ User auto-confirmed successfully');
+          
+          // Wait a bit for the confirmation to propagate
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Now create the profile after user is confirmed
           const { error: profileError } = await supabase.rpc('handle_signup_with_profile', {
             p_display_name: displayName,
             p_institutional_user: normalizedUser,
@@ -218,21 +227,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('Profile creation error:', profileError);
             return { error: { message: 'Erro ao criar perfil. Tente novamente.' } };
           }
-
-          // Confirm user automatically to avoid email confirmation
-          try {
-            await supabase.functions.invoke('confirm-user', {
-              body: { userId: data.user.id }
-            });
-            console.log('✅ User auto-confirmed successfully');
-          } catch (confirmError) {
-            console.warn('Auto-confirm failed, but continuing:', confirmError);
-          }
-
+          
           return { error: null };
-        } catch (profileErr) {
-          console.error('Profile creation failed:', profileErr);
-          return { error: { message: 'Erro ao criar perfil. Tente novamente.' } };
+        } catch (confirmError) {
+          console.warn('Auto-confirm failed:', confirmError);
+          return { error: { message: 'Erro na confirmação do usuário. Tente novamente.' } };
         }
       }
 

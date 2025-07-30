@@ -113,17 +113,7 @@ const Index = () => {
             <CardContent className="relative z-10">
               <Button 
                 size="lg" 
-                onClick={() => {
-                  // Add a small delay for mobile to ensure smooth transition
-                  const isMobile = window.innerWidth < 768;
-                  if (isMobile && !user) {
-                    setTimeout(() => {
-                      navigate('/auth', { replace: true });
-                    }, 10);
-                  } else {
-                    navigate(user ? '/dashboard' : '/auth', { replace: true });
-                  }
-                }}
+                onClick={() => navigate(user ? '/dashboard' : '/auth', { replace: true })}
                 className="w-full md:w-auto px-8 md:px-12 py-3 md:py-4 text-lg md:text-xl font-bold transition-all duration-300 hover:scale-105 md:hover:scale-110 shadow-lg md:shadow-xl hover:shadow-xl md:hover:shadow-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-primary-foreground border-2 border-primary-foreground/20 hover:border-primary-foreground/40"
               >
                 {user ? 'Acessar Sistema' : 'Entrar no Sistema'}

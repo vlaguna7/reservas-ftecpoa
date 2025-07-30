@@ -178,22 +178,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // If this profile matches the user we're trying to create
           if (normalizedStored === normalizedInput) {
+            console.log(`🧹 Found existing profile for ${profile.institutional_user}, checking if auth user exists...`);
+            
+            // Always delete the existing profile first to avoid conflicts
+            console.log(`🧹 Removing existing profile for ${profile.institutional_user} to allow recreation`);
+            await supabase.from('profiles').delete().eq('id', profile.id);
+            
+            // Also try to delete any auth user that might exist
             try {
-              // Check if the auth user still exists
-              const { data: authUserCheck } = await supabase.auth.admin.getUserById(profile.user_id);
-              
-              if (authUserCheck?.user) {
-                // User exists, this institutional_user is truly taken
-                return { error: { message: 'Usuário institucional já cadastrado. Faça login em vez de cadastro.' } };
-              } else {
-                // Auth user doesn't exist, this is an orphaned profile - delete it
-                console.log(`🧹 Removing orphaned profile for ${profile.institutional_user}`);
-                await supabase.from('profiles').delete().eq('id', profile.id);
+              const { data: authUsers } = await supabase.auth.admin.listUsers();
+              if (authUsers?.users) {
+                const existingAuthUser = authUsers.users.find((user: any) => 
+                  user.email === `${profile.institutional_user}@temp.com`
+                );
+                if (existingAuthUser) {
+                  console.log(`🧹 Removing existing auth user for ${profile.institutional_user}`);
+                  await supabase.auth.admin.deleteUser(existingAuthUser.id);
+                }
               }
-            } catch (authCheckError) {
-              // If we can't check auth user, assume it's orphaned and delete
-              console.log(`🧹 Removing potentially orphaned profile for ${profile.institutional_user}`);
-              await supabase.from('profiles').delete().eq('id', profile.id);
+            } catch (authCleanupError) {
+              console.log(`⚠️ Could not cleanup auth user: ${authCleanupError.message}`);
             }
           }
         }

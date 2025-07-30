@@ -97,16 +97,16 @@ const Index = () => {
         </div>
 
         <div className="text-center">
-          <Card className="inline-block p-12 animate-fade-in border-4 border-primary bg-gradient-to-br from-primary/20 via-primary/10 to-background shadow-2xl hover:shadow-3xl ring-4 ring-primary/20 hover:ring-primary/40 transition-all duration-500 hover:scale-105 hover:border-primary/80 relative overflow-hidden" style={{ animationDelay: '0.3s' }}>
-            {/* Efeito de brilho animado */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 opacity-0 hover:opacity-100 transition-opacity duration-700 transform translate-x-[-100%] hover:translate-x-[200%] animate-pulse"></div>
+          <Card className="inline-block p-6 md:p-12 animate-fade-in border-2 md:border-4 border-primary bg-gradient-to-br from-primary/20 via-primary/10 to-background shadow-xl md:shadow-2xl hover:shadow-2xl md:hover:shadow-3xl ring-2 md:ring-4 ring-primary/20 hover:ring-primary/40 transition-all duration-500 hover:scale-105 hover:border-primary/80 relative overflow-hidden max-w-sm md:max-w-none mx-auto" style={{ animationDelay: '0.3s' }}>
+            {/* Efeito de brilho animado - apenas no desktop */}
+            <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 opacity-0 hover:opacity-100 transition-opacity duration-700 transform translate-x-[-100%] hover:translate-x-[200%]"></div>
             
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3 justify-center text-primary text-2xl font-bold mb-2">
-                <Users className="h-8 w-8 text-primary animate-pulse" />
+            <CardHeader className="relative z-10 pb-4 md:pb-6">
+              <CardTitle className="flex items-center gap-2 md:gap-3 justify-center text-primary text-lg md:text-2xl font-bold mb-2">
+                <Users className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                 Acesso para Professores
               </CardTitle>
-              <CardDescription className="mb-8 text-lg font-medium text-foreground">
+              <CardDescription className="mb-4 md:mb-8 text-base md:text-lg font-medium text-foreground">
                 Faça login com seu usuário institucional e PIN para acessar o sistema
               </CardDescription>
             </CardHeader>
@@ -124,7 +124,7 @@ const Index = () => {
                     navigate(user ? '/dashboard' : '/auth', { replace: true });
                   }
                 }}
-                className="px-12 py-4 text-xl font-bold transition-all duration-300 hover:scale-110 shadow-xl hover:shadow-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-primary-foreground border-2 border-primary-foreground/20 hover:border-primary-foreground/40 animate-pulse hover:animate-none"
+                className="w-full md:w-auto px-8 md:px-12 py-3 md:py-4 text-lg md:text-xl font-bold transition-all duration-300 hover:scale-105 md:hover:scale-110 shadow-lg md:shadow-xl hover:shadow-xl md:hover:shadow-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-primary-foreground border-2 border-primary-foreground/20 hover:border-primary-foreground/40"
               >
                 {user ? 'Acessar Sistema' : 'Entrar no Sistema'}
               </Button>

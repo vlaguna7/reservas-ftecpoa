@@ -330,25 +330,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN deve ter exatamente 6 dígitos' } };
       }
 
-      // Sign in with PIN as password (PIN is stored as plaintext in Auth)
       const tempEmail = `${profileData.institutional_user}@temp.com`;
       console.log('🔐 Attempting login with:', { 
         tempEmail, 
         pinLength: pin.length,
-        institutionalUser: profileData.institutional_user 
-      });
-      
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: tempEmail,
-        password: pin
+        institutionalUser: profileData.institutional_user,
+        userCreatedAt: profileData.created_at
       });
 
-      console.log('🔐 Login result:', { 
-        success: !signInError, 
-        error: signInError?.message,
-        hasData: !!data,
-        userId: data?.user?.id
-      });
+      // Try different password formats for login
+      const passwordFormats = [
+        pin, // Current format (new users)
+        `FTEC_${profileData.institutional_user}_${pin}_2024!`, // Legacy format (old users)
+        `${profileData.institutional_user}_${pin}`, // Alternative format
+      ];
+
+      let signInError = null;
+      let data = null;
+
+      // Try each password format until one works
+      for (const [index, password] of passwordFormats.entries()) {
+        console.log(`🔐 Trying password format ${index + 1}/3`);
+        
+        const result = await supabase.auth.signInWithPassword({
+          email: tempEmail,
+          password: password
+        });
+
+        if (!result.error) {
+          data = result.data;
+          signInError = null;
+          console.log(`🔐 Login successful with format ${index + 1}`);
+          break;
+        } else {
+          signInError = result.error;
+          console.log(`🔐 Format ${index + 1} failed:`, result.error.message);
+        }
+      }
 
       if (signInError) {
         // If error is about unconfirmed email, try to confirm and retry
@@ -365,18 +383,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Wait a moment for the confirmation to process
             await new Promise(resolve => setTimeout(resolve, 1500));
             
-            // Try sign in again with same credentials
-            const { error: retryError } = await supabase.auth.signInWithPassword({
-              email: tempEmail,
-              password: pin
-            });
-            
-            if (retryError) {
-              console.error('🔧 Retry failed:', retryError);
-              return { error: { message: 'Erro de autenticação. Tente novamente.' } };
+            // Try the password formats again after confirmation
+            for (const [index, password] of passwordFormats.entries()) {
+              console.log(`🔧 Retry format ${index + 1}/3 after confirmation`);
+              
+              const result = await supabase.auth.signInWithPassword({
+                email: tempEmail,
+                password: password
+              });
+
+              if (!result.error) {
+                console.log(`🔧 Retry successful with format ${index + 1}`);
+                return { error: null };
+              }
             }
             
-            console.log('🔧 Auto-confirm and retry successful');
+            return { error: { message: 'Erro de autenticação após confirmação. Tente novamente.' } };
           } catch (confirmError) {
             console.error('Auto-confirm failed:', confirmError);
             return { error: { message: 'Erro de autenticação. Tente novamente.' } };

@@ -107,7 +107,7 @@ const Index = () => {
                 Acesso para Professores
               </CardTitle>
               <CardDescription className="mb-4 md:mb-8 text-base md:text-lg font-medium text-foreground">
-                Primeira vez? Crie seu cadastro primeiro!
+                Faça login com seu usuário institucional e PIN para acessar o sistema
               </CardDescription>
             </CardHeader>
             <CardContent className="relative z-10">

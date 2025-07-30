@@ -335,22 +335,15 @@ export function MakeReservation() {
         description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })}.`
       });
 
-      // Scroll para as reservas na versão mobile após sucesso
+      // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          const myReservationsTab = document.querySelector('[data-value="my-reservations"]');
-          if (myReservationsTab) {
-            (myReservationsTab as HTMLElement).click();
-            // Aguardar a aba mudar e fazer scroll
-            setTimeout(() => {
-              const reservationsSection = document.querySelector('[value="my-reservations"]');
-              if (reservationsSection) {
-                reservationsSection.scrollIntoView({ 
-                  behavior: 'smooth', 
-                  block: 'start' 
-                });
-              }
-            }, 300);
+          const reservationsSection = document.querySelector('[value="my-reservations"]');
+          if (reservationsSection) {
+            reservationsSection.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start' 
+            });
           }
         }, 1500);
       }
@@ -476,22 +469,15 @@ export function MakeReservation() {
         className: "bg-blue-900 border-blue-800 text-white [&>*]:text-white animate-scale-in"
       });
       
-      // Scroll para as reservas na versão mobile após sucesso
+      // Scroll para a dashboard na versão mobile após sucesso
       if (isMobile) {
         setTimeout(() => {
-          const myReservationsTab = document.querySelector('[data-value="my-reservations"]');
-          if (myReservationsTab) {
-            (myReservationsTab as HTMLElement).click();
-            // Aguardar a aba mudar e fazer scroll
-            setTimeout(() => {
-              const reservationsSection = document.querySelector('[value="my-reservations"]');
-              if (reservationsSection) {
-                reservationsSection.scrollIntoView({ 
-                  behavior: 'smooth', 
-                  block: 'start' 
-                });
-              }
-            }, 300);
+          const reservationsSection = document.querySelector('[value="my-reservations"]');
+          if (reservationsSection) {
+            reservationsSection.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start' 
+            });
           }
         }, 1500);
       }

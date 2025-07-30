@@ -101,22 +101,20 @@ export default function Dashboard() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} ${isMobile ? 'md:hidden' : ''}`}>
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-3' : 'grid-cols-4'} ${isMobile ? 'md:hidden' : ''}`}>
             <TabsTrigger value="reservations" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               Fazer Reserva
             </TabsTrigger>
+            <TabsTrigger value="my-reservations" className="flex items-center gap-2">
+              <List className="h-4 w-4" />
+              Minhas Reservas
+            </TabsTrigger>
             {!isMobile && (
-              <>
-                <TabsTrigger value="my-reservations" className="flex items-center gap-2">
-                  <List className="h-4 w-4" />
-                  Minhas Reservas
-                </TabsTrigger>
-                <TabsTrigger value="profile" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Meu Perfil
-                </TabsTrigger>
-              </>
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Meu Perfil
+              </TabsTrigger>
             )}
             {profile.is_admin && (
               <TabsTrigger value="admin" className="flex items-center gap-2">
@@ -134,18 +132,6 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <MakeReservation />
-                  {isMobile && (
-                    <div className="mt-6 pt-4 border-t">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setActiveTab('my-reservations')}
-                        className="w-full flex items-center gap-2"
-                      >
-                        <List className="h-4 w-4" />
-                        Minhas Reservas
-                      </Button>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
               

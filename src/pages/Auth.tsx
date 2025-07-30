@@ -59,10 +59,11 @@ export default function Auth() {
         description: "Redirecionando para o sistema...",
         duration: 1000,
       });
+      // Wait for auth state to fully update before navigation
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
         setLoading(false);
-      }, 1000);
+      }, 1200);
     }
   };
 

@@ -333,6 +333,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
               if (!result.error) {
                 console.log(`🔧 Retry successful with format ${index + 1}`);
+                // Wait for auth state to update before returning
+                await new Promise(resolve => setTimeout(resolve, 200));
                 return { error: null };
               }
             }
@@ -349,6 +351,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Wait for auth state to update before returning
+      await new Promise(resolve => setTimeout(resolve, 200));
       return { error: null };
     } catch (error) {
       console.error('SignIn error:', error);

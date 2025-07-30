@@ -60,6 +60,7 @@ export default function Auth() {
       // Force redirect after successful login
       setTimeout(() => {
         navigate('/dashboard');
+        window.scrollTo(0, 0); // Garantir que inicie no topo da página
         setLoading(false);
       }, 1000);
     }

@@ -207,19 +207,19 @@ export function TodayReservations() {
                 <h3 className="font-semibold text-lg mb-3">{teacherName}</h3>
                 <div className="space-y-3">
                   {teacherReservations.map((reservation) => (
-                    <div
-                      key={reservation.id}
-                      className="flex items-center justify-between bg-primary/10 rounded-lg p-3"
-                    >
-                      <div className="flex items-center gap-2 text-primary">
-                        {getEquipmentIcon(reservation.equipment_type)}
-                        <span className="font-medium">{getEquipmentLabel(reservation.equipment_type)}</span>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">Horário da solicitação:</span>{" "}
-                        <span>{format(new Date(reservation.created_at), 'HH:mm')}</span>
-                      </div>
-                    </div>
+                     <div
+                       key={reservation.id}
+                       className="bg-primary/10 rounded-lg p-3"
+                     >
+                       <div className="flex items-center gap-2 text-primary mb-2">
+                         {getEquipmentIcon(reservation.equipment_type)}
+                         <span className="font-medium">{getEquipmentLabel(reservation.equipment_type)}</span>
+                       </div>
+                       <div className="text-sm text-muted-foreground">
+                         <span className="font-medium">Horário da solicitação:</span>{" "}
+                         <span>{format(new Date(reservation.created_at), 'HH:mm')}</span>
+                       </div>
+                     </div>
                   ))}
                 </div>
               </div>

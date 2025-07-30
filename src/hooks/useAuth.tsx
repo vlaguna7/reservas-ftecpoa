@@ -95,18 +95,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (displayName: string, institutionalUser: string, pin: string) => {
     try {
-      // Normalize the institutional user (convert to lowercase for consistency, but preserve accents)
+      // Normalize the institutional user (preserve original for storage)
       const normalizedUser = institutionalUser.trim();
+      const normalizedInput = normalizedUser
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, ''); // Remove accents
 
-      // Check if user already exists (case-insensitive)
-      const { data: existingProfile } = await supabase
+      // Check if user already exists using normalized comparison
+      const { data: allProfiles } = await supabase
         .from('profiles')
-        .select('institutional_user')
-        .ilike('institutional_user', normalizedUser)
-        .maybeSingle();
+        .select('institutional_user');
 
-      if (existingProfile) {
-        return { error: { message: 'Usuário institucional já cadastrado' } };
+      if (allProfiles) {
+        const existingUser = allProfiles.find(profile => {
+          const normalizedStored = profile.institutional_user
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+          return normalizedStored === normalizedInput;
+        });
+        
+        if (existingUser) {
+          return { error: { message: 'Usuário institucional já cadastrado' } };
+        }
       }
 
       const bcrypt = await import('bcryptjs');
@@ -178,15 +190,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const bcrypt = await import('bcryptjs');
 
-      // Convert to lowercase for case-insensitive search
-      const normalizedUser = institutionalUser.toLowerCase().trim();
+      // Normalize user input (remove accents, lowercase)
+      const normalizedInput = institutionalUser.trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, ''); // Remove accents
 
-      // First, get the user profile by institutional_user (case-insensitive)
-      const { data: profileData, error: profileError } = await supabase
+      // Search for user profile by trying multiple matching strategies
+      // First try exact match with original input
+      let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .ilike('institutional_user', normalizedUser)
+        .ilike('institutional_user', institutionalUser.trim())
         .maybeSingle();
+
+      // If not found, try with normalized search (no accents)
+      if (!profileData) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (profiles) {
+          profileData = profiles.find(profile => {
+            const normalizedStored = profile.institutional_user
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '');
+            return normalizedStored === normalizedInput;
+          });
+        }
+      }
 
       if (profileError || !profileData) {
         return { error: { message: 'Usuário não encontrado' } };

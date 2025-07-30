@@ -214,24 +214,55 @@ export function AdminPanel() {
   };
 
   const toggleUserAdmin = async (userId: string, currentAdminStatus: boolean) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_admin: !currentAdminStatus })
-      .eq('user_id', userId);
+    try {
+      console.log('Toggling admin status:', { userId, currentAdminStatus, newStatus: !currentAdminStatus });
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ is_admin: !currentAdminStatus })
+        .eq('user_id', userId)
+        .select();
 
-    if (error) {
+      console.log('Update result:', { data, error });
+
+      if (error) {
+        console.error('Error updating admin status:', error);
+        toast({
+          title: "Erro ao alterar permissão",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data && data.length > 0) {
+        console.log('Successfully updated user:', data[0]);
+        toast({
+          title: "Permissão alterada!",
+          description: `Usuário ${!currentAdminStatus ? 'promovido a' : 'removido de'} administrador.`
+        });
+        
+        // Recarregar todos os dados para garantir que a UI seja atualizada
+        await Promise.all([
+          fetchAllUsers(),
+          fetchSystemStats(),
+          fetchAllReservations()
+        ]);
+      } else {
+        console.error('No data returned from update');
+        toast({
+          title: "Erro ao alterar permissão",
+          description: "Nenhum usuário foi atualizado. Verifique se o usuário existe.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Exception in toggleUserAdmin:', error);
       toast({
         title: "Erro ao alterar permissão",
-        description: error.message,
+        description: "Erro interno. Tente novamente.",
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Permissão alterada!",
-        description: `Usuário ${!currentAdminStatus ? 'promovido a' : 'removido de'} administrador.`
-      });
-      fetchAllUsers();
-      fetchSystemStats();
     }
   };
 

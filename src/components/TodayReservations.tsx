@@ -102,7 +102,7 @@ export function TodayReservations() {
     
     // Configurar realtime updates para reservas
     const channel = supabase
-      .channel('today-reservations')
+      .channel('today-reservations-realtime')
       .on(
         'postgres_changes',
         {
@@ -110,12 +110,19 @@ export function TodayReservations() {
           schema: 'public',
           table: 'reservations'
         },
-        () => {
-          console.log('Reservation change detected, refreshing...');
+        (payload) => {
+          console.log('🔄 Today Reservations: Real-time change detected:', payload);
+          // Atualização imediata
           fetchTodayReservations();
+          // Segunda atualização para garantir sincronização
+          setTimeout(() => {
+            fetchTodayReservations();
+          }, 300);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Today Reservations realtime status:', status);
+      });
     
     // Atualizar a cada minuto para verificar mudança de dia
     const interval = setInterval(() => {

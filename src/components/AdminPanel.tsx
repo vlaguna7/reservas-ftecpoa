@@ -455,50 +455,59 @@ export function AdminPanel() {
 
       console.log('✅ Successfully deleted profile:', deletedProfile[0]);
 
-      // Step 3: Delete from auth system using edge function
-      console.log('🗑️ Step 3: Deleting from auth system using edge function...');
+      // Step 3: Delete from auth system using direct call to edge function
+      console.log('🗑️ Step 3: Deleting from auth system...');
+      
+      let authDeleted = false;
+      
+      // Try direct HTTP call to edge function
       try {
-        const { data: authDeleteResult, error: authDeleteError } = await supabase.functions.invoke('admin-auth-manager', {
-          body: { 
+        console.log('🔄 Calling edge function directly...');
+        const response = await fetch(`https://frkqhvdsrjuxgcfjbtsp.supabase.co/functions/v1/admin-auth-manager`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZya3FodmRzcmp1eGdjZmpidHNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4Mjg2NjUsImV4cCI6MjA2OTQwNDY2NX0.SlEZUyfyvPWfFT3fLIT_BljVtHkD1W0TYtvsJn17aR8`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
             userId: userId,
             operation: 'delete'
-          }
+          })
         });
-        
-        console.log('🔐 Auth deletion edge function result:', { authDeleteResult, authDeleteError });
-        
-        if (authDeleteError) {
-          console.warn('⚠️ Warning deleting auth user via edge function:', authDeleteError);
-          
-          // Try direct admin API as fallback
-          try {
-            console.log('🔄 Trying direct admin API as fallback...');
-            const { data: directResult, error: directError } = await supabase.auth.admin.deleteUser(userId);
-            
-            console.log('🔐 Direct admin API result:', { directResult, directError });
-            
-            if (directError) {
-              console.warn('⚠️ Direct admin API also failed:', directError.message);
-              // Don't fail the entire process - profile was already deleted
-            } else {
-              console.log('✅ Successfully deleted from auth system via direct API');
-            }
-          } catch (directException) {
-            console.warn('⚠️ Direct admin API exception:', directException);
-          }
+
+        const result = await response.json();
+        console.log('🔐 Edge function response:', { 
+          status: response.status, 
+          ok: response.ok,
+          result 
+        });
+
+        if (response.ok && result.success) {
+          authDeleted = true;
+          console.log('✅ Auth user deleted successfully via edge function');
         } else {
-          console.log('✅ Successfully deleted from auth system via edge function');
+          console.warn('⚠️ Edge function failed:', result);
         }
-      } catch (authException) {
-        console.warn('⚠️ Exception during auth deletion:', authException);
-        
-        // Try direct admin API as final fallback
+      } catch (edgeError) {
+        console.warn('⚠️ Edge function error:', edgeError);
+      }
+
+      // If edge function failed, try direct admin API
+      if (!authDeleted) {
         try {
-          console.log('🔄 Final fallback: direct admin API...');
-          const { data: finalResult, error: finalError } = await supabase.auth.admin.deleteUser(userId);
-          console.log('🔐 Final fallback result:', { finalResult, finalError });
-        } catch (finalException) {
-          console.warn('⚠️ All auth deletion methods failed:', finalException);
+          console.log('🔄 Trying direct admin API as fallback...');
+          const { data: directResult, error: directError } = await supabase.auth.admin.deleteUser(userId);
+          
+          console.log('🔐 Direct admin API result:', { directResult, directError });
+          
+          if (!directError) {
+            authDeleted = true;
+            console.log('✅ Auth user deleted via direct admin API');
+          } else {
+            console.warn('⚠️ Direct admin API failed:', directError.message);
+          }
+        } catch (directException) {
+          console.warn('⚠️ Direct admin API exception:', directException);
         }
       }
 

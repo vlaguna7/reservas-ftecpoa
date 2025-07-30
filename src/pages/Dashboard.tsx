@@ -12,6 +12,7 @@ import { Profile } from '@/components/Profile';
 import { AdminPanel } from '@/components/AdminPanel';
 import { TodayReservations } from '@/components/TodayReservations';
 import { AuditoriumReservations } from '@/components/AuditoriumReservations';
+import { LaboratoryReservations } from '@/components/LaboratoryReservations';
 import { MobileSidebar } from '@/components/MobileSidebar';
 
 export default function Dashboard() {
@@ -150,6 +151,7 @@ export default function Dashboard() {
               
               <TodayReservations />
               <AuditoriumReservations />
+              <LaboratoryReservations />
             </div>
           </TabsContent>
 

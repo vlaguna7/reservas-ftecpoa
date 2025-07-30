@@ -9,12 +9,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Projector, Speaker, AlertCircle, X, HelpCircle, Building } from 'lucide-react';
+import { Calendar, Projector, Speaker, AlertCircle, X, HelpCircle, Building, FlaskConical } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface EquipmentSettings {
@@ -41,7 +42,32 @@ export function MakeReservation() {
   const [auditoriumObservation, setAuditoriumObservation] = useState('');
   const [auditoriumError, setAuditoriumError] = useState('');
   const [observation, setObservation] = useState('');
+  
+  // Estados para laboratório
+  const [selectedLaboratory, setSelectedLaboratory] = useState<string>('');
+  const [laboratoryDate, setLaboratoryDate] = useState<Date | undefined>();
+  const [needsSupplies, setNeedsSupplies] = useState<boolean | null>(null);
+  const [laboratoryObservation, setLaboratoryObservation] = useState('');
+  const [laboratoryError, setLaboratoryError] = useState('');
+  
   const isMobile = useIsMobile();
+
+  // Lista de laboratórios disponíveis
+  const laboratoryOptions = [
+    { value: 'laboratory_08_npj_psico', label: '08 - NPJ/PSICO' },
+    { value: 'laboratory_13_lab_informatica', label: '13 - LAB INFORMÁTICA' },
+    { value: 'laboratory_15_lab_quimica', label: '15 - LAB QUÍMICA' },
+    { value: 'laboratory_16_lab_informatica', label: '16 - LAB INFORMÁTICA' },
+    { value: 'laboratory_17_lab_projetos', label: '17 - LAB PROJETOS' },
+    { value: 'laboratory_18_lab', label: '18 - LAB' },
+    { value: 'laboratory_19_lab', label: '19 - LAB' },
+    { value: 'laboratory_20_lab_informatica', label: '20 - LAB INFORMÁTICA' },
+    { value: 'laboratory_22_lab', label: '22 - LAB' },
+    { value: 'laboratory_28_lab_eng', label: '28 - LAB ENG.' },
+    { value: 'laboratory_103_lab', label: '103 - LAB' },
+    { value: 'laboratory_105_lab_hidraulica', label: '105 - LAB HIDRÁULICA' },
+    { value: 'laboratory_106_lab_informatica', label: '106 - LAB INFORMÁTICA' }
+  ];
 
   const getAvailableDate = () => {
     const today = new Date();
@@ -360,12 +386,105 @@ export function MakeReservation() {
     }
   };
 
+  const confirmLaboratoryReservation = async () => {
+    if (!selectedLaboratory || !laboratoryDate) {
+      setLaboratoryError('Por favor, selecione um laboratório e uma data.');
+      return;
+    }
+
+    if (needsSupplies === null) {
+      setLaboratoryError('Por favor, responda se precisa comprar insumos.');
+      return;
+    }
+
+    if (needsSupplies && !laboratoryObservation.trim()) {
+      setLaboratoryError('Para compra de insumos, adicione uma observação detalhada.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const dateStr = formatDateToLocalString(laboratoryDate);
+      
+      // Verificar se já existe reserva para este laboratório na data
+      const { data: existingReservations, error: checkError } = await supabase
+        .from('reservations')
+        .select('id')
+        .eq('equipment_type', selectedLaboratory)
+        .eq('reservation_date', dateStr);
+
+      if (checkError) {
+        throw checkError;
+      }
+
+      if (existingReservations && existingReservations.length > 0) {
+        setLaboratoryError('Este laboratório já está reservado para esta data. Por favor, selecione outro dia disponível.');
+        return;
+      }
+
+      const observation = needsSupplies 
+        ? laboratoryObservation.trim()
+        : 'Não deseja insumos extras.';
+      
+      const { error } = await supabase
+        .from('reservations')
+        .insert({
+          user_id: user.id,
+          equipment_type: selectedLaboratory,
+          reservation_date: dateStr,
+          observation: observation
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      const laboratoryName = laboratoryOptions.find(lab => lab.value === selectedLaboratory)?.label || 'Laboratório';
+
+      toast({
+        title: "Reserva confirmada!",
+        description: `${laboratoryName} reservado para ${format(laboratoryDate, "dd/MM/yyyy", { locale: ptBR })}.`
+      });
+
+      // Scroll para o meio da página na versão mobile após sucesso
+      if (isMobile) {
+        setTimeout(() => {
+          const pageHeight = document.documentElement.scrollHeight;
+          const middlePosition = pageHeight / 2;
+          
+          window.scrollTo({
+            top: middlePosition,
+            behavior: 'smooth'
+          });
+        }, 1500);
+      }
+
+      // Reset form
+      setSelectedLaboratory('');
+      setLaboratoryDate(undefined);
+      setNeedsSupplies(null);
+      setLaboratoryObservation('');
+      setLaboratoryError('');
+    } catch (error: any) {
+      console.error('Error creating laboratory reservation:', error);
+      setLaboratoryError(error.message || 'Erro ao criar reserva. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Para auditório, usar função específica
     if (selectedEquipment === 'auditorium') {
       await confirmAuditoriumReservation();
+      return;
+    }
+
+    // Para laboratório, usar função específica
+    if (selectedEquipment === 'laboratory') {
+      await confirmLaboratoryReservation();
       return;
     }
 
@@ -487,6 +606,13 @@ export function MakeReservation() {
       setAuditoriumDate(undefined);
       setAuditoriumObservation('');
       setObservation('');
+      
+      // Reset laboratory states
+      setSelectedLaboratory('');
+      setLaboratoryDate(undefined);
+      setNeedsSupplies(null);
+      setLaboratoryObservation('');
+      setLaboratoryError('');
     }
 
     setLoading(false);
@@ -523,6 +649,8 @@ export function MakeReservation() {
         return <Speaker className="h-4 w-4" />;
       case 'auditorium':
         return <Building className="h-4 w-4" />;
+      case 'laboratory':
+        return <FlaskConical className="h-4 w-4" />;
       default:
         return null;
     }
@@ -536,6 +664,8 @@ export function MakeReservation() {
         return 'Caixa de Som';
       case 'auditorium':
         return 'Auditório';
+      case 'laboratory':
+        return 'Laboratório';
       default:
         return '';
     }
@@ -546,7 +676,7 @@ export function MakeReservation() {
       <div>
         <Label className="text-base font-medium">Selecione uma opção:</Label>
         <RadioGroup value={selectedEquipment} onValueChange={setSelectedEquipment} className="mt-3">
-          {['projector', 'speaker', 'auditorium'].map((type) => (
+          {['projector', 'speaker', 'auditorium', 'laboratory'].map((type) => (
             <div key={type} className="flex items-center space-x-2">
               <RadioGroupItem value={type} id={type} />
               <Label htmlFor={type} className="flex items-center gap-2 cursor-pointer">
@@ -559,6 +689,8 @@ export function MakeReservation() {
         <div className="mt-2 text-sm text-muted-foreground">
           {selectedEquipment === 'auditorium' 
             ? 'O auditório pode ser reservado uma vez por dia por professor.'
+            : selectedEquipment === 'laboratory'
+            ? 'Selecione o laboratório desejado e escolha uma data para a reserva.'
             : 'Você pode fazer 1 reserva de cada tipo de equipamento por dia (1 projetor + 1 caixa de som).'
           }
         </div>
@@ -643,8 +775,125 @@ export function MakeReservation() {
         </div>
       )}
 
+      {/* Interface específica para laboratório */}
+      {selectedEquipment === 'laboratory' && (
+        <div className="space-y-4">
+          <div>
+            <Label className="text-base font-medium">Selecione o laboratório:</Label>
+            <Select value={selectedLaboratory} onValueChange={setSelectedLaboratory}>
+              <SelectTrigger className="mt-2">
+                <SelectValue placeholder="Escolha um laboratório" />
+              </SelectTrigger>
+              <SelectContent>
+                {laboratoryOptions.map((lab) => (
+                  <SelectItem key={lab.value} value={lab.value}>
+                    {lab.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedLaboratory && (
+            <>
+              <div>
+                <Label className="text-base font-medium">Selecione a data:</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal mt-2"
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {laboratoryDate ? format(laboratoryDate, "dd/MM/yyyy") : "Escolha uma data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={laboratoryDate}
+                      onSelect={(date) => {
+                        setLaboratoryDate(date);
+                        setLaboratoryError('');
+                      }}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        date.setHours(0, 0, 0, 0);
+                        return date < today;
+                      }}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {laboratoryDate && (
+                <>
+                  <div>
+                    <Label className="text-base font-medium">Precisa comprar algum insumo para a aula?</Label>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="supplies-yes"
+                          name="needsSupplies"
+                          checked={needsSupplies === true}
+                          onChange={() => {
+                            setNeedsSupplies(true);
+                            setLaboratoryError('');
+                          }}
+                        />
+                        <Label htmlFor="supplies-yes" className="cursor-pointer">Sim</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="supplies-no"
+                          name="needsSupplies"
+                          checked={needsSupplies === false}
+                          onChange={() => {
+                            setNeedsSupplies(false);
+                            setLaboratoryError('');
+                          }}
+                        />
+                        <Label htmlFor="supplies-no" className="cursor-pointer">Não</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {needsSupplies === true && (
+                    <div>
+                      <Label className="text-base font-medium">Observação (obrigatória para insumos):</Label>
+                      <Textarea
+                        placeholder="Para compra de insumos, esta aula deverá ser agendada com no mínimo 3 dias úteis de antecedência."
+                        value={laboratoryObservation}
+                        onChange={(e) => {
+                          setLaboratoryObservation(e.target.value);
+                          setLaboratoryError('');
+                        }}
+                        className="mt-2"
+                        rows={3}
+                      />
+                    </div>
+                  )}
+
+                  {laboratoryError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{laboratoryError}</AlertDescription>
+                    </Alert>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Interface para equipamentos normais */}
-      {selectedEquipment && selectedEquipment !== 'auditorium' && (
+      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedEquipment !== 'laboratory' && (
         <div>
           <Label className="text-base font-medium">Data disponível para reserva:</Label>
           <div className="mt-3 space-y-3">
@@ -737,7 +986,7 @@ export function MakeReservation() {
         </div>
       )}
 
-      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedDate && hasUserReservation(selectedDate, selectedEquipment) && (
+      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedEquipment !== 'laboratory' && selectedDate && hasUserReservation(selectedDate, selectedEquipment) && (
         <Alert variant="default" className="border-amber-200 bg-amber-50">
           <AlertCircle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
@@ -746,7 +995,7 @@ export function MakeReservation() {
         </Alert>
       )}
 
-      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedDate && !hasUserReservation(selectedDate, selectedEquipment) && !isAvailable(selectedDate, selectedEquipment) && (
+      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedEquipment !== 'laboratory' && selectedDate && !hasUserReservation(selectedDate, selectedEquipment) && !isAvailable(selectedDate, selectedEquipment) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -759,10 +1008,11 @@ export function MakeReservation() {
         type="submit" 
         disabled={loading || !selectedEquipment || 
           (selectedEquipment === 'auditorium' ? (!auditoriumDate || !auditoriumObservation.trim()) : 
+            selectedEquipment === 'laboratory' ? (!selectedLaboratory || !laboratoryDate || needsSupplies === null || (needsSupplies && !laboratoryObservation.trim())) :
             (!selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)))}
         className="w-full"
       >
-        {loading ? 'Reservando...' : 'Confirmar Reserva'}
+        {loading ? 'Reservando...' : selectedEquipment === 'laboratory' ? 'Reservar Laboratório' : 'Confirmar Reserva'}
       </Button>
 
       <Collapsible open={showFAQ} onOpenChange={setShowFAQ}>

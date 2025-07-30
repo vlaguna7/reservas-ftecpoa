@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Projector, Speaker, Calendar, Users, Building } from 'lucide-react';
+import { Projector, Speaker, Calendar, Users, Building, FlaskConical } from 'lucide-react';
 
 
 const Index = () => {
@@ -58,7 +58,7 @@ const Index = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-6 mb-12 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-5 gap-6 mb-12 max-w-7xl mx-auto">
           <Card className="text-center card-hover animate-fade-in">
             <CardHeader>
               <Projector className="h-12 w-12 mx-auto mb-4 text-primary" />
@@ -97,6 +97,18 @@ const Index = () => {
 
           <Card className="text-center card-hover animate-fade-in" style={{ animationDelay: '0.3s' }}>
             <CardHeader>
+              <FlaskConical className="h-12 w-12 mx-auto mb-4 text-primary" />
+              <CardTitle>Reserva de Laboratórios</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Reserve laboratórios para suas aulas práticas
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center card-hover animate-fade-in" style={{ animationDelay: '0.4s' }}>
+            <CardHeader>
               <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Agendamento</CardTitle>
             </CardHeader>
@@ -109,7 +121,7 @@ const Index = () => {
         </div>
 
         <div className="text-center">
-          <Card className="inline-block p-6 md:p-12 animate-fade-in border-2 md:border-4 border-primary bg-gradient-to-br from-primary/20 via-primary/10 to-background shadow-xl md:shadow-2xl hover:shadow-2xl md:hover:shadow-3xl ring-2 md:ring-4 ring-primary/20 hover:ring-primary/40 transition-all duration-500 hover:scale-105 hover:border-primary/80 relative overflow-hidden max-w-sm md:max-w-none mx-auto" style={{ animationDelay: '0.4s' }}>
+          <Card className="inline-block p-6 md:p-12 animate-fade-in border-2 md:border-4 border-primary bg-gradient-to-br from-primary/20 via-primary/10 to-background shadow-xl md:shadow-2xl hover:shadow-2xl md:hover:shadow-3xl ring-2 md:ring-4 ring-primary/20 hover:ring-primary/40 transition-all duration-500 hover:scale-105 hover:border-primary/80 relative overflow-hidden max-w-sm md:max-w-none mx-auto" style={{ animationDelay: '0.5s' }}>
             {/* Efeito de brilho animado - apenas no desktop */}
             <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 opacity-0 hover:opacity-100 transition-opacity duration-700 transform translate-x-[-100%] hover:translate-x-[200%]"></div>
             

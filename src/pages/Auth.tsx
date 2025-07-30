@@ -88,33 +88,48 @@ export default function Auth() {
     }
 
     setLoading(true);
-    const { error } = await signUp(
-      signupData.displayName,
-      signupData.institutionalUser,
-      signupData.pin
-    );
     
-    if (error) {
+    try {
+      const { error } = await signUp(
+        signupData.displayName,
+        signupData.institutionalUser,
+        signupData.pin
+      );
+      
+      if (error) {
+        console.error('Signup error:', error);
+        toast({
+          title: "Erro no cadastro",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Cadastro realizado!",
+          description: "Redirecionando para o dashboard...",
+          className: "bg-blue-900 text-white border-blue-700 shadow-lg",
+          duration: 2000
+        });
+        
+        // Clear form data
+        setSignupData({ displayName: '', institutionalUser: '', pin: '', confirmPin: '' });
+        
+        // For mobile compatibility, redirect directly to dashboard after successful signup
+        console.log('Signup successful, redirecting to dashboard...');
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Signup exception:', err);
       toast({
         title: "Erro no cadastro",
-        description: error.message,
+        description: "Erro inesperado. Tente novamente.",
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Cadastro realizado!",
-        description: "Você pode fazer login agora.",
-        className: "bg-blue-900 text-white border-blue-700 shadow-lg",
-        duration: 4000
-      });
-      setSignupData({ displayName: '', institutionalUser: '', pin: '', confirmPin: '' });
-      
-      setTimeout(() => {
-        setActiveTab('login');
-      }, 100);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (

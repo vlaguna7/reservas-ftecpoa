@@ -159,6 +159,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, ''); // Remove accents
 
+      // Generate email early to check for duplicates
+      const safeEmailUser = normalizedUser
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^a-z0-9.]/g, ''); // Keep only letters, numbers, and dots
+      const tempEmail = `${safeEmailUser}@temp.com`;
+
       // Check if user already exists using normalized comparison
       const { data: allProfiles } = await supabase
         .from('profiles')
@@ -174,20 +182,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         if (existingUser) {
-          return { error: { message: 'Usuário institucional já cadastrado' } };
+          return { error: { message: 'Usuário institucional já cadastrado. Faça login em vez de cadastro.' } };
         }
       }
 
       const bcrypt = await import('bcryptjs');
       const pinHash = await bcrypt.hash(pin, 10);
 
-      // Create user with temporary email - normalize for valid email format
-      const safeEmailUser = normalizedUser
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove accents
-        .replace(/[^a-z0-9.]/g, ''); // Keep only letters, numbers, and dots
-      const tempEmail = `${safeEmailUser}@temp.com`;
+      // Create user with temporary email using previously defined variables
       const { data, error: authError } = await supabase.auth.signUp({
         email: tempEmail,
         password: normalizedUser + pin,
@@ -201,7 +203,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (authError) {
+        // Handle specific error cases
+        if (authError.message.includes('User already registered')) {
+          return { error: { message: 'Este usuário institucional já está cadastrado. Faça login em vez de cadastro.' } };
+        }
+        if (authError.message.includes('Email already registered')) {
+          return { error: { message: 'Este usuário institucional já está cadastrado. Faça login em vez de cadastro.' } };
+        }
         return { error: authError };
+      }
+
+      // Check if signup was successful but user already exists
+      if (!data.user) {
+        return { error: { message: 'Erro inesperado durante o cadastro. Tente novamente.' } };
       }
 
       if (data.user) {

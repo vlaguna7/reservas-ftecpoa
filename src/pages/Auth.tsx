@@ -105,7 +105,9 @@ export default function Auth() {
     } else {
       toast({
         title: "Cadastro realizado!",
-        description: "Você pode fazer login agora."
+        description: "Você pode fazer login agora.",
+        className: "bg-blue-900 text-white border-blue-700 shadow-lg",
+        duration: 4000
       });
       setSignupData({ displayName: '', institutionalUser: '', pin: '', confirmPin: '' });
       

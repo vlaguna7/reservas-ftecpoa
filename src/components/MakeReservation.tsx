@@ -385,61 +385,66 @@ export function MakeReservation() {
       return;
     }
 
-    // Verificar novamente se há conflitos antes de confirmar (excluindo reservas do próprio usuário)
-    const dateStr = format(auditoriumDate, 'yyyy-MM-dd');
-    const availability = await checkAuditoriumAvailability(dateStr, selectedTimeSlots, true);
-    
-    if (!availability.available) {
-      const conflictingLabels = availability.conflictingSlots.map(slot => 
-        TIME_SLOTS.find(ts => ts.value === slot)?.label
-      ).join(', ');
-      setAuditoriumError(`Os seguintes horários já estão reservados por outros usuários: ${conflictingLabels}. Por favor, remova-os da sua seleção.`);
-      return;
-    }
-
     try {
       setLoading(true);
       const dateStr = formatDateToLocalString(auditoriumDate);
       
-      console.log('Data selecionada:', auditoriumDate);
-      console.log('Data formatada para envio:', dateStr);
-      console.log('Horários selecionados:', selectedTimeSlots);
-      
-      // Verificar se os horários estão disponíveis
-      const availability = await checkAuditoriumAvailability(dateStr, selectedTimeSlots);
-      
-      if (!availability.available) {
-        const conflictingLabels = availability.conflictingSlots.map(slot => 
-          TIME_SLOTS.find(ts => ts.value === slot)?.label
-        ).join(', ');
-        setAuditoriumError(`Os seguintes horários já estão reservados: ${conflictingLabels}. Por favor, selecione outros horários.`);
-        return;
-      }
+      console.log('🔄 Iniciando processo de reserva...');
+      console.log('🔄 Data selecionada:', auditoriumDate);
+      console.log('🔄 Data formatada para envio:', dateStr);
+      console.log('🔄 Horários selecionados:', selectedTimeSlots);
+      console.log('🔄 Usuário:', user?.id);
       
       // Verificar se o usuário já tem uma reserva para esta data
-      console.log('🔍 Verificando reservas existentes para:', { userId: user.id, date: dateStr });
       const { data: existingReservations, error: checkError } = await supabase
         .from('reservations')
-        .select('id, time_slots')
+        .select('id, time_slots, observation')
         .eq('user_id', user.id)
         .eq('equipment_type', 'auditorium')
         .eq('reservation_date', dateStr);
 
       console.log('🔍 Reservas existentes encontradas:', existingReservations);
-      console.log('🔍 Erro na verificação:', checkError);
-
+      
       if (checkError) {
+        console.error('❌ Erro ao verificar reservas existentes:', checkError);
         throw checkError;
+      }
+
+      // Verificar conflitos com outros usuários (excluindo o próprio usuário)
+      const { data: otherReservations, error: otherError } = await supabase
+        .from('reservations')
+        .select('time_slots')
+        .eq('equipment_type', 'auditorium')
+        .eq('reservation_date', dateStr)
+        .neq('user_id', user.id);
+
+      if (otherError) {
+        console.error('❌ Erro ao verificar reservas de outros usuários:', otherError);
+        throw otherError;
+      }
+
+      // Verificar se há conflitos com outros usuários
+      const otherUsersSlots = otherReservations?.flatMap(res => res.time_slots || []) || [];
+      const conflictingSlots = selectedTimeSlots.filter(slot => otherUsersSlots.includes(slot));
+      
+      if (conflictingSlots.length > 0) {
+        const conflictingLabels = conflictingSlots.map(slot => 
+          TIME_SLOTS.find(ts => ts.value === slot)?.label
+        ).join(', ');
+        setAuditoriumError(`Os seguintes horários já estão reservados por outros usuários: ${conflictingLabels}.`);
+        return;
       }
 
       let result;
       
       if (existingReservations && existingReservations.length > 0) {
-        // Atualizar reserva existente adicionando novos horários
-        console.log('🔄 Atualizando reserva existente...');
+        // Atualizar reserva existente
+        console.log('🔄 Usuário já tem reserva - atualizando...');
         const existingReservation = existingReservations[0];
         const existingSlots = existingReservation.time_slots || [];
-        const allSlots = [...new Set([...existingSlots, ...selectedTimeSlots])]; // Remove duplicatas
+        
+        // Combinar horários existentes com novos (sem duplicatas)
+        const allSlots = [...new Set([...existingSlots, ...selectedTimeSlots])];
         
         console.log('🔄 Horários existentes:', existingSlots);
         console.log('🔄 Novos horários:', selectedTimeSlots);
@@ -449,7 +454,8 @@ export function MakeReservation() {
           .from('reservations')
           .update({
             time_slots: allSlots,
-            observation: auditoriumObservation.trim()
+            observation: auditoriumObservation.trim(),
+            updated_at: new Date().toISOString()
           })
           .eq('id', existingReservation.id)
           .select();
@@ -457,9 +463,22 @@ export function MakeReservation() {
         console.log('🔄 Resultado da atualização:', { data, error });
 
         if (error) {
+          console.error('❌ Erro na atualização:', error);
           throw error;
         }
-        result = data?.[0]; // Usar o primeiro item do array em vez de .single()
+        
+        result = data?.[0];
+        
+        // Mostrar horários combinados no toast
+        const allSelectedLabels = allSlots.map(slot => 
+          TIME_SLOTS.find(ts => ts.value === slot)?.label
+        ).join(', ');
+        
+        toast({
+          title: "Reserva atualizada!",
+          description: `Auditório atualizado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })} nos horários: ${allSelectedLabels}.`
+        });
+        
       } else {
         // Criar nova reserva
         console.log('➕ Criando nova reserva...');
@@ -477,32 +496,23 @@ export function MakeReservation() {
         console.log('➕ Resultado da criação:', { data, error });
 
         if (error) {
+          console.error('❌ Erro na criação:', error);
           throw error;
         }
-        result = data?.[0]; // Usar o primeiro item do array em vez de .single()
+        
+        result = data?.[0];
+        
+        const selectedLabels = selectedTimeSlots.map(slot => 
+          TIME_SLOTS.find(ts => ts.value === slot)?.label
+        ).join(', ');
+
+        toast({
+          title: "Reserva confirmada!",
+          description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })} nos horários: ${selectedLabels}.`
+        });
       }
 
-      const selectedLabels = selectedTimeSlots.map(slot => 
-        TIME_SLOTS.find(ts => ts.value === slot)?.label
-      ).join(', ');
-
-      toast({
-        title: "Reserva confirmada!",
-        description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })} nos horários: ${selectedLabels}.`
-      });
-
-      // Scroll para o meio da página na versão mobile após sucesso
-      if (isMobile) {
-        setTimeout(() => {
-          const pageHeight = document.documentElement.scrollHeight;
-          const middlePosition = pageHeight / 2;
-          
-          window.scrollTo({
-            top: middlePosition,
-            behavior: 'smooth'
-          });
-        }, 1500);
-      }
+      console.log('✅ Reserva processada com sucesso:', result);
 
       // Reset form
       setAuditoriumDate(undefined);
@@ -511,12 +521,12 @@ export function MakeReservation() {
       setSelectedTimeSlots([]);
       setShowAuditoriumObservation(false);
       
-      // Forçar reload dos dados para garantir que todas as telas sejam atualizadas
-      window.location.reload();
+      // Não fazer reload da página - deixar o realtime atualizar
+      console.log('🔄 Reserva concluída - aguardando atualizações do realtime...');
       
     } catch (error: any) {
-      console.error('Error creating auditorium reservation:', error);
-      setAuditoriumError(error.message || 'Erro ao criar reserva. Tente novamente.');
+      console.error('❌ Erro no processo de reserva:', error);
+      setAuditoriumError(error.message || 'Erro ao processar reserva. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -905,37 +915,45 @@ export function MakeReservation() {
                       checked={selectedTimeSlots.includes(slot.value)}
                       onCheckedChange={async (checked) => {
                         if (checked === true) {
-                          // Verificar se este horário já está reservado
+                          // Verificar se este horário já está reservado por outros usuários
                           const dateStr = formatDateToLocalString(auditoriumDate!);
-                          const availability = await checkAuditoriumAvailability(dateStr, [slot.value], true);
                           
-                          if (!availability.available) {
-                            setAuditoriumError(`Este horário já está reservado.`);
-                            // Impedir a seleção de horários já reservados
+                          // Buscar reservas de outros usuários para esta data
+                          const { data: otherReservations, error } = await supabase
+                            .from('reservations')
+                            .select('time_slots')
+                            .eq('equipment_type', 'auditorium')
+                            .eq('reservation_date', dateStr)
+                            .neq('user_id', user?.id);
+                          
+                          if (error) {
+                            console.error('Erro ao verificar disponibilidade:', error);
+                            setAuditoriumError('Erro ao verificar disponibilidade. Tente novamente.');
                             return;
                           }
                           
+                          const otherUsersSlots = otherReservations?.flatMap(res => res.time_slots || []) || [];
+                          
+                          if (otherUsersSlots.includes(slot.value)) {
+                            setAuditoriumError(`Este horário já está reservado.`);
+                            return; // Impedir a seleção
+                          }
+                          
+                          // Se chegou até aqui, pode selecionar
                           setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
-                          setAuditoriumError(''); // Limpar erro se conseguiu selecionar
+                          setAuditoriumError(''); // Limpar qualquer erro anterior
                         } else {
                           setSelectedTimeSlots(selectedTimeSlots.filter(s => s !== slot.value));
-                          // Limpar erro se deselecionar
-                          if (auditoriumError.includes(slot.label)) {
-                            setAuditoriumError('');
-                          }
+                          setAuditoriumError(''); // Limpar erro ao deselecionar
                         }
                         
-                        // Mostrar observação apenas quando algum horário for selecionado E não houver conflitos
+                        // Controlar exibição da observação
                         const newTimeSlots = checked === true 
                           ? [...selectedTimeSlots, slot.value]
                           : selectedTimeSlots.filter(s => s !== slot.value);
                         
-                        // Só mostrar observação se não houver erros de conflito
-                        if (newTimeSlots.length > 0 && !auditoriumError) {
-                          setShowAuditoriumObservation(true);
-                        } else if (newTimeSlots.length === 0) {
-                          setShowAuditoriumObservation(false);
-                        }
+                        // Só mostrar observação se houver horários selecionados e sem erros
+                        setShowAuditoriumObservation(newTimeSlots.length > 0 && !auditoriumError);
                       }}
                     />
                     <Label htmlFor={slot.value} className="cursor-pointer">

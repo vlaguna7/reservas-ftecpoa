@@ -425,6 +425,19 @@ export function MakeReservation() {
 
       const hasExistingReservation = existingReservations && existingReservations.length > 0;
       
+      // NOVA LÓGICA: Se já tem reserva, bloquear e pedir para cancelar
+      if (hasExistingReservation) {
+        console.log('🚫 Usuário já tem reserva - bloqueando nova reserva');
+        setAuditoriumError('Você já possui uma reserva de auditório para esta data. Para modificar sua reserva, primeiro cancele a reserva atual em "Minhas Reservas" e depois faça uma nova reserva com os horários desejados.');
+        return;
+      }
+
+      // Sempre exigir observação para novas reservas
+      if (!auditoriumObservation.trim()) {
+        setAuditoriumError('Por favor, adicione uma observação.');
+        return;
+      }
+      
       // Se não há reserva existente, exigir observação
       if (!hasExistingReservation && !auditoriumObservation.trim()) {
         setAuditoriumError('Por favor, adicione uma observação.');
@@ -456,100 +469,36 @@ export function MakeReservation() {
         return;
       }
 
-      let result;
-      
-      if (hasExistingReservation) {
-        // Atualizar reserva existente
-        console.log('🔄 CONFIRMAÇÃO - Usuário já tem reserva - atualizando...');
-        const existingReservation = existingReservations[0];
-        const existingSlots = existingReservation.time_slots || [];
-        
-        console.log('🔄 CONFIRMAÇÃO - Reserva existente completa:', existingReservation);
-        console.log('🔄 CONFIRMAÇÃO - Horários existentes na reserva:', existingSlots);
-        console.log('🔄 CONFIRMAÇÃO - Novos horários selecionados:', selectedTimeSlots);
-        
-        // Verificar se o usuário já tem estes horários reservados
-        const duplicateSlots = selectedTimeSlots.filter(slot => existingSlots.includes(slot));
-        console.log('🔄 CONFIRMAÇÃO - Horários duplicados encontrados:', duplicateSlots);
-        
-        if (duplicateSlots.length > 0) {
-          const duplicateLabels = duplicateSlots.map(slot => 
-            TIME_SLOTS.find(ts => ts.value === slot)?.label
-          ).join(', ');
-          console.log('❌ CONFIRMAÇÃO - Bloqueando por duplicatas:', duplicateLabels);
-          setAuditoriumError(`Você já reservou os seguintes horários: ${duplicateLabels}.`);
-          return;
-        }
-        
-        // Combinar horários existentes com novos
-        const allSlots = [...existingSlots, ...selectedTimeSlots];
-        
-        console.log('🔄 CONFIRMAÇÃO - Horários existentes:', existingSlots);
-        console.log('🔄 CONFIRMAÇÃO - Novos horários:', selectedTimeSlots);
-        console.log('🔄 CONFIRMAÇÃO - Todos os horários combinados:', allSlots);
-        console.log('🔄 CONFIRMAÇÃO - ID da reserva a ser atualizada:', existingReservation.id);
-        
-        const { data, error } = await supabase
-          .from('reservations')
-          .update({
-            time_slots: allSlots,
-            observation: auditoriumObservation.trim() || existingReservation.observation,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingReservation.id)
-          .select();
+      // Criar nova reserva (lógica simplificada - sem atualização de reservas existentes)
+      console.log('➕ Criando nova reserva...');
+      const { data, error } = await supabase
+        .from('reservations')
+        .insert({
+          user_id: user.id,
+          equipment_type: 'auditorium',
+          reservation_date: dateStr,
+          observation: auditoriumObservation.trim(),
+          time_slots: selectedTimeSlots
+        })
+        .select();
 
-        console.log('🔄 Resultado da atualização:', { data, error });
+      console.log('➕ Resultado da criação:', { data, error });
 
-        if (error) {
-          console.error('❌ Erro na atualização:', error);
-          throw error;
-        }
-        
-        result = data?.[0];
-        
-        // Mostrar horários combinados no toast
-        const allSelectedLabels = allSlots.map(slot => 
-          TIME_SLOTS.find(ts => ts.value === slot)?.label
-        ).join(', ');
-        
-        toast({
-          title: "Reserva atualizada!",
-          description: `Auditório atualizado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })} nos horários: ${allSelectedLabels}.`
-        });
-        
-      } else {
-        // Criar nova reserva
-        console.log('➕ Criando nova reserva...');
-        const { data, error } = await supabase
-          .from('reservations')
-          .insert({
-            user_id: user.id,
-            equipment_type: 'auditorium',
-            reservation_date: dateStr,
-            observation: auditoriumObservation.trim(),
-            time_slots: selectedTimeSlots
-          })
-          .select();
-
-        console.log('➕ Resultado da criação:', { data, error });
-
-        if (error) {
-          console.error('❌ Erro na criação:', error);
-          throw error;
-        }
-        
-        result = data?.[0];
-        
-        const selectedLabels = selectedTimeSlots.map(slot => 
-          TIME_SLOTS.find(ts => ts.value === slot)?.label
-        ).join(', ');
-
-        toast({
-          title: "Reserva confirmada!",
-          description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })} nos horários: ${selectedLabels}.`
-        });
+      if (error) {
+        console.error('❌ Erro na criação:', error);
+        throw error;
       }
+      
+      const result = data?.[0];
+      
+      const selectedLabels = selectedTimeSlots.map(slot => 
+        TIME_SLOTS.find(ts => ts.value === slot)?.label
+      ).join(', ');
+
+      toast({
+        title: "Reserva confirmada!",
+        description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })} nos horários: ${selectedLabels}.`
+      });
 
       console.log('✅ Reserva processada com sucesso:', result);
 
@@ -1041,7 +990,7 @@ export function MakeReservation() {
                           console.log('🔍 CHECKBOX - Reservas do usuário:', userReservations);
                           
                           const hasExistingReservation = userReservations && userReservations.length > 0;
-                          setShowAuditoriumObservation(newTimeSlots.length > 0 && !hasExistingReservation);
+                          setShowAuditoriumObservation(newTimeSlots.length > 0);
                           
                           console.log('🔍 CHECKBOX - Mostrar observação?', newTimeSlots.length > 0 && !hasExistingReservation);
                         } else {
@@ -1065,7 +1014,7 @@ export function MakeReservation() {
                               .eq('user_id', user?.id);
                             
                             const hasExistingReservation = userReservations && userReservations.length > 0;
-                            setShowAuditoriumObservation(newTimeSlots.length > 0 && !hasExistingReservation);
+                            setShowAuditoriumObservation(newTimeSlots.length > 0);
                           }
                         }
                       }}
@@ -1101,9 +1050,9 @@ export function MakeReservation() {
             </Alert>
           )}
 
-          {auditoriumDate && selectedTimeSlots.length > 0 && showAuditoriumObservation && !auditoriumError && (
+          {auditoriumDate && selectedTimeSlots.length > 0 && !auditoriumError && (
             <div>
-              <Label className="text-base font-medium">Observação (obrigatória para nova reserva):</Label>
+              <Label className="text-base font-medium">Observação (obrigatória):</Label>
               <Textarea
                 placeholder="Descreva o motivo da reserva, se precisará de equipamentos, apoio técnico, etc. (máximo 600 caracteres)"
                 value={auditoriumObservation}
@@ -1382,7 +1331,7 @@ export function MakeReservation() {
       <Button 
         type="submit" 
       disabled={loading || !selectedEquipment || 
-        (selectedEquipment === 'auditorium' ? (!auditoriumDate || selectedTimeSlots.length === 0 || !!auditoriumError || (!hasExistingAuditoriumReservation && !auditoriumObservation.trim())) :
+        (selectedEquipment === 'auditorium' ? (!auditoriumDate || selectedTimeSlots.length === 0 || !!auditoriumError || !auditoriumObservation.trim()) :
           selectedEquipment === 'laboratory' ? (!selectedLaboratory || !laboratoryDate || needsSupplies === null || (needsSupplies && !laboratoryObservation.trim())) :
           (!selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)))}
         className="w-full"

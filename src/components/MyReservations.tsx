@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Projector, Speaker, Trash2, CheckCircle, FlaskConical, Users } from 'lucide-react';
+import { Calendar, Projector, Speaker, Trash2, CheckCircle, FlaskConical, Users, Filter } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Reservation {
   id: string;
@@ -40,9 +48,12 @@ interface Reservation {
 
 export function MyReservations() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [laboratories, setLaboratories] = useState<{[key: string]: string}>({});
+  const [filteredReservations, setFilteredReservations] = useState<Reservation[]>([]);
+  const [currentFilter, setCurrentFilter] = useState('all');
 
   useEffect(() => {
     fetchLaboratories();
@@ -118,6 +129,7 @@ export function MyReservations() {
     } else {
       console.log('Reservations data:', data); // Debug log
       setReservations(data || []);
+      setFilteredReservations(data || []);
     }
 
     setLoading(false);
@@ -281,6 +293,57 @@ export function MyReservations() {
     return !isReservationFinished(reservationDate);
   };
 
+  const applyFilter = (filter: string) => {
+    setCurrentFilter(filter);
+    let filtered = [...reservations];
+
+    switch (filter) {
+      case 'recent':
+        filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'oldest':
+        filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'projector':
+        filtered = filtered.filter(r => r.equipment_type === 'projector');
+        break;
+      case 'speaker':
+        filtered = filtered.filter(r => r.equipment_type === 'speaker');
+        break;
+      case 'auditorium':
+        filtered = filtered.filter(r => r.equipment_type === 'auditorium');
+        break;
+      case 'laboratory':
+        filtered = filtered.filter(r => r.equipment_type.startsWith('laboratory_'));
+        break;
+      case 'all':
+      default:
+        // No additional filtering, keep original order
+        break;
+    }
+
+    setFilteredReservations(filtered);
+  };
+
+  const getFilterLabel = () => {
+    switch (currentFilter) {
+      case 'recent':
+        return 'Mais recentes';
+      case 'oldest':
+        return 'Mais antigas';
+      case 'projector':
+        return 'Projetor';
+      case 'speaker':
+        return 'Caixa de Som';
+      case 'auditorium':
+        return 'Auditório';
+      case 'laboratory':
+        return 'Laboratório';
+      default:
+        return 'Todos';
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -312,7 +375,47 @@ export function MyReservations() {
 
   return (
     <div className="space-y-4">
-      {reservations.map((reservation) => {
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold">Minhas Reservas</h2>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size={isMobile ? "icon" : "default"}>
+              <Filter className="h-4 w-4" />
+              {!isMobile && <span className="ml-2">{getFilterLabel()}</span>}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => applyFilter('all')}>
+              Todas as reservas
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => applyFilter('recent')}>
+              Mais recentes
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => applyFilter('oldest')}>
+              Mais antigas
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => applyFilter('projector')}>
+              <Projector className="h-4 w-4 mr-2" />
+              Projetor
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => applyFilter('speaker')}>
+              <Speaker className="h-4 w-4 mr-2" />
+              Caixa de Som
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => applyFilter('auditorium')}>
+              <Users className="h-4 w-4 mr-2" />
+              Auditório
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => applyFilter('laboratory')}>
+              <FlaskConical className="h-4 w-4 mr-2" />
+              Laboratório
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {filteredReservations.map((reservation) => {
         // Parse the date string safely to avoid timezone issues
         console.log('Raw reservation_date:', reservation.reservation_date); // Debug log
         const reservationDate = parseISO(reservation.reservation_date + 'T00:00:00');

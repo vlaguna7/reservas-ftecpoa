@@ -314,7 +314,11 @@ export function MyReservations() {
                   {reservation.equipment_type === 'auditorium' && reservation.time_slots && reservation.time_slots.length > 0 && (
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-xs mt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground mt-1 md:variant-outline md:h-8 md:px-3"
+                        >
                           Ver horários
                         </Button>
                       </DialogTrigger>

@@ -314,11 +314,16 @@ export function MakeReservation() {
   };
 
   const checkAuditoriumAvailability = async (date: string, timeSlots: string[]) => {
+    console.log('🔍 Verificando disponibilidade para:', { date, timeSlots });
+    
     const { data, error } = await supabase
       .from('reservations')
       .select('time_slots')
       .eq('reservation_date', date)
       .eq('equipment_type', 'auditorium');
+
+    console.log('🔍 Reservas encontradas:', data);
+    console.log('🔍 Erro na consulta:', error);
 
     if (error) {
       console.error('Error checking auditorium availability:', error);
@@ -326,12 +331,16 @@ export function MakeReservation() {
     }
 
     if (data.length === 0) {
+      console.log('✅ Nenhuma reserva encontrada - horários disponíveis');
       return { available: true, conflictingSlots: [] };
     }
 
     // Verificar conflitos de horários
     const existingSlots = data.flatMap(reservation => reservation.time_slots || []);
+    console.log('🔍 Horários já reservados:', existingSlots);
+    
     const conflictingSlots = timeSlots.filter(slot => existingSlots.includes(slot));
+    console.log('⚠️ Conflitos encontrados:', conflictingSlots);
     
     return {
       available: conflictingSlots.length === 0,
@@ -388,12 +397,16 @@ export function MakeReservation() {
       }
       
       // Verificar se o usuário já tem uma reserva para esta data
+      console.log('🔍 Verificando reservas existentes para:', { userId: user.id, date: dateStr });
       const { data: existingReservations, error: checkError } = await supabase
         .from('reservations')
         .select('id, time_slots')
         .eq('user_id', user.id)
         .eq('equipment_type', 'auditorium')
         .eq('reservation_date', dateStr);
+
+      console.log('🔍 Reservas existentes encontradas:', existingReservations);
+      console.log('🔍 Erro na verificação:', checkError);
 
       if (checkError) {
         throw checkError;
@@ -403,9 +416,14 @@ export function MakeReservation() {
       
       if (existingReservations && existingReservations.length > 0) {
         // Atualizar reserva existente adicionando novos horários
+        console.log('🔄 Atualizando reserva existente...');
         const existingReservation = existingReservations[0];
         const existingSlots = existingReservation.time_slots || [];
         const allSlots = [...new Set([...existingSlots, ...selectedTimeSlots])]; // Remove duplicatas
+        
+        console.log('🔄 Horários existentes:', existingSlots);
+        console.log('🔄 Novos horários:', selectedTimeSlots);
+        console.log('🔄 Todos os horários combinados:', allSlots);
         
         const { data, error } = await supabase
           .from('reservations')
@@ -414,15 +432,17 @@ export function MakeReservation() {
             observation: auditoriumObservation.trim()
           })
           .eq('id', existingReservation.id)
-          .select()
-          .single();
+          .select();
+
+        console.log('🔄 Resultado da atualização:', { data, error });
 
         if (error) {
           throw error;
         }
-        result = data;
+        result = data?.[0]; // Usar o primeiro item do array em vez de .single()
       } else {
         // Criar nova reserva
+        console.log('➕ Criando nova reserva...');
         const { data, error } = await supabase
           .from('reservations')
           .insert({
@@ -432,13 +452,14 @@ export function MakeReservation() {
             observation: auditoriumObservation.trim(),
             time_slots: selectedTimeSlots
           })
-          .select()
-          .single();
+          .select();
+
+        console.log('➕ Resultado da criação:', { data, error });
 
         if (error) {
           throw error;
         }
-        result = data;
+        result = data?.[0]; // Usar o primeiro item do array em vez de .single()
       }
 
       const selectedLabels = selectedTimeSlots.map(slot => 

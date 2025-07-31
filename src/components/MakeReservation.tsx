@@ -313,14 +313,21 @@ export function MakeReservation() {
     return available !== null && available > 0 && !userAlreadyHasReservation;
   };
 
-  const checkAuditoriumAvailability = async (date: string, timeSlots: string[]) => {
-    console.log('🔍 Verificando disponibilidade para:', { date, timeSlots });
+  const checkAuditoriumAvailability = async (date: string, timeSlots: string[], excludeCurrentUser = false) => {
+    console.log('🔍 Verificando disponibilidade para:', { date, timeSlots, excludeCurrentUser });
     
-    const { data, error } = await supabase
+    let query = supabase
       .from('reservations')
-      .select('time_slots')
+      .select('time_slots, user_id')
       .eq('reservation_date', date)
       .eq('equipment_type', 'auditorium');
+
+    // Se excludeCurrentUser for true, excluir reservas do usuário atual
+    if (excludeCurrentUser && user) {
+      query = query.neq('user_id', user.id);
+    }
+
+    const { data, error } = await query;
 
     console.log('🔍 Reservas encontradas:', data);
     console.log('🔍 Erro na consulta:', error);
@@ -335,9 +342,9 @@ export function MakeReservation() {
       return { available: true, conflictingSlots: [] };
     }
 
-    // Verificar conflitos de horários
+    // Verificar conflitos de horários (excluindo reservas do próprio usuário quando solicitado)
     const existingSlots = data.flatMap(reservation => reservation.time_slots || []);
-    console.log('🔍 Horários já reservados:', existingSlots);
+    console.log('🔍 Horários já reservados (excluindo usuário atual se solicitado):', existingSlots);
     
     const conflictingSlots = timeSlots.filter(slot => existingSlots.includes(slot));
     console.log('⚠️ Conflitos encontrados:', conflictingSlots);
@@ -378,36 +385,16 @@ export function MakeReservation() {
       return;
     }
 
-    // Verificar novamente se há conflitos antes de confirmar
+    // Verificar novamente se há conflitos antes de confirmar (excluindo reservas do próprio usuário)
     const dateStr = format(auditoriumDate, 'yyyy-MM-dd');
+    const availability = await checkAuditoriumAvailability(dateStr, selectedTimeSlots, true);
     
-    // Verificar se o usuário já tem uma reserva para esta data
-    console.log('🔍 Verificando reservas existentes para:', { userId: user?.id, date: dateStr });
-    const { data: existingReservations, error: checkError } = await supabase
-      .from('reservations')
-      .select('id, time_slots')
-      .eq('user_id', user?.id)
-      .eq('equipment_type', 'auditorium')
-      .eq('reservation_date', dateStr);
-
-    if (checkError) {
-      console.error('Erro ao verificar reservas existentes:', checkError);
-      setAuditoriumError('Erro ao verificar reservas. Tente novamente.');
+    if (!availability.available) {
+      const conflictingLabels = availability.conflictingSlots.map(slot => 
+        TIME_SLOTS.find(ts => ts.value === slot)?.label
+      ).join(', ');
+      setAuditoriumError(`Os seguintes horários já estão reservados por outros usuários: ${conflictingLabels}. Por favor, remova-os da sua seleção.`);
       return;
-    }
-
-    // Se o usuário já tem uma reserva, permitir adição de novos horários
-    // Se não tem reserva, verificar conflitos com outros usuários
-    if (!existingReservations || existingReservations.length === 0) {
-      const availability = await checkAuditoriumAvailability(dateStr, selectedTimeSlots);
-      
-      if (!availability.available) {
-        const conflictingLabels = availability.conflictingSlots.map(slot => 
-          TIME_SLOTS.find(ts => ts.value === slot)?.label
-        ).join(', ');
-        setAuditoriumError(`Os seguintes horários já estão reservados: ${conflictingLabels}. Por favor, remova-os da sua seleção.`);
-        return;
-      }
     }
 
     try {
@@ -523,6 +510,9 @@ export function MakeReservation() {
       setAuditoriumError('');
       setSelectedTimeSlots([]);
       setShowAuditoriumObservation(false);
+      
+      // Forçar reload dos dados para garantir que todas as telas sejam atualizadas
+      window.location.reload();
       
     } catch (error: any) {
       console.error('Error creating auditorium reservation:', error);
@@ -917,12 +907,11 @@ export function MakeReservation() {
                         if (checked === true) {
                           // Verificar se este horário já está reservado
                           const dateStr = formatDateToLocalString(auditoriumDate!);
-                          const availability = await checkAuditoriumAvailability(dateStr, [slot.value]);
+                          const availability = await checkAuditoriumAvailability(dateStr, [slot.value], true);
                           
                           if (!availability.available) {
-                            setAuditoriumError(`O horário "${slot.label}" já está reservado para esta data.`);
-                            // Não adicionar o horário se já estiver reservado
-                            return;
+                            setAuditoriumError(`O horário "${slot.label}" já está reservado por outro usuário para esta data.`);
+                            // Não impedir a seleção, apenas mostrar o aviso
                           }
                           
                           setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
@@ -934,13 +923,11 @@ export function MakeReservation() {
                           }
                         }
                         
-                        // Mostrar observação apenas quando algum horário válido for selecionado
+                        // Mostrar observação apenas quando algum horário for selecionado
                         const newTimeSlots = checked === true 
                           ? [...selectedTimeSlots, slot.value]
                           : selectedTimeSlots.filter(s => s !== slot.value);
-                        
-                        // Só mostrar observação se não há erro e há horários selecionados
-                        setShowAuditoriumObservation(newTimeSlots.length > 0 && !auditoriumError);
+                        setShowAuditoriumObservation(newTimeSlots.length > 0);
                       }}
                     />
                     <Label htmlFor={slot.value} className="cursor-pointer">
@@ -955,7 +942,7 @@ export function MakeReservation() {
             </div>
           )}
 
-          {auditoriumDate && selectedTimeSlots.length > 0 && !auditoriumError && (
+          {auditoriumDate && selectedTimeSlots.length > 0 && (
             <div>
               <Label className="text-base font-medium">Observação (obrigatória):</Label>
               <Textarea

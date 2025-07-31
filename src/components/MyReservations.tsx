@@ -158,7 +158,9 @@ export function MyReservations() {
         // Delay adicional para sincronização completa
         setTimeout(async () => {
           await fetchReservations();
-        }, 500);
+          // Força reload da página para garantir sincronização total
+          window.location.reload();
+        }, 1000);
         
       } else {
         console.error('No data returned from delete operation');

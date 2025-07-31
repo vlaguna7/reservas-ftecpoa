@@ -49,7 +49,7 @@ export function MakeReservation() {
   const [needsSupplies, setNeedsSupplies] = useState<boolean | null>(null);
   const [laboratoryObservation, setLaboratoryObservation] = useState('');
   const [laboratoryError, setLaboratoryError] = useState('');
-  const [laboratoryOptions, setLaboratoryOptions] = useState<Array<{value: string, label: string}>>([]);
+  const [laboratoryOptions, setLaboratoryOptions] = useState<Array<{value: string, label: string, isActive: boolean}>>([]);
   
   const isMobile = useIsMobile();
 
@@ -146,21 +146,44 @@ export function MakeReservation() {
   const fetchActiveLaboratories = async () => {
     const { data, error } = await supabase
       .from('laboratory_settings')
-      .select('laboratory_code, laboratory_name')
-      .eq('is_active', true)
-      .order('laboratory_name', { ascending: true });
+      .select('laboratory_code, laboratory_name, is_active')
+      .order('laboratory_name');
 
     if (error) {
-      console.error('Error fetching active laboratories:', error);
+      console.error('Error fetching laboratories:', error);
       return;
     }
 
-    const labOptions = data?.map(lab => ({
-      value: lab.laboratory_code,
-      label: lab.laboratory_name
-    })) || [];
+    // Separar laboratórios ativos e inativos, ordenar numericamente
+    const allLabs = data || [];
+    const activeLabs = allLabs.filter(lab => lab.is_active);
+    const inactiveLabs = allLabs.filter(lab => !lab.is_active);
     
-    setLaboratoryOptions(labOptions);
+    // Função para extrair número do nome do laboratório para ordenação
+    const extractNumber = (name: string) => {
+      const match = name.match(/\d+/);
+      return match ? parseInt(match[0]) : 999; // Colocar labs sem número no final
+    };
+    
+    // Ordenar por número
+    const sortedActiveLabs = activeLabs.sort((a, b) => extractNumber(a.laboratory_name) - extractNumber(b.laboratory_name));
+    const sortedInactiveLabs = inactiveLabs.sort((a, b) => extractNumber(a.laboratory_name) - extractNumber(b.laboratory_name));
+    
+    // Criar opções com informação de status
+    const activeOptions = sortedActiveLabs.map(lab => ({
+      value: lab.laboratory_code,
+      label: lab.laboratory_name,
+      isActive: true
+    }));
+    
+    const inactiveOptions = sortedInactiveLabs.map(lab => ({
+      value: lab.laboratory_code,
+      label: lab.laboratory_name,
+      isActive: false
+    }));
+    
+    // Combinar: ativos primeiro, depois inativos
+    setLaboratoryOptions([...activeOptions, ...inactiveOptions]);
   };
 
   const fetchAvailability = async () => {
@@ -786,19 +809,39 @@ export function MakeReservation() {
         <div className="space-y-4">
           <div>
             <Label className="text-base font-medium">Selecione o laboratório:</Label>
-            <Select value={selectedLaboratory} onValueChange={setSelectedLaboratory}>
-              <SelectTrigger className="mt-2 max-w-md">
-                <SelectValue placeholder={laboratoryOptions.length === 0 ? "Nenhum laboratório ativo disponível" : "Escolha um laboratório"} />
+            <Select value={selectedLaboratory} onValueChange={(value) => {
+              const selectedLab = laboratoryOptions.find(lab => lab.value === value);
+              if (selectedLab && !selectedLab.isActive) {
+                setLaboratoryError('Este laboratório está desativado pela administração e não pode ser reservado.');
+                return;
+              }
+              setSelectedLaboratory(value);
+              setLaboratoryError('');
+            }}>
+              <SelectTrigger className="mt-2 max-w-sm">
+                <SelectValue placeholder={laboratoryOptions.length === 0 ? "Nenhum laboratório disponível" : "Escolha um laboratório"} />
               </SelectTrigger>
               <SelectContent className="max-h-60">
                 {laboratoryOptions.length === 0 ? (
                   <div className="p-2 text-center text-muted-foreground">
-                    Nenhum laboratório ativo no momento
+                    Nenhum laboratório cadastrado
                   </div>
                 ) : (
                   laboratoryOptions.map((lab) => (
-                    <SelectItem key={lab.value} value={lab.value}>
-                      {lab.label}
+                    <SelectItem 
+                      key={lab.value} 
+                      value={lab.value}
+                      disabled={!lab.isActive}
+                      className={!lab.isActive ? "opacity-60" : ""}
+                    >
+                      <div className="flex flex-col">
+                        <span>{lab.label}</span>
+                        {!lab.isActive && (
+                          <span className="text-xs text-muted-foreground">
+                            Desativado pela administração
+                          </span>
+                        )}
+                      </div>
                     </SelectItem>
                   ))
                 )}

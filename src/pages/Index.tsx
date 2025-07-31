@@ -41,25 +41,30 @@ const Index = () => {
       
       <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center md:text-left mb-8">
           <img 
             src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
             alt="FTEC Logo" 
-            className="mx-auto h-20 md:h-24 object-contain animate-fade-in"
+            className="mx-auto md:mx-0 md:block md:w-auto md:h-24 h-20 object-contain animate-fade-in"
           />
         </div>
         
-        <div className="text-center mb-12">
+        <div className="text-center md:text-left mb-12">
           <h1 className="text-4xl font-bold mb-4 text-foreground animate-fade-in">
             Sistema de Reservas de Equipamentos
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in">
+          <p className="text-xl text-muted-foreground max-w-2xl md:mx-0 mx-auto animate-fade-in">
             Plataforma para professores e parceiros reservarem projetores, caixas de som e nosso Auditório na unidade FTEC POA.
           </p>
         </div>
 
         <div className="grid md:grid-cols-5 gap-6 mb-12 max-w-7xl mx-auto">
-          <Card className="text-center card-hover animate-fade-in">
+          <Card className="text-center card-hover animate-fade-in cursor-pointer md:cursor-default" onClick={() => {
+            if (window.innerWidth < 768) { // Mobile only
+              const footer = document.querySelector('footer');
+              footer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }}>
             <CardHeader>
               <Projector className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Projetores</CardTitle>
@@ -71,7 +76,12 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center card-hover animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          <Card className="text-center card-hover animate-fade-in cursor-pointer md:cursor-default" style={{ animationDelay: '0.1s' }} onClick={() => {
+            if (window.innerWidth < 768) { // Mobile only
+              const footer = document.querySelector('footer');
+              footer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }}>
             <CardHeader>
               <Speaker className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Caixas de Som</CardTitle>
@@ -83,7 +93,12 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center card-hover animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <Card className="text-center card-hover animate-fade-in cursor-pointer md:cursor-default" style={{ animationDelay: '0.2s' }} onClick={() => {
+            if (window.innerWidth < 768) { // Mobile only
+              const footer = document.querySelector('footer');
+              footer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }}>
             <CardHeader>
               <Building className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Reserve o auditório de Porto Alegre</CardTitle>
@@ -95,7 +110,12 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center card-hover animate-fade-in" style={{ animationDelay: '0.3s' }}>
+          <Card className="text-center card-hover animate-fade-in cursor-pointer md:cursor-default" style={{ animationDelay: '0.3s' }} onClick={() => {
+            if (window.innerWidth < 768) { // Mobile only
+              const footer = document.querySelector('footer');
+              footer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }}>
             <CardHeader>
               <FlaskConical className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Reserva de Laboratórios</CardTitle>
@@ -107,7 +127,12 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="text-center card-hover animate-fade-in" style={{ animationDelay: '0.4s' }}>
+          <Card className="text-center card-hover animate-fade-in cursor-pointer md:cursor-default" style={{ animationDelay: '0.4s' }} onClick={() => {
+            if (window.innerWidth < 768) { // Mobile only
+              const footer = document.querySelector('footer');
+              footer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }}>
             <CardHeader>
               <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Agendamento</CardTitle>

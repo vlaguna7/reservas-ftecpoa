@@ -503,6 +503,10 @@ export function MakeReservation() {
       setAuditoriumError('');
       setSelectedTimeSlots([]);
       setShowAuditoriumObservation(false);
+      
+      // Forçar reload dos dados para garantir que todas as telas sejam atualizadas
+      window.location.reload();
+      
     } catch (error: any) {
       console.error('Error creating auditorium reservation:', error);
       setAuditoriumError(error.message || 'Erro ao criar reserva. Tente novamente.');

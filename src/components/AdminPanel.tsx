@@ -1064,11 +1064,9 @@ export function AdminPanel() {
 
   const handleAuditoriumDateSelect = (date: Date | undefined) => {
     if (date) {
-      const reservation = getAuditoriumReservationForDate(date);
-      if (reservation) {
-        setSelectedAuditoriumDate(date);
-        setShowAuditoriumDetails(true);
-      }
+      // Sempre permitir seleção da data, mesmo se não houver reservas
+      setSelectedAuditoriumDate(date);
+      setShowAuditoriumDetails(true);
     } else {
       setSelectedAuditoriumDate(undefined);
       setShowAuditoriumDetails(false);
@@ -1253,13 +1251,16 @@ export function AdminPanel() {
                       {format(selectedAuditoriumDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                     </DialogDescription>
                   </DialogHeader>
-                  {(() => {
-                    const reservationsForDate = auditoriumReservations.filter(reservation => {
-                      return format(new Date(reservation.reservation_date), 'yyyy-MM-dd') === 
-                             format(selectedAuditoriumDate, 'yyyy-MM-dd');
-                    });
-                    
-                    return reservationsForDate.length > 0 ? (
+                   {(() => {
+                     const reservationsForDate = auditoriumReservations.filter(reservation => {
+                       const reservationDate = new Date(reservation.reservation_date + 'T12:00:00');
+                       return isSameDay(reservationDate, selectedAuditoriumDate);
+                     });
+                     
+                     console.log('🗓️ Reservas para data selecionada:', reservationsForDate);
+                     console.log('🗓️ Todas as reservas do auditório:', auditoriumReservations);
+                     
+                     return reservationsForDate.length > 0 ? (
                       <div className="space-y-6 max-h-96 overflow-y-auto">
                         {reservationsForDate.map((reservation, index) => (
                           <div key={reservation.id} className="border rounded-lg p-4 space-y-3">

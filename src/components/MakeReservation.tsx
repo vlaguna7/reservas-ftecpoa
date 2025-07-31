@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -356,6 +356,13 @@ export function MakeReservation() {
     };
   };
   
+  // Verificar se usuário tem reserva existente de auditório
+  const hasExistingAuditoriumReservation = useMemo(() => {
+    if (!auditoriumDate || !user) return false;
+    const dateStr = formatDateToLocalString(auditoriumDate);
+    return userReservations[dateStr]?.some(res => res.equipment_type === 'auditorium') || false;
+  }, [auditoriumDate, userReservations, user]);
+
   // Função para forçar data local sem problemas de timezone
   const formatDateToLocalString = (date: Date) => {
     // Abordagem mais drástica: extrair componentes e construir string diretamente
@@ -1327,7 +1334,7 @@ export function MakeReservation() {
       <Button 
         type="submit" 
       disabled={loading || !selectedEquipment || 
-        (selectedEquipment === 'auditorium' ? (!auditoriumDate || selectedTimeSlots.length === 0 || !auditoriumObservation.trim() || !!auditoriumError) : 
+        (selectedEquipment === 'auditorium' ? (!auditoriumDate || selectedTimeSlots.length === 0 || !!auditoriumError || (!hasExistingAuditoriumReservation && !auditoriumObservation.trim())) : 
           selectedEquipment === 'laboratory' ? (!selectedLaboratory || !laboratoryDate || needsSupplies === null || (needsSupplies && !laboratoryObservation.trim())) :
           (!selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)))}
         className="w-full"

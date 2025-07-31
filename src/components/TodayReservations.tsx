@@ -50,11 +50,12 @@ export function TodayReservations() {
       
       console.log('🔍 TodayReservations: Fetching reservations for date:', dateStr);
 
-      // Buscar todas as reservas (equipamentos e laboratórios)
+      // Buscar apenas reservas de projetores e caixas de som
       const { data: reservationData, error: reservationError } = await supabase
         .from('reservations')
         .select('id, equipment_type, user_id, created_at')
         .eq('reservation_date', dateStr)
+        .in('equipment_type', ['projector', 'speaker'])
         .order('created_at', { ascending: true });
 
       console.log('🔍 TodayReservations: Raw reservation data:', reservationData);

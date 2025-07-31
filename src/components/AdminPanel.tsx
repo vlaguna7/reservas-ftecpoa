@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Settings, Users, Calendar, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff, Plus } from 'lucide-react';
+import { Settings, Users, Calendar as CalendarIcon, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff, Plus } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -82,6 +84,25 @@ interface LaboratorySetting {
   is_active: boolean;
 }
 
+interface AuditoriumReservation {
+  id: string;
+  reservation_date: string;
+  observation: string;
+  user_profile: {
+    display_name: string;
+  };
+}
+
+interface LaboratoryReservation {
+  id: string;
+  reservation_date: string;
+  observation: string;
+  equipment_type: string;
+  user_profile: {
+    display_name: string;
+  };
+}
+
 export function AdminPanel() {
   const [equipmentSettings, setEquipmentSettings] = useState<EquipmentSettings | null>(null);
   const [reservations, setReservations] = useState<ReservationWithProfile[]>([]);
@@ -111,6 +132,13 @@ export function AdminPanel() {
     laboratory_code: '',
     laboratory_name: ''
   });
+  
+  const [auditoriumReservations, setAuditoriumReservations] = useState<AuditoriumReservation[]>([]);
+  const [laboratoryReservations, setLaboratoryReservations] = useState<LaboratoryReservation[]>([]);
+  const [selectedAuditoriumDate, setSelectedAuditoriumDate] = useState<Date | undefined>(undefined);
+  const [selectedLabDate, setSelectedLabDate] = useState<Date | undefined>(undefined);
+  const [showAuditoriumDetails, setShowAuditoriumDetails] = useState(false);
+  const [showLabDetails, setShowLabDetails] = useState(false);
 
   useEffect(() => {
     fetchEquipmentSettings();
@@ -118,6 +146,8 @@ export function AdminPanel() {
     fetchAllUsers();
     fetchLaboratorySettings();
     fetchSystemStats();
+    fetchAuditoriumReservations();
+    fetchLaboratoryReservations();
   }, []);
 
   const fetchEquipmentSettings = async () => {
@@ -848,6 +878,115 @@ export function AdminPanel() {
     }
   };
 
+  const fetchAuditoriumReservations = async () => {
+    const { data, error } = await supabase
+      .from('reservations')
+      .select(`
+        id,
+        reservation_date,
+        observation,
+        user_id
+      `)
+      .eq('equipment_type', 'auditorium')
+      .order('reservation_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching auditorium reservations:', error);
+      return;
+    }
+
+    const reservationsWithProfiles = await Promise.all(
+      (data || []).map(async (reservation) => {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', reservation.user_id)
+          .single();
+
+        return {
+          ...reservation,
+          user_profile: profileData || { display_name: 'N/A' }
+        };
+      })
+    );
+
+    setAuditoriumReservations(reservationsWithProfiles);
+  };
+
+  const fetchLaboratoryReservations = async () => {
+    const { data, error } = await supabase
+      .from('reservations')
+      .select(`
+        id,
+        reservation_date,
+        observation,
+        equipment_type,
+        user_id
+      `)
+      .like('equipment_type', 'laboratory_%')
+      .order('reservation_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching laboratory reservations:', error);
+      return;
+    }
+
+    const reservationsWithProfiles = await Promise.all(
+      (data || []).map(async (reservation) => {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', reservation.user_id)
+          .single();
+
+        return {
+          ...reservation,
+          user_profile: profileData || { display_name: 'N/A' }
+        };
+      })
+    );
+
+    setLaboratoryReservations(reservationsWithProfiles);
+  };
+
+  const getAuditoriumReservationForDate = (date: Date) => {
+    return auditoriumReservations.find(reservation => 
+      isSameDay(new Date(reservation.reservation_date), date)
+    );
+  };
+
+  const getLaboratoryReservationsForDate = (date: Date) => {
+    return laboratoryReservations.filter(reservation => 
+      isSameDay(new Date(reservation.reservation_date), date)
+    );
+  };
+
+  const handleAuditoriumDateSelect = (date: Date | undefined) => {
+    if (date) {
+      const reservation = getAuditoriumReservationForDate(date);
+      if (reservation) {
+        setSelectedAuditoriumDate(date);
+        setShowAuditoriumDetails(true);
+      }
+    }
+  };
+
+  const handleLabDateSelect = (date: Date | undefined) => {
+    if (date) {
+      const reservations = getLaboratoryReservationsForDate(date);
+      if (reservations.length > 0) {
+        setSelectedLabDate(date);
+        setShowLabDetails(true);
+      }
+    }
+  };
+
+  const getLabNameFromCode = (equipmentType: string) => {
+    const labCode = equipmentType.replace('laboratory_', '');
+    const lab = laboratorySettings.find(lab => lab.laboratory_code === `laboratory_${labCode}`);
+    return lab ? lab.laboratory_name : `Laboratório ${labCode}`;
+  };
+
   const getEquipmentIcon = (type: string) => {
     switch (type) {
       case 'projector':
@@ -969,142 +1108,123 @@ export function AdminPanel() {
         </CardContent>
       </Card>
 
-      {/* All Reservations */}
+      {/* Auditorium Calendar */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Todas as Reservas
+            <CalendarIcon className="h-5 w-5" />
+            Calendário de Auditório
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {reservations.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                Nenhuma reserva encontrada
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Ainda não há reservas no sistema.
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Equipamento</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Dia da Semana</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reservations.map((reservation) => {
-                  const reservationDate = new Date(reservation.reservation_date + 'T12:00:00');
-                  const dayOfWeek = format(reservationDate, 'EEEE', { locale: ptBR });
-                  const formattedDate = format(reservationDate, "dd/MM/yyyy", { locale: ptBR });
-                  
-                  return (
-                    <TableRow key={reservation.id}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {editingReservation === reservation.id ? (
-                            <div className="space-y-2">
-                              <Input
-                                value={editForm.display_name}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, display_name: e.target.value }))}
-                                placeholder="Nome"
-                                className="h-8"
-                              />
-                              <Input
-                                value={editForm.institutional_user}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, institutional_user: e.target.value }))}
-                                placeholder="Usuário institucional"
-                                className="h-8"
-                              />
-                            </div>
-                          ) : (
-                            <>
-                              <div className="font-medium">{reservation.profiles.display_name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {reservation.profiles.institutional_user}
+          <div className="space-y-4">
+            <Calendar
+              mode="single"
+              selected={selectedAuditoriumDate}
+              onSelect={handleAuditoriumDateSelect}
+              locale={ptBR}
+              className="rounded-md border"
+              modifiers={{
+                hasReservation: (date) => !!getAuditoriumReservationForDate(date)
+              }}
+              modifiersStyles={{
+                hasReservation: { backgroundColor: '#22c55e', color: 'white' }
+              }}
+            />
+            
+            {showAuditoriumDetails && selectedAuditoriumDate && (
+              <Dialog open={showAuditoriumDetails} onOpenChange={setShowAuditoriumDetails}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Reserva do Auditório</DialogTitle>
+                    <DialogDescription>
+                      {format(selectedAuditoriumDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    </DialogDescription>
+                  </DialogHeader>
+                  {(() => {
+                    const reservation = getAuditoriumReservationForDate(selectedAuditoriumDate);
+                    return reservation ? (
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium">Reservado por:</Label>
+                          <p className="mt-1 text-sm">{reservation.user_profile.display_name}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Observação:</Label>
+                          <p className="mt-1 text-sm">{reservation.observation || 'Nenhuma observação'}</p>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Laboratory Calendar */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FlaskConical className="h-5 w-5" />
+            Calendário de Laboratórios
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Calendar
+              mode="single"
+              selected={selectedLabDate}
+              onSelect={handleLabDateSelect}
+              locale={ptBR}
+              className="rounded-md border"
+              modifiers={{
+                hasReservation: (date) => getLaboratoryReservationsForDate(date).length > 0
+              }}
+              modifiersStyles={{
+                hasReservation: { backgroundColor: '#22c55e', color: 'white' }
+              }}
+            />
+            
+            {showLabDetails && selectedLabDate && (
+              <Dialog open={showLabDetails} onOpenChange={setShowLabDetails}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Reservas de Laboratórios</DialogTitle>
+                    <DialogDescription>
+                      {format(selectedLabDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    </DialogDescription>
+                  </DialogHeader>
+                  {(() => {
+                    const reservations = getLaboratoryReservationsForDate(selectedLabDate);
+                    return reservations.length > 0 ? (
+                      <div className="space-y-4 max-h-96 overflow-y-auto">
+                        {reservations.map((reservation, index) => (
+                          <div key={reservation.id} className="border rounded-lg p-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium">Laboratório:</Label>
+                                <p className="mt-1 text-sm">{getLabNameFromCode(reservation.equipment_type)}</p>
                               </div>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getEquipmentColor(reservation.equipment_type)}>
-                          <div className="flex items-center gap-1">
-                            {getEquipmentIcon(reservation.equipment_type)}
-                            {getEquipmentLabel(reservation.equipment_type)}
+                              <div>
+                                <Label className="text-sm font-medium">Reservado por:</Label>
+                                <p className="mt-1 text-sm">{reservation.user_profile.display_name}</p>
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <Label className="text-sm font-medium">Observação:</Label>
+                              <p className="mt-1 text-sm">{reservation.observation || 'Nenhuma observação'}</p>
+                            </div>
                           </div>
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formattedDate}</TableCell>
-                      <TableCell className="capitalize">{dayOfWeek}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {editingReservation === reservation.id ? (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => saveReservationChanges(reservation.id, reservation.user_id)}
-                              >
-                                <Save className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingReservation(null)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => startEditingReservation(reservation)}
-                              >
-                                <Edit3 className="h-3 w-3" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button size="sm" variant="outline" className="text-destructive hover:text-destructive">
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tem certeza que deseja cancelar esta reserva? Esta ação não pode ser desfeita.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Voltar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => cancelReservation(reservation.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Cancelar Reserva
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </CardContent>
       </Card>
 

@@ -102,6 +102,7 @@ export type Database = {
           id: string
           observation: string | null
           reservation_date: string
+          time_slots: string[] | null
           updated_at: string
           user_id: string
         }
@@ -111,6 +112,7 @@ export type Database = {
           id?: string
           observation?: string | null
           reservation_date: string
+          time_slots?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -120,6 +122,7 @@ export type Database = {
           id?: string
           observation?: string | null
           reservation_date?: string
+          time_slots?: string[] | null
           updated_at?: string
           user_id?: string
         }

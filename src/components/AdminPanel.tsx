@@ -88,6 +88,8 @@ interface AuditoriumReservation {
   id: string;
   reservation_date: string;
   observation: string;
+  created_at: string;
+  time_slots?: string[];
   user_profile: {
     display_name: string;
   };
@@ -937,6 +939,8 @@ export function AdminPanel() {
         id,
         reservation_date,
         observation,
+        created_at,
+        time_slots,
         user_id
       `)
       .eq('equipment_type', 'auditorium')
@@ -1199,27 +1203,72 @@ export function AdminPanel() {
             
             {showAuditoriumDetails && selectedAuditoriumDate && (
               <Dialog open={showAuditoriumDetails} onOpenChange={setShowAuditoriumDetails}>
-                <DialogContent>
+                <DialogContent className="max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>Reserva do Auditório</DialogTitle>
+                    <DialogTitle>Reservas do Auditório</DialogTitle>
                     <DialogDescription>
                       {format(selectedAuditoriumDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                     </DialogDescription>
                   </DialogHeader>
                   {(() => {
-                    const reservation = getAuditoriumReservationForDate(selectedAuditoriumDate);
-                    return reservation ? (
-                      <div className="space-y-4">
-                        <div>
-                          <Label className="text-sm font-medium">Reservado por:</Label>
-                          <p className="mt-1 text-sm">{reservation.user_profile.display_name}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-medium">Observação:</Label>
-                          <p className="mt-1 text-sm">{reservation.observation || 'Nenhuma observação'}</p>
-                        </div>
+                    const reservationsForDate = auditoriumReservations.filter(reservation => {
+                      return format(new Date(reservation.reservation_date), 'yyyy-MM-dd') === 
+                             format(selectedAuditoriumDate, 'yyyy-MM-dd');
+                    });
+                    
+                    return reservationsForDate.length > 0 ? (
+                      <div className="space-y-6 max-h-96 overflow-y-auto">
+                        {reservationsForDate.map((reservation, index) => (
+                          <div key={reservation.id} className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium">Reserva {index + 1}</h4>
+                              <span className="text-xs text-muted-foreground">
+                                ID: {reservation.id.slice(0, 8)}...
+                              </span>
+                            </div>
+                            
+                            <div>
+                              <Label className="text-sm font-medium">Reservado por:</Label>
+                              <p className="mt-1 text-sm">{reservation.user_profile.display_name}</p>
+                            </div>
+                            
+                            {reservation.time_slots && reservation.time_slots.length > 0 && (
+                              <div>
+                                <Label className="text-sm font-medium">Horários:</Label>
+                                <div className="mt-1 flex flex-wrap gap-2">
+                                  {reservation.time_slots.map((slot) => {
+                                    const timeSlotLabels = {
+                                      'morning': 'Manhã - 09h/12h',
+                                      'afternoon': 'Tarde - 13h/18h',
+                                      'evening': 'Noite - 19h/22h'
+                                    };
+                                    return (
+                                      <span key={slot} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary">
+                                        {timeSlotLabels[slot as keyof typeof timeSlotLabels] || slot}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div>
+                              <Label className="text-sm font-medium">Observação:</Label>
+                              <p className="mt-1 text-sm">{reservation.observation || 'Nenhuma observação'}</p>
+                            </div>
+                            
+                            <div>
+                              <Label className="text-sm font-medium">Criado em:</Label>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {format(new Date(reservation.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ) : null;
+                    ) : (
+                      <p className="text-muted-foreground">Nenhuma reserva encontrada para esta data.</p>
+                    );
                   })()}
                 </DialogContent>
               </Dialog>

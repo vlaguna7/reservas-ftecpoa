@@ -15,6 +15,7 @@ interface AuditoriumReservation {
   reservation_date: string;
   observation: string;
   created_at: string;
+  time_slots?: string[];
   user_profile: {
     display_name: string;
   };
@@ -34,7 +35,7 @@ export function AuditoriumReservations() {
 
       const { data: reservationData, error: reservationError } = await supabase
         .from('reservations')
-        .select('id, reservation_date, observation, user_id, created_at')
+        .select('id, reservation_date, observation, user_id, created_at, time_slots')
         .eq('equipment_type', 'auditorium')
         .gte('reservation_date', todayStr)
         .order('reservation_date', { ascending: true });
@@ -68,6 +69,7 @@ export function AuditoriumReservations() {
         reservation_date: reservation.reservation_date,
         observation: reservation.observation || '',
         created_at: reservation.created_at,
+        time_slots: reservation.time_slots || [],
         user_profile: {
           display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
         }
@@ -266,6 +268,26 @@ export function AuditoriumReservations() {
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="px-4 pb-4 border-t bg-muted/20">
+                      {reservation.time_slots && reservation.time_slots.length > 0 && (
+                        <div className="mt-3">
+                          <h4 className="font-medium text-sm mb-2">Horários:</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {reservation.time_slots.map((slot) => {
+                              const timeSlotLabels = {
+                                'morning': 'Manhã - 09h/12h',
+                                'afternoon': 'Tarde - 13h/18h',
+                                'evening': 'Noite - 19h/22h'
+                              };
+                              return (
+                                <span key={slot} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary">
+                                  {timeSlotLabels[slot as keyof typeof timeSlotLabels] || slot}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="mt-3">
                         <h4 className="font-medium text-sm mb-2">Observação:</h4>
                         <div className="bg-white p-3 rounded border text-sm">

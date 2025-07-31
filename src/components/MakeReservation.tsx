@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
@@ -30,6 +31,13 @@ interface ReservationCount {
   auditorium_count: number;
 }
 
+// Definição dos horários do auditório
+const TIME_SLOTS = [
+  { value: 'morning', label: 'Manhã - 09h/12h' },
+  { value: 'afternoon', label: 'Tarde - 13h/18h' },
+  { value: 'evening', label: 'Noite - 19h/22h' }
+] as const;
+
 export function MakeReservation() {
   const { user, profile } = useAuth();
   const [selectedEquipment, setSelectedEquipment] = useState<string>('');
@@ -43,6 +51,8 @@ export function MakeReservation() {
   const [auditoriumObservation, setAuditoriumObservation] = useState('');
   const [auditoriumError, setAuditoriumError] = useState('');
   const [auditoriumCalendarOpen, setAuditoriumCalendarOpen] = useState(false);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
+  const [showAuditoriumObservation, setShowAuditoriumObservation] = useState(false);
   const [observation, setObservation] = useState('');
   
   // Estados para laboratório
@@ -303,20 +313,30 @@ export function MakeReservation() {
     return available !== null && available > 0 && !userAlreadyHasReservation;
   };
 
-  const checkAuditoriumAvailability = async (date: string) => {
+  const checkAuditoriumAvailability = async (date: string, timeSlots: string[]) => {
     const { data, error } = await supabase
       .from('reservations')
-      .select('user_id')
+      .select('time_slots')
       .eq('reservation_date', date)
       .eq('equipment_type', 'auditorium');
 
     if (error) {
       console.error('Error checking auditorium availability:', error);
-      return false;
+      return { available: false, conflictingSlots: [] };
     }
 
-    // Se não há reservas, está disponível
-    return data.length === 0;
+    if (data.length === 0) {
+      return { available: true, conflictingSlots: [] };
+    }
+
+    // Verificar conflitos de horários
+    const existingSlots = data.flatMap(reservation => reservation.time_slots || []);
+    const conflictingSlots = timeSlots.filter(slot => existingSlots.includes(slot));
+    
+    return {
+      available: conflictingSlots.length === 0,
+      conflictingSlots
+    };
   };
   
   // Função para forçar data local sem problemas de timezone
@@ -343,8 +363,8 @@ export function MakeReservation() {
   };
 
   const confirmAuditoriumReservation = async () => {
-    if (!auditoriumDate || !auditoriumObservation.trim()) {
-      setAuditoriumError('Por favor, selecione uma data e adicione uma observação.');
+    if (!auditoriumDate || selectedTimeSlots.length === 0 || !auditoriumObservation.trim()) {
+      setAuditoriumError('Por favor, selecione uma data, pelo menos um horário e adicione uma observação.');
       return;
     }
 
@@ -354,20 +374,16 @@ export function MakeReservation() {
       
       console.log('Data selecionada:', auditoriumDate);
       console.log('Data formatada para envio:', dateStr);
+      console.log('Horários selecionados:', selectedTimeSlots);
       
-      // Verificar se já existe reserva para esta data
-      const { data: existingReservations, error: checkError } = await supabase
-        .from('reservations')
-        .select('id')
-        .eq('equipment_type', 'auditorium')
-        .eq('reservation_date', dateStr);
-
-      if (checkError) {
-        throw checkError;
-      }
-
-      if (existingReservations && existingReservations.length > 0) {
-        setAuditoriumError('Atenção: o auditório já está reservado para esta data. Por favor, selecione outro dia disponível.');
+      // Verificar se os horários estão disponíveis
+      const availability = await checkAuditoriumAvailability(dateStr, selectedTimeSlots);
+      
+      if (!availability.available) {
+        const conflictingLabels = availability.conflictingSlots.map(slot => 
+          TIME_SLOTS.find(ts => ts.value === slot)?.label
+        ).join(', ');
+        setAuditoriumError(`Os seguintes horários já estão reservados: ${conflictingLabels}. Por favor, selecione outros horários.`);
         return;
       }
       
@@ -377,7 +393,8 @@ export function MakeReservation() {
           user_id: user.id,
           equipment_type: 'auditorium',
           reservation_date: dateStr,
-          observation: auditoriumObservation.trim()
+          observation: auditoriumObservation.trim(),
+          time_slots: selectedTimeSlots
         })
         .select()
         .single();
@@ -386,9 +403,13 @@ export function MakeReservation() {
         throw error;
       }
 
+      const selectedLabels = selectedTimeSlots.map(slot => 
+        TIME_SLOTS.find(ts => ts.value === slot)?.label
+      ).join(', ');
+
       toast({
         title: "Reserva confirmada!",
-        description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })}.`
+        description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })} nos horários: ${selectedLabels}.`
       });
 
       // Scroll para o meio da página na versão mobile após sucesso
@@ -408,6 +429,8 @@ export function MakeReservation() {
       setAuditoriumDate(undefined);
       setAuditoriumObservation('');
       setAuditoriumError('');
+      setSelectedTimeSlots([]);
+      setShowAuditoriumObservation(false);
     } catch (error: any) {
       console.error('Error creating auditorium reservation:', error);
       setAuditoriumError(error.message || 'Erro ao criar reserva. Tente novamente.');
@@ -788,29 +811,67 @@ export function MakeReservation() {
             </Popover>
           </div>
 
-          <div>
-            <Label className="text-base font-medium">Observação (obrigatória):</Label>
-            <Textarea
-              placeholder="Descreva o motivo da reserva, se precisará de equipamentos, apoio técnico, etc. (máximo 600 caracteres)"
-              value={auditoriumObservation}
-              onChange={(e) => {
-                setAuditoriumObservation(e.target.value);
-                setAuditoriumError(''); // Limpar erro ao digitar
-              }}
-              maxLength={600}
-              className="mt-2"
-              rows={4}
-            />
-            <div className="text-sm text-muted-foreground mt-1">
-              {auditoriumObservation.length}/600 caracteres
+          {auditoriumDate && (
+            <div>
+              <Label className="text-base font-medium">Selecione os horários desejados:</Label>
+              <div className="mt-2 space-y-3">
+                {TIME_SLOTS.map((slot) => (
+                  <div key={slot.value} className="flex items-center space-x-2">
+                     <Checkbox
+                      id={slot.value}
+                      checked={selectedTimeSlots.includes(slot.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked === true) {
+                          setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
+                        } else {
+                          setSelectedTimeSlots(selectedTimeSlots.filter(s => s !== slot.value));
+                        }
+                        setAuditoriumError('');
+                        
+                        // Mostrar observação apenas quando algum horário for selecionado
+                        const newTimeSlots = checked === true 
+                          ? [...selectedTimeSlots, slot.value]
+                          : selectedTimeSlots.filter(s => s !== slot.value);
+                        setShowAuditoriumObservation(newTimeSlots.length > 0);
+                      }}
+                    />
+                    <Label htmlFor={slot.value} className="cursor-pointer">
+                      {slot.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                Selecione pelo menos um horário para continuar
+              </div>
             </div>
-            {auditoriumError && (
-              <Alert variant="destructive" className="mt-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{auditoriumError}</AlertDescription>
-              </Alert>
-            )}
-          </div>
+          )}
+
+          {auditoriumDate && selectedTimeSlots.length > 0 && (
+            <div>
+              <Label className="text-base font-medium">Observação (obrigatória):</Label>
+              <Textarea
+                placeholder="Descreva o motivo da reserva, se precisará de equipamentos, apoio técnico, etc. (máximo 600 caracteres)"
+                value={auditoriumObservation}
+                onChange={(e) => {
+                  setAuditoriumObservation(e.target.value);
+                  setAuditoriumError(''); // Limpar erro ao digitar
+                }}
+                maxLength={600}
+                className="mt-2"
+                rows={4}
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                {auditoriumObservation.length}/600 caracteres
+              </div>
+              {auditoriumError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{auditoriumError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
         </div>
       )}
 

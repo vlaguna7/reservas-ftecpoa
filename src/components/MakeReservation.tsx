@@ -915,27 +915,49 @@ export function MakeReservation() {
                       checked={selectedTimeSlots.includes(slot.value)}
                       onCheckedChange={async (checked) => {
                         if (checked === true) {
-                          // Verificar se este horário já está reservado por outros usuários
+                          // Verificar se este horário já está reservado
                           const dateStr = formatDateToLocalString(auditoriumDate!);
                           
                           // Buscar reservas de outros usuários para esta data
-                          const { data: otherReservations, error } = await supabase
+                          const { data: otherReservations, error: otherError } = await supabase
                             .from('reservations')
                             .select('time_slots')
                             .eq('equipment_type', 'auditorium')
                             .eq('reservation_date', dateStr)
                             .neq('user_id', user?.id);
                           
-                          if (error) {
-                            console.error('Erro ao verificar disponibilidade:', error);
+                          if (otherError) {
+                            console.error('Erro ao verificar disponibilidade:', otherError);
                             setAuditoriumError('Erro ao verificar disponibilidade. Tente novamente.');
                             return;
                           }
                           
-                          const otherUsersSlots = otherReservations?.flatMap(res => res.time_slots || []) || [];
+                          // Buscar reserva do próprio usuário para esta data
+                          const { data: userReservations, error: userError } = await supabase
+                            .from('reservations')
+                            .select('time_slots')
+                            .eq('equipment_type', 'auditorium')
+                            .eq('reservation_date', dateStr)
+                            .eq('user_id', user?.id);
                           
+                          if (userError) {
+                            console.error('Erro ao verificar suas reservas:', userError);
+                            setAuditoriumError('Erro ao verificar suas reservas. Tente novamente.');
+                            return;
+                          }
+                          
+                          const otherUsersSlots = otherReservations?.flatMap(res => res.time_slots || []) || [];
+                          const userSlots = userReservations?.flatMap(res => res.time_slots || []) || [];
+                          
+                          // Verificar se outro usuário já reservou este horário
                           if (otherUsersSlots.includes(slot.value)) {
-                            setAuditoriumError(`Este horário já está reservado.`);
+                            setAuditoriumError(`Este horário já está reservado por outro usuário.`);
+                            return; // Impedir a seleção
+                          }
+                          
+                          // Verificar se o próprio usuário já reservou este horário
+                          if (userSlots.includes(slot.value)) {
+                            setAuditoriumError(`Você já reservou este horário.`);
                             return; // Impedir a seleção
                           }
                           

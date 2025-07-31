@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Projector, Speaker, Trash2, CheckCircle } from 'lucide-react';
+import { Calendar, Projector, Speaker, Trash2, CheckCircle, FlaskConical } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,12 +19,23 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 interface Reservation {
   id: string;
   equipment_type: string;
   reservation_date: string;
   created_at: string;
+  observation?: string;
+  time_slots?: string[];
 }
 
 export function MyReservations() {
@@ -149,6 +160,8 @@ export function MyReservations() {
         return <Projector className="h-4 w-4" />;
       case 'speaker':
         return <Speaker className="h-4 w-4" />;
+      case 'auditorium':
+        return <FlaskConical className="h-4 w-4" />;
       default:
         return <Projector className="h-4 w-4" />;
     }
@@ -198,6 +211,8 @@ export function MyReservations() {
         return 'bg-blue-100 text-blue-800';
       case 'speaker':
         return 'bg-green-100 text-green-800';
+      case 'auditorium':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -295,6 +310,51 @@ export function MyReservations() {
                     <Calendar className="h-4 w-4" />
                     <span className="capitalize">{dayOfWeek}, {formattedDate}</span>
                   </div>
+                  
+                  {reservation.equipment_type === 'auditorium' && reservation.time_slots && reservation.time_slots.length > 0 && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-xs mt-2">
+                          Ver horários
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Horários da Reserva</DialogTitle>
+                          <DialogDescription>
+                            Auditório - {formattedDate}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-3">
+                          <div>
+                            <Label className="text-sm font-medium">Horários selecionados:</Label>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {reservation.time_slots.map((slot) => {
+                                const timeSlotLabels = {
+                                  'morning': 'Manhã - 09h/12h',
+                                  'afternoon': 'Tarde - 13h/18h', 
+                                  'evening': 'Noite - 19h/22h'
+                                };
+                                return (
+                                  <span key={slot} className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 text-primary">
+                                    {timeSlotLabels[slot as keyof typeof timeSlotLabels] || slot}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          {reservation.observation && (
+                            <div>
+                              <Label className="text-sm font-medium">Observação:</Label>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {reservation.observation}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
                 
                 {canCancelReservation(reservation.reservation_date) && (

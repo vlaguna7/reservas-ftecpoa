@@ -143,6 +143,24 @@ export function MyReservations() {
     }
   };
 
+  const getBadgeLabel = (type: string) => {
+    switch (type) {
+      case 'projector':
+        return 'Projetor';
+      case 'speaker':
+        return 'Caixa de Som';
+      case 'auditorium':
+        return 'Auditório';
+      default:
+        if (type.startsWith('laboratory_')) {
+          // Extrair o código do laboratório (ex: laboratory_LAB01 -> LAB01)
+          const labCode = type.replace('laboratory_', '');
+          return `Laboratório ${labCode}`;
+        }
+        return type;
+    }
+  };
+
   const getEquipmentColor = (type: string) => {
     switch (type) {
       case 'projector':
@@ -237,7 +255,7 @@ export function MyReservations() {
                       {getEquipmentLabel(reservation.equipment_type)}
                     </span>
                     <Badge className={getEquipmentColor(reservation.equipment_type)}>
-                      {getEquipmentLabel(reservation.equipment_type)}
+                      {getBadgeLabel(reservation.equipment_type)}
                     </Badge>
                     {isFinished && (
                       <Badge className="bg-green-100 text-green-800">

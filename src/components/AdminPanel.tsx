@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,6 +107,7 @@ interface LaboratoryReservation {
 }
 
 export function AdminPanel() {
+  const isMobile = useIsMobile();
   const [equipmentSettings, setEquipmentSettings] = useState<EquipmentSettings | null>(null);
   const [reservations, setReservations] = useState<ReservationWithProfile[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -1692,9 +1694,9 @@ export function AdminPanel() {
             </div>
             <Dialog open={addingLaboratory} onOpenChange={setAddingLaboratory}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
+                <Button className={`flex items-center ${isMobile ? 'p-2' : 'gap-2'}`}>
                   <Plus className="h-4 w-4" />
-                  Novo Laboratório
+                  {!isMobile && 'Novo Laboratório'}
                 </Button>
               </DialogTrigger>
               <DialogContent>

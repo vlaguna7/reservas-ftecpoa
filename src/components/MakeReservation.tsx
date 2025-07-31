@@ -968,7 +968,7 @@ export function MakeReservation() {
               <Label className="text-base font-medium">Selecione os horários desejados:</Label>
               <div className="mt-2 space-y-3">
                 {TIME_SLOTS.map((slot) => (
-                  <div key={slot.value} className="flex items-center space-x-2">
+                  <div key={slot.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
                     <Checkbox
                       id={slot.value}
                       checked={selectedTimeSlots.includes(slot.value)}
@@ -991,22 +991,7 @@ export function MakeReservation() {
                             return;
                           }
                           
-                          // Buscar reserva do próprio usuário para esta data
-                          const { data: userReservations, error: userError } = await supabase
-                            .from('reservations')
-                            .select('time_slots')
-                            .eq('equipment_type', 'auditorium')
-                            .eq('reservation_date', dateStr)
-                            .eq('user_id', user?.id);
-                          
-                          if (userError) {
-                            console.error('Erro ao verificar suas reservas:', userError);
-                            setAuditoriumError('Erro ao verificar suas reservas. Tente novamente.');
-                            return;
-                          }
-                          
                           const otherUsersSlots = otherReservations?.flatMap(res => res.time_slots || []) || [];
-                          const userSlots = userReservations?.flatMap(res => res.time_slots || []) || [];
                           
                           // Verificar se outro usuário já reservou este horário
                           if (otherUsersSlots.includes(slot.value)) {
@@ -1014,17 +999,18 @@ export function MakeReservation() {
                             return; // Impedir a seleção
                           }
                           
-                          // Verificar se o próprio usuário já reservou este horário
-                          if (userSlots.includes(slot.value)) {
-                            setAuditoriumError(`Você já reservou este horário.`);
-                            return; // Impedir a seleção
-                          }
-                          
-                          // Se chegou até aqui, pode selecionar
+                          // Se chegou até aqui, pode selecionar (permitir adicionar novos turnos)
                           setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
                           setAuditoriumError(''); // Limpar qualquer erro anterior
                           
-                          // Controlar exibição da observação baseado na reserva existente
+                          // Buscar reserva do próprio usuário para controlar observação
+                          const { data: userReservations } = await supabase
+                            .from('reservations')
+                            .select('time_slots')
+                            .eq('equipment_type', 'auditorium')
+                            .eq('reservation_date', dateStr)
+                            .eq('user_id', user?.id);
+                          
                           const hasExistingReservation = userReservations && userReservations.length > 0;
                           const newTimeSlots = [...selectedTimeSlots, slot.value];
                           setShowAuditoriumObservation(newTimeSlots.length > 0 && !hasExistingReservation);
@@ -1048,8 +1034,19 @@ export function MakeReservation() {
                           }
                         }
                       }}
+                      className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                     />
-                    <Label htmlFor={slot.value} className="cursor-pointer">
+                    <Label 
+                      htmlFor={slot.value} 
+                      className="cursor-pointer flex-1 text-base font-medium select-none"
+                      onClick={() => {
+                        // Para melhorar a UX no mobile, permitir clicar em toda a área
+                        const checkbox = document.getElementById(slot.value) as HTMLInputElement;
+                        if (checkbox) {
+                          checkbox.click();
+                        }
+                      }}
+                    >
                       {slot.label}
                     </Label>
                   </div>

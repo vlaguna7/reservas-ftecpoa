@@ -31,10 +31,29 @@ export function MyReservations() {
   const { user } = useAuth();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [laboratories, setLaboratories] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
+    fetchLaboratories();
     fetchReservations();
   }, []);
+
+  const fetchLaboratories = async () => {
+    const { data, error } = await supabase
+      .from('laboratory_settings')
+      .select('laboratory_code, laboratory_name')
+      .eq('is_active', true);
+
+    if (!error && data) {
+      const labMap: {[key: string]: string} = {};
+      data.forEach(lab => {
+        if (lab.laboratory_code) {
+          labMap[lab.laboratory_code] = lab.laboratory_name;
+        }
+      });
+      setLaboratories(labMap);
+    }
+  };
 
   const fetchReservations = async () => {
     if (!user) return;
@@ -155,7 +174,9 @@ export function MyReservations() {
         if (type.startsWith('laboratory_')) {
           // Extrair o código do laboratório (ex: laboratory_LAB01 -> LAB01)
           const labCode = type.replace('laboratory_', '');
-          return `Laboratório ${labCode}`;
+          // Buscar o nome real do laboratório
+          const labName = laboratories[labCode];
+          return labName ? labName : `Laboratório ${labCode}`;
         }
         return type;
     }

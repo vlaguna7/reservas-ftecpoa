@@ -42,6 +42,7 @@ export function MakeReservation() {
   const [auditoriumDate, setAuditoriumDate] = useState<Date | undefined>();
   const [auditoriumObservation, setAuditoriumObservation] = useState('');
   const [auditoriumError, setAuditoriumError] = useState('');
+  const [auditoriumCalendarOpen, setAuditoriumCalendarOpen] = useState(false);
   const [observation, setObservation] = useState('');
   
   // Estados para laboratório
@@ -51,6 +52,7 @@ export function MakeReservation() {
   const [laboratoryObservation, setLaboratoryObservation] = useState('');
   const [laboratoryError, setLaboratoryError] = useState('');
   const [laboratoryOptions, setLaboratoryOptions] = useState<Array<{value: string, label: string, isActive: boolean}>>([]);
+  const [laboratoryCalendarOpen, setLaboratoryCalendarOpen] = useState(false);
   
   const isMobile = useIsMobile();
 
@@ -728,7 +730,7 @@ export function MakeReservation() {
         <div className="space-y-4">
           <div>
             <Label className="text-base font-medium">Selecione a data para o auditório:</Label>
-            <Popover>
+            <Popover open={auditoriumCalendarOpen} onOpenChange={setAuditoriumCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -753,6 +755,7 @@ export function MakeReservation() {
                     }
                     setAuditoriumDate(date);
                     setAuditoriumError('');
+                    setAuditoriumCalendarOpen(false);
                   }}
                   disabled={(date) => {
                     const today = new Date();
@@ -843,7 +846,7 @@ export function MakeReservation() {
             <>
               <div>
                 <Label className="text-base font-medium">Selecione a data:</Label>
-                <Popover>
+                <Popover open={laboratoryCalendarOpen} onOpenChange={setLaboratoryCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -860,6 +863,7 @@ export function MakeReservation() {
                       onSelect={(date) => {
                         setLaboratoryDate(date);
                         setLaboratoryError('');
+                        setLaboratoryCalendarOpen(false);
                       }}
                       disabled={(date) => {
                         const today = new Date();

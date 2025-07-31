@@ -49,15 +49,6 @@ export default function Dashboard() {
         <div className="container mx-auto px-4 py-4">
           {/* Layout Mobile */}
           <div className="md:hidden">
-            {/* Logo centralizada no topo */}
-            <div className="text-center mb-4">
-              <img 
-                src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
-                alt="FTEC Logo" 
-                className="h-10 object-contain mx-auto"
-              />
-            </div>
-            
             {/* Linha com menu e botão sair */}
             <div className="flex justify-between items-center mb-2">
               <MobileSidebar 
@@ -125,7 +116,7 @@ export default function Dashboard() {
               <Calendar className="h-4 w-4" />
               Fazer Reserva
             </TabsTrigger>
-            <TabsTrigger value="my-reservations" className="flex items-center gap-2">
+            <TabsTrigger value="my-reservations" className={`flex items-center gap-2 ${isMobile ? 'text-[0.85em]' : ''}`}>
               <List className="h-4 w-4" />
               Minhas Reservas
             </TabsTrigger>

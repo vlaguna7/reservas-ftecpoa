@@ -477,6 +477,58 @@ export function AdminPanel() {
     }
   };
 
+  const deleteLaboratory = async (laboratoryId: string, laboratoryCode: string) => {
+    try {
+      // Primeiro, remover todas as reservas futuras deste laboratório
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      const { error: reservationsError } = await supabase
+        .from('reservations')
+        .delete()
+        .eq('equipment_type', laboratoryCode)
+        .gte('reservation_date', todayStr);
+
+      if (reservationsError) {
+        toast({
+          title: "Erro ao remover reservas",
+          description: reservationsError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Agora, excluir o laboratório
+      const { error } = await supabase
+        .from('laboratory_settings')
+        .delete()
+        .eq('id', laboratoryId);
+
+      if (error) {
+        toast({
+          title: "Erro ao excluir laboratório",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Laboratório excluído!",
+        description: "O laboratório e suas reservas futuras foram removidos com sucesso."
+      });
+
+      await fetchLaboratorySettings();
+    } catch (error) {
+      console.error('Exception in deleteLaboratory:', error);
+      toast({
+        title: "Erro ao excluir laboratório",
+        description: "Erro interno. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const exportReservations = () => {
     if (reservations.length === 0) {
       toast({
@@ -1561,18 +1613,6 @@ export function AdminPanel() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="lab-code">Código do Laboratório</Label>
-                    <Input
-                      id="lab-code"
-                      placeholder="Ex: laboratory_201_lab_fisica"
-                      value={newLaboratoryForm.laboratory_code}
-                      onChange={(e) => setNewLaboratoryForm(prev => ({ ...prev, laboratory_code: e.target.value }))}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Use formato: laboratory_numero_descricao (sem espaços, use _ para separar)
-                    </p>
-                  </div>
-                  <div className="grid gap-2">
                     <Label htmlFor="lab-name">Nome do Laboratório</Label>
                     <Input
                       id="lab-name"
@@ -1729,6 +1769,40 @@ export function AdminPanel() {
                                   className={lab.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
                                 >
                                   {lab.is_active ? 'Sim, inativar' : 'Sim, ativar'}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                          
+                          {/* Botão de Excluir */}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-6 px-2 text-xs"
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Excluir
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir Laboratório</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir permanentemente o laboratório {lab.laboratory_name}?
+                                  <span className="block mt-2 text-red-600 font-medium">
+                                    ⚠️ ATENÇÃO: Esta ação é irreversível e todas as reservas futuras deste laboratório serão removidas.
+                                  </span>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteLaboratory(lab.id, lab.laboratory_code)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Sim, excluir permanentemente
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>

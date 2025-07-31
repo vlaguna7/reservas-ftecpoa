@@ -155,7 +155,7 @@ export default function Dashboard() {
           <TabsContent value="my-reservations" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Minhas Reservas</CardTitle>
+                <CardTitle className={`${isMobile ? 'text-center text-lg' : ''}`}>Minhas Reservas</CardTitle>
               </CardHeader>
               <CardContent>
                 <MyReservations />

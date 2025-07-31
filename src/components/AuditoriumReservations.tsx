@@ -210,20 +210,20 @@ export function AuditoriumReservations() {
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="w-full justify-between p-4 h-auto"
+                      className="w-full justify-between p-2 md:p-4 h-auto"
                     >
-                      <div className="flex items-center gap-3 text-left">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <div>
-                          <div className="font-medium">
+                      <div className="flex items-center gap-2 md:gap-3 text-left flex-1 min-w-0">
+                        <Calendar className="h-3 w-3 md:h-4 md:w-4 text-primary flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-xs md:text-sm truncate">
                             {format(new Date(reservation.reservation_date + 'T12:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-xs md:text-sm text-muted-foreground truncate">
                             {reservation.user_profile.display_name}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                         {canUserCancelReservation(reservation) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -231,10 +231,10 @@ export function AuditoriumReservations() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) => e.stopPropagation()}
-                                className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-6 w-6"
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-5 w-5 md:h-6 md:w-6"
                                 title="Cancelar reserva"
                               >
-                                <X className="h-3 w-3" />
+                                <X className="h-2 w-2 md:h-3 md:w-3" />
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -257,9 +257,9 @@ export function AuditoriumReservations() {
                           </AlertDialog>
                         )}
                         {expandedItems.has(reservation.id) ? (
-                          <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                          <ChevronDown className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                          <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                         )}
                       </div>
                     </Button>

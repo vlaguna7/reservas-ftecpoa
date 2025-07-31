@@ -82,6 +82,7 @@ export function TodayReservations() {
       });
 
       console.log('🔍 TodayReservations: Laboratory mapping:', laboratoryNames);
+      console.log('🔍 TodayReservations: Looking for laboratory:', reservationData.filter(r => r.equipment_type.startsWith('laboratory_')));
 
       if (reservationData.length === 0) {
         console.log('📭 TodayReservations: No reservations found for today');
@@ -107,9 +108,11 @@ export function TodayReservations() {
       const profileMap = new Map(profileData?.map(p => [p.user_id, p]) || []);
       const combinedData = reservationData.map(reservation => {
         // Para laboratórios, usar o nome mapeado se disponível
-        const displayType = reservation.equipment_type.startsWith('laboratory_') 
-          ? laboratoryNames[reservation.equipment_type] || reservation.equipment_type
-          : reservation.equipment_type;
+        let displayType = reservation.equipment_type;
+        if (reservation.equipment_type.startsWith('laboratory_')) {
+          displayType = laboratoryNames[reservation.equipment_type] || reservation.equipment_type;
+          console.log(`🔍 TodayReservations: Mapping laboratory ${reservation.equipment_type} to ${displayType}`);
+        }
           
         return {
           id: reservation.id,

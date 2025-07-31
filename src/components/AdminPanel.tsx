@@ -950,15 +950,17 @@ export function AdminPanel() {
   };
 
   const getAuditoriumReservationForDate = (date: Date) => {
-    return auditoriumReservations.find(reservation => 
-      isSameDay(new Date(reservation.reservation_date), date)
-    );
+    return auditoriumReservations.find(reservation => {
+      const reservationDate = new Date(reservation.reservation_date + 'T12:00:00');
+      return isSameDay(reservationDate, date);
+    });
   };
 
   const getLaboratoryReservationsForDate = (date: Date) => {
-    return laboratoryReservations.filter(reservation => 
-      isSameDay(new Date(reservation.reservation_date), date)
-    );
+    return laboratoryReservations.filter(reservation => {
+      const reservationDate = new Date(reservation.reservation_date + 'T12:00:00');
+      return isSameDay(reservationDate, date);
+    });
   };
 
   const handleAuditoriumDateSelect = (date: Date | undefined) => {
@@ -1125,7 +1127,12 @@ export function AdminPanel() {
               locale={ptBR}
               className="rounded-md border"
               modifiers={{
-                hasReservation: (date) => !!getAuditoriumReservationForDate(date)
+                hasReservation: (date) => {
+                  return auditoriumReservations.some(reservation => {
+                    const reservationDate = new Date(reservation.reservation_date + 'T12:00:00');
+                    return isSameDay(reservationDate, date);
+                  });
+                }
               }}
               modifiersStyles={{
                 hasReservation: { backgroundColor: '#22c55e', color: 'white' }
@@ -1180,7 +1187,12 @@ export function AdminPanel() {
               locale={ptBR}
               className="rounded-md border"
               modifiers={{
-                hasReservation: (date) => getLaboratoryReservationsForDate(date).length > 0
+                hasReservation: (date) => {
+                  return laboratoryReservations.some(reservation => {
+                    const reservationDate = new Date(reservation.reservation_date + 'T12:00:00');
+                    return isSameDay(reservationDate, date);
+                  });
+                }
               }}
               modifiersStyles={{
                 hasReservation: { backgroundColor: '#22c55e', color: 'white' }

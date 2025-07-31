@@ -86,13 +86,18 @@ export default function Dashboard() {
           </div>
 
           {/* Layout Desktop */}
-          <div className="hidden md:flex justify-between items-center">
-            <div className="flex items-center gap-4">
+          <div className="hidden md:block">
+            {/* Logo centralizada */}
+            <div className="text-center mb-4">
               <img 
                 src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
                 alt="FTEC Logo" 
-                className="h-12 object-contain"
+                className="h-12 object-contain mx-auto"
               />
+            </div>
+            
+            {/* Linha com título à esquerda e botão sair à direita */}
+            <div className="flex justify-between items-center">
               <div>
                 <h1 className="text-2xl font-bold">Sistema de Reservas</h1>
                 <p className="text-muted-foreground">
@@ -104,11 +109,11 @@ export default function Dashboard() {
                   )}
                 </p>
               </div>
+              <Button variant="outline" onClick={signOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
             </div>
-            <Button variant="outline" onClick={signOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
           </div>
         </div>
       </header>

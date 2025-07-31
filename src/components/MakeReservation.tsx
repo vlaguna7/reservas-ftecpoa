@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface EquipmentSettings {
   projector_limit: number;
@@ -154,10 +155,8 @@ export function MakeReservation() {
       return;
     }
 
-    // Separar laboratórios ativos e inativos, ordenar numericamente
+    // Ordenar todos os laboratórios numericamente (ativos e inativos juntos)
     const allLabs = data || [];
-    const activeLabs = allLabs.filter(lab => lab.is_active);
-    const inactiveLabs = allLabs.filter(lab => !lab.is_active);
     
     // Função para extrair número do nome do laboratório para ordenação
     const extractNumber = (name: string) => {
@@ -166,24 +165,16 @@ export function MakeReservation() {
     };
     
     // Ordenar por número
-    const sortedActiveLabs = activeLabs.sort((a, b) => extractNumber(a.laboratory_name) - extractNumber(b.laboratory_name));
-    const sortedInactiveLabs = inactiveLabs.sort((a, b) => extractNumber(a.laboratory_name) - extractNumber(b.laboratory_name));
+    const sortedLabs = allLabs.sort((a, b) => extractNumber(a.laboratory_name) - extractNumber(b.laboratory_name));
     
     // Criar opções com informação de status
-    const activeOptions = sortedActiveLabs.map(lab => ({
+    const labOptions = sortedLabs.map(lab => ({
       value: lab.laboratory_code,
       label: lab.laboratory_name,
-      isActive: true
+      isActive: lab.is_active
     }));
     
-    const inactiveOptions = sortedInactiveLabs.map(lab => ({
-      value: lab.laboratory_code,
-      label: lab.laboratory_name,
-      isActive: false
-    }));
-    
-    // Combinar: ativos primeiro, depois inativos
-    setLaboratoryOptions([...activeOptions, ...inactiveOptions]);
+    setLaboratoryOptions(labOptions);
   };
 
   const fetchAvailability = async () => {
@@ -755,15 +746,6 @@ export function MakeReservation() {
                     }
                     setAuditoriumDate(date);
                     setAuditoriumError('');
-                    // Fechar automaticamente o popover após seleção
-                    if (date) {
-                      setTimeout(() => {
-                        const closeButton = document.querySelector('[data-state="open"]');
-                        if (closeButton) {
-                          (closeButton as HTMLElement).click();
-                        }
-                      }, 100);
-                    }
                   }}
                   disabled={(date) => {
                     const today = new Date();
@@ -772,7 +754,7 @@ export function MakeReservation() {
                     return date < today;
                   }}
                   initialFocus
-                  className="p-3 pointer-events-auto"
+                  className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
             </Popover>
@@ -870,15 +852,6 @@ export function MakeReservation() {
                       onSelect={(date) => {
                         setLaboratoryDate(date);
                         setLaboratoryError('');
-                        // Fechar automaticamente o popover após seleção
-                        if (date) {
-                          setTimeout(() => {
-                            const closeButton = document.querySelector('[data-state="open"]');
-                            if (closeButton) {
-                              (closeButton as HTMLElement).click();
-                            }
-                          }, 100);
-                        }
                       }}
                       disabled={(date) => {
                         const today = new Date();
@@ -887,7 +860,7 @@ export function MakeReservation() {
                         return date < today;
                       }}
                       initialFocus
-                      className="p-3 pointer-events-auto"
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>

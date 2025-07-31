@@ -380,14 +380,34 @@ export function MakeReservation() {
 
     // Verificar novamente se há conflitos antes de confirmar
     const dateStr = format(auditoriumDate, 'yyyy-MM-dd');
-    const availability = await checkAuditoriumAvailability(dateStr, selectedTimeSlots);
     
-    if (!availability.available) {
-      const conflictingLabels = availability.conflictingSlots.map(slot => 
-        TIME_SLOTS.find(ts => ts.value === slot)?.label
-      ).join(', ');
-      setAuditoriumError(`Os seguintes horários já estão reservados: ${conflictingLabels}. Por favor, remova-os da sua seleção.`);
+    // Verificar se o usuário já tem uma reserva para esta data
+    console.log('🔍 Verificando reservas existentes para:', { userId: user?.id, date: dateStr });
+    const { data: existingReservations, error: checkError } = await supabase
+      .from('reservations')
+      .select('id, time_slots')
+      .eq('user_id', user?.id)
+      .eq('equipment_type', 'auditorium')
+      .eq('reservation_date', dateStr);
+
+    if (checkError) {
+      console.error('Erro ao verificar reservas existentes:', checkError);
+      setAuditoriumError('Erro ao verificar reservas. Tente novamente.');
       return;
+    }
+
+    // Se o usuário já tem uma reserva, permitir adição de novos horários
+    // Se não tem reserva, verificar conflitos com outros usuários
+    if (!existingReservations || existingReservations.length === 0) {
+      const availability = await checkAuditoriumAvailability(dateStr, selectedTimeSlots);
+      
+      if (!availability.available) {
+        const conflictingLabels = availability.conflictingSlots.map(slot => 
+          TIME_SLOTS.find(ts => ts.value === slot)?.label
+        ).join(', ');
+        setAuditoriumError(`Os seguintes horários já estão reservados: ${conflictingLabels}. Por favor, remova-os da sua seleção.`);
+        return;
+      }
     }
 
     try {
@@ -503,9 +523,6 @@ export function MakeReservation() {
       setAuditoriumError('');
       setSelectedTimeSlots([]);
       setShowAuditoriumObservation(false);
-      
-      // Forçar reload dos dados para garantir que todas as telas sejam atualizadas
-      window.location.reload();
       
     } catch (error: any) {
       console.error('Error creating auditorium reservation:', error);
@@ -904,7 +921,8 @@ export function MakeReservation() {
                           
                           if (!availability.available) {
                             setAuditoriumError(`O horário "${slot.label}" já está reservado para esta data.`);
-                            // Não impedir a seleção, apenas mostrar o aviso
+                            // Não adicionar o horário se já estiver reservado
+                            return;
                           }
                           
                           setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
@@ -916,11 +934,13 @@ export function MakeReservation() {
                           }
                         }
                         
-                        // Mostrar observação apenas quando algum horário for selecionado
+                        // Mostrar observação apenas quando algum horário válido for selecionado
                         const newTimeSlots = checked === true 
                           ? [...selectedTimeSlots, slot.value]
                           : selectedTimeSlots.filter(s => s !== slot.value);
-                        setShowAuditoriumObservation(newTimeSlots.length > 0);
+                        
+                        // Só mostrar observação se não há erro e há horários selecionados
+                        setShowAuditoriumObservation(newTimeSlots.length > 0 && !auditoriumError);
                       }}
                     />
                     <Label htmlFor={slot.value} className="cursor-pointer">
@@ -935,7 +955,7 @@ export function MakeReservation() {
             </div>
           )}
 
-          {auditoriumDate && selectedTimeSlots.length > 0 && (
+          {auditoriumDate && selectedTimeSlots.length > 0 && !auditoriumError && (
             <div>
               <Label className="text-base font-medium">Observação (obrigatória):</Label>
               <Textarea

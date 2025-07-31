@@ -356,13 +356,6 @@ export function MakeReservation() {
     };
   };
   
-  // Verificar se usuário tem reserva existente de auditório
-  const hasExistingAuditoriumReservation = useMemo(() => {
-    if (!auditoriumDate || !user) return false;
-    const dateStr = formatDateToLocalString(auditoriumDate);
-    return userReservations[dateStr]?.some(res => res.equipment_type === 'auditorium') || false;
-  }, [auditoriumDate, userReservations, user]);
-
   // Função para forçar data local sem problemas de timezone
   const formatDateToLocalString = (date: Date) => {
     // Abordagem mais drástica: extrair componentes e construir string diretamente
@@ -385,6 +378,13 @@ export function MakeReservation() {
     
     return result;
   };
+
+  // Verificar se usuário tem reserva existente de auditório
+  const hasExistingAuditoriumReservation = useMemo(() => {
+    if (!auditoriumDate || !user) return false;
+    const dateStr = formatDateToLocalString(auditoriumDate);
+    return userReservations[dateStr]?.some(res => res.equipment_type === 'auditorium') || false;
+  }, [auditoriumDate, userReservations, user]);
 
   const confirmAuditoriumReservation = async () => {
     if (!auditoriumDate || selectedTimeSlots.length === 0) {
@@ -911,24 +911,40 @@ export function MakeReservation() {
                       console.log('📅 SELEÇÃO - getMonth():', date.getMonth());
                       console.log('📅 SELEÇÃO - getFullYear():', date.getFullYear());
                       
-                      // Verificar se há reserva existente para esta nova data
-                      const dateStr = formatDateToLocalString(date);
-                      const { data: userReservations } = await supabase
-                        .from('reservations')
-                        .select('time_slots')
-                        .eq('equipment_type', 'auditorium')
-                        .eq('reservation_date', dateStr)
-                        .eq('user_id', user?.id);
+                      console.log('📅 SELEÇÃO - formatDateToLocalString definida:', typeof formatDateToLocalString);
                       
-                      const hasExistingReservation = userReservations && userReservations.length > 0;
+                      try {
+                        // Verificar se há reserva existente para esta nova data
+                        const dateStr = formatDateToLocalString(date);
+                        console.log('📅 SELEÇÃO - Data formatada:', dateStr);
+                        
+                        const { data: userReservations, error } = await supabase
+                          .from('reservations')
+                          .select('time_slots')
+                          .eq('equipment_type', 'auditorium')
+                          .eq('reservation_date', dateStr)
+                          .eq('user_id', user?.id);
+                        
+                        console.log('📅 SELEÇÃO - Resultado da consulta:', { userReservations, error });
+                        
+                        if (error) {
+                          console.error('❌ Erro na consulta de reservas:', error);
+                          throw error;
+                        }
+                        
+                        const hasExistingReservation = userReservations && userReservations.length > 0;
+                        console.log('📅 Reserva existente para nova data:', hasExistingReservation);
+                        
+                      } catch (err) {
+                        console.error('❌ Erro ao verificar reserva existente:', err);
+                      }
                       
                       // Reset campos quando muda data
                       setSelectedTimeSlots([]);
                       setAuditoriumObservation('');
                       setShowAuditoriumObservation(false);
-                      
-                      console.log('📅 Reserva existente para nova data:', hasExistingReservation);
                     }
+                    
                     setAuditoriumDate(date);
                     setAuditoriumError('');
                     setAuditoriumCalendarOpen(false);

@@ -387,20 +387,58 @@ export function MakeReservation() {
         return;
       }
       
-      const { data, error } = await supabase
+      // Verificar se o usuário já tem uma reserva para esta data
+      const { data: existingReservations, error: checkError } = await supabase
         .from('reservations')
-        .insert({
-          user_id: user.id,
-          equipment_type: 'auditorium',
-          reservation_date: dateStr,
-          observation: auditoriumObservation.trim(),
-          time_slots: selectedTimeSlots
-        })
-        .select()
-        .single();
+        .select('id, time_slots')
+        .eq('user_id', user.id)
+        .eq('equipment_type', 'auditorium')
+        .eq('reservation_date', dateStr);
 
-      if (error) {
-        throw error;
+      if (checkError) {
+        throw checkError;
+      }
+
+      let result;
+      
+      if (existingReservations && existingReservations.length > 0) {
+        // Atualizar reserva existente adicionando novos horários
+        const existingReservation = existingReservations[0];
+        const existingSlots = existingReservation.time_slots || [];
+        const allSlots = [...new Set([...existingSlots, ...selectedTimeSlots])]; // Remove duplicatas
+        
+        const { data, error } = await supabase
+          .from('reservations')
+          .update({
+            time_slots: allSlots,
+            observation: auditoriumObservation.trim()
+          })
+          .eq('id', existingReservation.id)
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+        result = data;
+      } else {
+        // Criar nova reserva
+        const { data, error } = await supabase
+          .from('reservations')
+          .insert({
+            user_id: user.id,
+            equipment_type: 'auditorium',
+            reservation_date: dateStr,
+            observation: auditoriumObservation.trim(),
+            time_slots: selectedTimeSlots
+          })
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+        result = data;
       }
 
       const selectedLabels = selectedTimeSlots.map(slot => 
@@ -817,11 +855,20 @@ export function MakeReservation() {
               <div className="mt-2 space-y-3">
                 {TIME_SLOTS.map((slot) => (
                   <div key={slot.value} className="flex items-center space-x-2">
-                     <Checkbox
+                    <Checkbox
                       id={slot.value}
                       checked={selectedTimeSlots.includes(slot.value)}
-                      onCheckedChange={(checked) => {
+                      onCheckedChange={async (checked) => {
                         if (checked === true) {
+                          // Verificar se este horário já está reservado
+                          const dateStr = formatDateToLocalString(auditoriumDate!);
+                          const availability = await checkAuditoriumAvailability(dateStr, [slot.value]);
+                          
+                          if (!availability.available) {
+                            setAuditoriumError(`O horário ${slot.label} já está reservado. Por favor, selecione outro horário.`);
+                            return;
+                          }
+                          
                           setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
                         } else {
                           setSelectedTimeSlots(selectedTimeSlots.filter(s => s !== slot.value));

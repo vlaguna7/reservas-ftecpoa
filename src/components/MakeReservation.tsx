@@ -31,6 +31,14 @@ interface ReservationCount {
   auditorium_count: number;
 }
 
+interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
 // Definição dos horários do auditório
 const TIME_SLOTS = [
   { value: 'morning', label: 'Manhã - 09h/12h' },
@@ -47,6 +55,7 @@ export function MakeReservation() {
   const [userReservations, setUserReservations] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(false);
   const [showFAQ, setShowFAQ] = useState(false);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [auditoriumDate, setAuditoriumDate] = useState<Date | undefined>();
   const [auditoriumObservation, setAuditoriumObservation] = useState('');
   const [auditoriumError, setAuditoriumError] = useState('');
@@ -100,6 +109,7 @@ export function MakeReservation() {
     fetchAvailability();
     fetchUserReservations();
     fetchActiveLaboratories();
+    fetchFaqs();
 
     // Configurar realtime updates para mudanças nas reservas
     const channelName = `make-reservation-${Date.now()}`;
@@ -195,6 +205,21 @@ export function MakeReservation() {
     
     setLaboratoryOptions(labOptions);
     setLaboratoryNames(labNames);
+  };
+
+  const fetchFaqs = async () => {
+    const { data, error } = await supabase
+      .from('faqs')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching FAQs:', error);
+      return;
+    }
+
+    setFaqs(data || []);
   };
 
   const fetchAvailability = async () => {
@@ -1348,44 +1373,20 @@ export function MakeReservation() {
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-2 mt-4">
           <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-              <AccordionTrigger>📅 Por que só posso reservar para hoje ou próximo dia útil?</AccordionTrigger>
-              <AccordionContent>
-                Para otimizar o uso dos equipamentos e evitar reservas esquecidas, o sistema permite reservas apenas para o dia atual (durante a semana) ou próxima segunda-feira (nos fins de semana).
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2">
-              <AccordionTrigger>📚 Posso reservar para todas as minhas aulas do semestre?</AccordionTrigger>
-              <AccordionContent>
-                No momento, não. É necessário acessar o site e realizar a reserva sempre que houver necessidade de uso do equipamento.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3">
-              <AccordionTrigger>🔌 O que fazer quando não houver mais projetores disponíveis para reserva?</AccordionTrigger>
-              <AccordionContent>
-                Em casos essenciais, entre em contato diretamente com a Camila para verificar a possibilidade de disponibilização de um equipamento.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-4">
-              <AccordionTrigger>📅 Como reservar o auditório?</AccordionTrigger>
-              <AccordionContent>
-                Para reservar o auditório, selecione "Auditório" na lista de equipamentos, escolha uma data no calendário e preencha a observação obrigatória descrevendo o motivo da reserva e necessidades específicas.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-5">
-              <AccordionTrigger>📞 Tem alguma outra dúvida?</AccordionTrigger>
-              <AccordionContent>
-                Fale com a gente pelo WhatsApp:{" "}
-                <a 
-                  href="https://wa.me/5551992885496" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline"
-                >
-                  clique aqui
-                </a>
-              </AccordionContent>
-            </AccordionItem>
+            {faqs.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                Nenhuma pergunta frequente disponível no momento.
+              </div>
+            ) : (
+              faqs.map((faq) => (
+                <AccordionItem key={faq.id} value={faq.id}>
+                  <AccordionTrigger>{faq.question}</AccordionTrigger>
+                  <AccordionContent className="whitespace-pre-wrap">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))
+            )}
           </Accordion>
         </CollapsibleContent>
       </Collapsible>

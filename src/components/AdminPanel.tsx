@@ -11,7 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { toast } from '@/hooks/use-toast';
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Settings, Users, Calendar as CalendarIcon, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff, Plus } from 'lucide-react';
+import { Settings, Users, Calendar as CalendarIcon, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff, Plus, HelpCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 import {
   AlertDialog,
@@ -85,6 +87,16 @@ interface LaboratorySetting {
   is_active: boolean;
 }
 
+interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 interface AuditoriumReservation {
   id: string;
   reservation_date: string;
@@ -112,6 +124,7 @@ export function AdminPanel() {
   const [reservations, setReservations] = useState<ReservationWithProfile[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [laboratorySettings, setLaboratorySettings] = useState<LaboratorySetting[]>([]);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
@@ -137,6 +150,21 @@ export function AdminPanel() {
     laboratory_name: ''
   });
   
+  // Estados para FAQs
+  const [editingFaq, setEditingFaq] = useState<string | null>(null);
+  const [addingFaq, setAddingFaq] = useState(false);
+  const [faqEditForm, setFaqEditForm] = useState({
+    question: '',
+    answer: '',
+    is_active: true,
+    sort_order: 0
+  });
+  const [newFaqForm, setNewFaqForm] = useState({
+    question: '',
+    answer: '',
+    sort_order: 0
+  });
+  
   const [auditoriumReservations, setAuditoriumReservations] = useState<AuditoriumReservation[]>([]);
   const [laboratoryReservations, setLaboratoryReservations] = useState<LaboratoryReservation[]>([]);
   const [selectedAuditoriumDate, setSelectedAuditoriumDate] = useState<Date | undefined>(undefined);
@@ -149,6 +177,7 @@ export function AdminPanel() {
     fetchAllReservations();
     fetchAllUsers();
     fetchLaboratorySettings();
+    fetchFaqs();
     fetchSystemStats();
     fetchAuditoriumReservations();
     fetchLaboratoryReservations();
@@ -265,6 +294,20 @@ export function AdminPanel() {
     }
 
     setLaboratorySettings(data || []);
+  };
+
+  const fetchFaqs = async () => {
+    const { data, error } = await supabase
+      .from('faqs')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching FAQs:', error);
+      return;
+    }
+
+    setFaqs(data || []);
   };
 
   const fetchSystemStats = async () => {
@@ -1055,6 +1098,140 @@ export function AdminPanel() {
       const reservationDate = new Date(reservation.reservation_date + 'T12:00:00');
       return isSameDay(reservationDate, date);
     });
+  };
+
+  // Funções para gerenciar FAQs
+  const createFaq = async () => {
+    if (!newFaqForm.question.trim() || !newFaqForm.answer.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Pergunta e resposta são obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('faqs')
+        .insert({
+          question: newFaqForm.question.trim(),
+          answer: newFaqForm.answer.trim(),
+          sort_order: newFaqForm.sort_order || faqs.length + 1
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "FAQ criada!",
+        description: "A pergunta frequente foi adicionada com sucesso."
+      });
+
+      setAddingFaq(false);
+      setNewFaqForm({
+        question: '',
+        answer: '',
+        sort_order: 0
+      });
+      fetchFaqs();
+    } catch (error) {
+      console.error('Error creating FAQ:', error);
+      toast({
+        title: "Erro ao criar FAQ",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateFaq = async (faqId: string) => {
+    if (!faqEditForm.question.trim() || !faqEditForm.answer.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Pergunta e resposta são obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('faqs')
+        .update({
+          question: faqEditForm.question.trim(),
+          answer: faqEditForm.answer.trim(),
+          is_active: faqEditForm.is_active,
+          sort_order: faqEditForm.sort_order
+        })
+        .eq('id', faqId);
+
+      if (error) throw error;
+
+      toast({
+        title: "FAQ atualizada!",
+        description: "As alterações foram salvas."
+      });
+
+      setEditingFaq(null);
+      fetchFaqs();
+    } catch (error) {
+      console.error('Error updating FAQ:', error);
+      toast({
+        title: "Erro ao atualizar FAQ",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteFaq = async (faqId: string) => {
+    try {
+      const { error } = await supabase
+        .from('faqs')
+        .delete()
+        .eq('id', faqId);
+
+      if (error) throw error;
+
+      toast({
+        title: "FAQ excluída!",
+        description: "A pergunta frequente foi removida."
+      });
+
+      fetchFaqs();
+    } catch (error) {
+      console.error('Error deleting FAQ:', error);
+      toast({
+        title: "Erro ao excluir FAQ",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleFaqStatus = async (faqId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('faqs')
+        .update({ is_active: !currentStatus })
+        .eq('id', faqId);
+
+      if (error) throw error;
+
+      toast({
+        title: `FAQ ${!currentStatus ? 'ativada' : 'desativada'}!`,
+        description: `A pergunta frequente foi ${!currentStatus ? 'ativada' : 'desativada'}.`
+      });
+
+      fetchFaqs();
+    } catch (error) {
+      console.error('Error toggling FAQ status:', error);
+      toast({
+        title: "Erro ao alterar status",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getLaboratoryReservationsForDate = (date: Date) => {
@@ -1905,6 +2082,229 @@ export function AdminPanel() {
                         </div>
                       )}
                     </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* FAQ Management */}
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5" />
+              Gestão de Perguntas Frequentes
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Gerencie as perguntas frequentes que aparecem na página "Fazer Reserva"
+            </p>
+          </div>
+          <Dialog open={addingFaq} onOpenChange={setAddingFaq}>
+            <DialogTrigger asChild>
+              <Button className={`flex items-center ${isMobile ? 'p-2' : 'gap-2'}`}>
+                <Plus className="h-4 w-4" />
+                {!isMobile && 'Nova FAQ'}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Nova Pergunta Frequente</DialogTitle>
+                <DialogDescription>
+                  Adicione uma nova pergunta frequente que será exibida na página de reservas
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="new-faq-question">Pergunta *</Label>
+                  <Input
+                    id="new-faq-question"
+                    value={newFaqForm.question}
+                    onChange={(e) => setNewFaqForm(prev => ({ ...prev, question: e.target.value }))}
+                    placeholder="Ex: Como fazer uma reserva?"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new-faq-answer">Resposta *</Label>
+                  <Textarea
+                    id="new-faq-answer"
+                    value={newFaqForm.answer}
+                    onChange={(e) => setNewFaqForm(prev => ({ ...prev, answer: e.target.value }))}
+                    placeholder="Digite a resposta detalhada..."
+                    rows={4}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new-faq-order">Ordem de exibição</Label>
+                  <Input
+                    id="new-faq-order"
+                    type="number"
+                    min="0"
+                    value={newFaqForm.sort_order}
+                    onChange={(e) => setNewFaqForm(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddingFaq(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={createFaq}>
+                  Criar FAQ
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          {faqs.length === 0 ? (
+            <div className="text-center py-8">
+              <HelpCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                Nenhuma pergunta frequente cadastrada ainda.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {faqs.map((faq) => (
+                <Card key={faq.id} className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-4">
+                    {editingFaq === faq.id ? (
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor={`edit-question-${faq.id}`}>Pergunta</Label>
+                          <Input
+                            id={`edit-question-${faq.id}`}
+                            value={faqEditForm.question}
+                            onChange={(e) => setFaqEditForm(prev => ({ ...prev, question: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`edit-answer-${faq.id}`}>Resposta</Label>
+                          <Textarea
+                            id={`edit-answer-${faq.id}`}
+                            value={faqEditForm.answer}
+                            onChange={(e) => setFaqEditForm(prev => ({ ...prev, answer: e.target.value }))}
+                            rows={4}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id={`active-${faq.id}`}
+                              checked={faqEditForm.is_active}
+                              onCheckedChange={(checked) => setFaqEditForm(prev => ({ ...prev, is_active: checked }))}
+                            />
+                            <Label htmlFor={`active-${faq.id}`}>Ativa</Label>
+                          </div>
+                          <div>
+                            <Label htmlFor={`edit-order-${faq.id}`}>Ordem</Label>
+                            <Input
+                              id={`edit-order-${faq.id}`}
+                              type="number"
+                              min="0"
+                              value={faqEditForm.sort_order}
+                              onChange={(e) => setFaqEditForm(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+                              className="w-20"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={() => updateFaq(faq.id)} size="sm">
+                            <Save className="h-4 w-4 mr-1" />
+                            Salvar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingFaq(null)}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-semibold text-lg">{faq.question}</h4>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={faq.is_active ? 'default' : 'secondary'}>
+                              {faq.is_active ? 'Ativa' : 'Inativa'}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">#{faq.sort_order}</span>
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground mb-4 whitespace-pre-wrap">{faq.answer}</p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingFaq(faq.id);
+                              setFaqEditForm({
+                                question: faq.question,
+                                answer: faq.answer,
+                                is_active: faq.is_active,
+                                sort_order: faq.sort_order
+                              });
+                            }}
+                          >
+                            <Edit3 className="h-4 w-4 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleFaqStatus(faq.id, faq.is_active)}
+                          >
+                            {faq.is_active ? (
+                              <>
+                                <PowerOff className="h-4 w-4 mr-1" />
+                                Desativar
+                              </>
+                            ) : (
+                              <>
+                                <Power className="h-4 w-4 mr-1" />
+                                Ativar
+                              </>
+                            )}
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Excluir
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir esta pergunta frequente?
+                                  <br />
+                                  <strong>Pergunta:</strong> {faq.question}
+                                  <br />
+                                  Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteFaq(faq.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Sim, excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

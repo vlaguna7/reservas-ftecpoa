@@ -111,7 +111,7 @@ export function TodayReservations() {
         let displayType = reservation.equipment_type;
         if (reservation.equipment_type.startsWith('laboratory_')) {
           displayType = laboratoryNames[reservation.equipment_type] || reservation.equipment_type;
-          console.log(`🔍 TodayReservations: Mapping laboratory ${reservation.equipment_type} to ${displayType}`);
+          console.log(`🔍 TodayReservations: Mapping laboratory ${reservation.equipment_type} to "${displayType}"`);
         }
           
         return {
@@ -139,11 +139,11 @@ export function TodayReservations() {
     fetchTodayReservations();
     
     // Configurar realtime updates para reservas
-    const channelName = `today-reservations-${Date.now()}`;
-    console.log('📡 TodayReservations: Creating channel:', channelName);
+    const reservationsChannelName = `today-reservations-${Date.now()}`;
+    console.log('📡 TodayReservations: Creating reservations channel:', reservationsChannelName);
     
-    const channel = supabase
-      .channel(channelName)
+    const reservationsChannel = supabase
+      .channel(reservationsChannelName)
       .on(
         'postgres_changes',
         {
@@ -152,10 +152,7 @@ export function TodayReservations() {
           table: 'reservations'
         },
         (payload) => {
-          console.log('🔄 TodayReservations: Real-time change detected:', payload);
-          console.log('🔄 TodayReservations: Event type:', payload.eventType);
-          console.log('🔄 TodayReservations: New record:', payload.new);
-          console.log('🔄 TodayReservations: Old record:', payload.old);
+          console.log('🔄 TodayReservations: Reservations change detected:', payload);
           
           // Atualização imediata
           setTimeout(() => {
@@ -171,13 +168,39 @@ export function TodayReservations() {
         }
       )
       .subscribe((status) => {
-        console.log('📡 TodayReservations realtime status:', status);
+        console.log('📡 TodayReservations reservations realtime status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ TodayReservations: Successfully subscribed to realtime updates');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ TodayReservations: Channel error');
-        } else if (status === 'TIMED_OUT') {
-          console.error('⏰ TodayReservations: Subscription timed out');
+          console.log('✅ TodayReservations: Successfully subscribed to reservations updates');
+        }
+      });
+
+    // Configurar realtime updates para laboratory_settings (quando novos laboratórios são criados)
+    const labChannelName = `laboratory-settings-${Date.now()}`;
+    console.log('📡 TodayReservations: Creating laboratory settings channel:', labChannelName);
+    
+    const labChannel = supabase
+      .channel(labChannelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'laboratory_settings'
+        },
+        (payload) => {
+          console.log('🔄 TodayReservations: Laboratory settings change detected:', payload);
+          
+          // Quando laboratórios são adicionados/modificados, recarregar dados
+          setTimeout(() => {
+            console.log('🔄 TodayReservations: Refreshing due to laboratory changes...');
+            fetchTodayReservations();
+          }, 200);
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 TodayReservations laboratory settings realtime status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ TodayReservations: Successfully subscribed to laboratory settings updates');
         }
       });
     
@@ -192,8 +215,9 @@ export function TodayReservations() {
     }, 60000); // 1 minuto
 
     return () => {
-      console.log('🧹 TodayReservations: Cleaning up channel and interval');
-      supabase.removeChannel(channel);
+      console.log('🧹 TodayReservations: Cleaning up channels and interval');
+      supabase.removeChannel(reservationsChannel);
+      supabase.removeChannel(labChannel);
       clearInterval(interval);
     };
   }, []);

@@ -380,23 +380,6 @@ export function MakeReservation() {
   };
 
   const confirmAuditoriumReservation = async () => {
-    // Verificar se há reserva existente primeiro
-    const dateStr = formatDateToLocalString(auditoriumDate!);
-    const { data: existingReservations } = await supabase
-      .from('reservations')
-      .select('id, observation')
-      .eq('user_id', user.id)
-      .eq('equipment_type', 'auditorium')
-      .eq('reservation_date', dateStr);
-
-    const hasExistingReservation = existingReservations && existingReservations.length > 0;
-    
-    // Se não há reserva existente, exigir observação
-    if (!hasExistingReservation && (!auditoriumObservation.trim())) {
-      setAuditoriumError('Por favor, adicione uma observação.');
-      return;
-    }
-    
     if (!auditoriumDate || selectedTimeSlots.length === 0) {
       setAuditoriumError('Por favor, selecione uma data e pelo menos um horário.');
       return;
@@ -427,6 +410,14 @@ export function MakeReservation() {
         throw checkError;
       }
 
+      const hasExistingReservation = existingReservations && existingReservations.length > 0;
+      
+      // Se não há reserva existente, exigir observação
+      if (!hasExistingReservation && !auditoriumObservation.trim()) {
+        setAuditoriumError('Por favor, adicione uma observação.');
+        return;
+      }
+
       // Verificar conflitos com outros usuários (excluindo o próprio usuário)
       const { data: otherReservations, error: otherError } = await supabase
         .from('reservations')
@@ -454,14 +445,24 @@ export function MakeReservation() {
 
       let result;
       
-      if (existingReservations && existingReservations.length > 0) {
+      if (hasExistingReservation) {
         // Atualizar reserva existente
         console.log('🔄 Usuário já tem reserva - atualizando...');
         const existingReservation = existingReservations[0];
         const existingSlots = existingReservation.time_slots || [];
         
-        // Combinar horários existentes com novos (sem duplicatas)
-        const allSlots = [...new Set([...existingSlots, ...selectedTimeSlots])];
+        // Verificar se o usuário já tem estes horários reservados
+        const duplicateSlots = selectedTimeSlots.filter(slot => existingSlots.includes(slot));
+        if (duplicateSlots.length > 0) {
+          const duplicateLabels = duplicateSlots.map(slot => 
+            TIME_SLOTS.find(ts => ts.value === slot)?.label
+          ).join(', ');
+          setAuditoriumError(`Você já reservou os seguintes horários: ${duplicateLabels}.`);
+          return;
+        }
+        
+        // Combinar horários existentes com novos
+        const allSlots = [...existingSlots, ...selectedTimeSlots];
         
         console.log('🔄 Horários existentes:', existingSlots);
         console.log('🔄 Novos horários:', selectedTimeSlots);
@@ -894,7 +895,7 @@ export function MakeReservation() {
                 <CalendarComponent
                   mode="single"
                   selected={auditoriumDate}
-                  onSelect={(date) => {
+                  onSelect={async (date) => {
                     if (date) {
                       console.log('📅 SELEÇÃO - Data original do calendário:', date);
                       console.log('📅 SELEÇÃO - Data em ISO:', date.toISOString());
@@ -902,6 +903,24 @@ export function MakeReservation() {
                       console.log('📅 SELEÇÃO - getDate():', date.getDate());
                       console.log('📅 SELEÇÃO - getMonth():', date.getMonth());
                       console.log('📅 SELEÇÃO - getFullYear():', date.getFullYear());
+                      
+                      // Verificar se há reserva existente para esta nova data
+                      const dateStr = formatDateToLocalString(date);
+                      const { data: userReservations } = await supabase
+                        .from('reservations')
+                        .select('time_slots')
+                        .eq('equipment_type', 'auditorium')
+                        .eq('reservation_date', dateStr)
+                        .eq('user_id', user?.id);
+                      
+                      const hasExistingReservation = userReservations && userReservations.length > 0;
+                      
+                      // Reset campos quando muda data
+                      setSelectedTimeSlots([]);
+                      setAuditoriumObservation('');
+                      setShowAuditoriumObservation(false);
+                      
+                      console.log('📅 Reserva existente para nova data:', hasExistingReservation);
                     }
                     setAuditoriumDate(date);
                     setAuditoriumError('');
@@ -981,21 +1000,30 @@ export function MakeReservation() {
                           // Se chegou até aqui, pode selecionar
                           setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
                           setAuditoriumError(''); // Limpar qualquer erro anterior
+                          
+                          // Controlar exibição da observação baseado na reserva existente
+                          const hasExistingReservation = userReservations && userReservations.length > 0;
+                          const newTimeSlots = [...selectedTimeSlots, slot.value];
+                          setShowAuditoriumObservation(newTimeSlots.length > 0 && !hasExistingReservation);
                         } else {
                           setSelectedTimeSlots(selectedTimeSlots.filter(s => s !== slot.value));
                           setAuditoriumError(''); // Limpar erro ao deselecionar
+                          
+                          // Verificar se há reserva existente para controlar observação
+                          if (auditoriumDate) {
+                            const dateStr = formatDateToLocalString(auditoriumDate);
+                            const { data: userReservations } = await supabase
+                              .from('reservations')
+                              .select('time_slots')
+                              .eq('equipment_type', 'auditorium')
+                              .eq('reservation_date', dateStr)
+                              .eq('user_id', user?.id);
+                            
+                            const hasExistingReservation = userReservations && userReservations.length > 0;
+                            const newTimeSlots = selectedTimeSlots.filter(s => s !== slot.value);
+                            setShowAuditoriumObservation(newTimeSlots.length > 0 && !hasExistingReservation);
+                          }
                         }
-                        
-                        // Controlar exibição da observação
-                        const newTimeSlots = checked === true 
-                          ? [...selectedTimeSlots, slot.value]
-                          : selectedTimeSlots.filter(s => s !== slot.value);
-                        
-                        // Verificar se há reserva existente do usuário para esta data
-                        const hasExistingReservation = userReservations && Array.isArray(userReservations) && userReservations.length > 0;
-                        
-                        // Só mostrar observação se houver horários selecionados, sem erros e sem reserva existente
-                        setShowAuditoriumObservation(newTimeSlots.length > 0 && !auditoriumError && !hasExistingReservation);
                       }}
                     />
                     <Label htmlFor={slot.value} className="cursor-pointer">

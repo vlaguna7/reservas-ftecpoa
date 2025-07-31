@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Projector, Speaker, Calendar, X, Building } from 'lucide-react';
+import { Projector, Speaker, Calendar, X, Building, FlaskConical } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface Reservation {
   id: string;
   equipment_type: string;
+  display_type?: string;
   created_at: string;
   user_profile: {
     display_name: string;
@@ -49,12 +50,11 @@ export function TodayReservations() {
       
       console.log('🔍 TodayReservations: Fetching reservations for date:', dateStr);
 
-      // Primeira query: buscar reservas (apenas equipamentos: projector e speaker)
+      // Buscar todas as reservas (equipamentos e laboratórios)
       const { data: reservationData, error: reservationError } = await supabase
         .from('reservations')
         .select('id, equipment_type, user_id, created_at')
         .eq('reservation_date', dateStr)
-        .in('equipment_type', ['projector', 'speaker'])
         .order('created_at', { ascending: true });
 
       console.log('🔍 TodayReservations: Raw reservation data:', reservationData);
@@ -70,21 +70,27 @@ export function TodayReservations() {
         return;
       }
 
-      // Filtrar apenas equipamentos válidos para garantir que não há laboratórios
-      const validReservations = reservationData.filter(r => 
-        r.equipment_type === 'projector' || r.equipment_type === 'speaker'
-      );
-      
-      console.log('✅ TodayReservations: Valid reservations after filter:', validReservations);
+      // Buscar nomes dos laboratórios para mapear códigos
+      const { data: labData } = await supabase
+        .from('laboratory_settings')
+        .select('laboratory_code, laboratory_name');
 
-      if (validReservations.length === 0) {
-        console.log('📭 TodayReservations: No valid equipment reservations found');
+      // Criar mapeamento de códigos de laboratório para nomes
+      const laboratoryNames: Record<string, string> = {};
+      labData?.forEach(lab => {
+        laboratoryNames[lab.laboratory_code] = lab.laboratory_name;
+      });
+
+      console.log('🔍 TodayReservations: Laboratory mapping:', laboratoryNames);
+
+      if (reservationData.length === 0) {
+        console.log('📭 TodayReservations: No reservations found for today');
         setReservations([]);
         return;
       }
 
       // Segunda query: buscar perfis dos usuários
-      const userIds = validReservations.map(r => r.user_id);
+      const userIds = reservationData.map(r => r.user_id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('user_id, display_name')
@@ -99,14 +105,22 @@ export function TodayReservations() {
 
       // Combinar dados
       const profileMap = new Map(profileData?.map(p => [p.user_id, p]) || []);
-      const combinedData = validReservations.map(reservation => ({
-        id: reservation.id,
-        equipment_type: reservation.equipment_type,
-        created_at: reservation.created_at,
-        user_profile: {
-          display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
-        }
-      }));
+      const combinedData = reservationData.map(reservation => {
+        // Para laboratórios, usar o nome mapeado se disponível
+        const displayType = reservation.equipment_type.startsWith('laboratory_') 
+          ? laboratoryNames[reservation.equipment_type] || reservation.equipment_type
+          : reservation.equipment_type;
+          
+        return {
+          id: reservation.id,
+          equipment_type: reservation.equipment_type,
+          display_type: displayType,
+          created_at: reservation.created_at,
+          user_profile: {
+            display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
+          }
+        };
+      });
 
       console.log('✅ TodayReservations: Final combined data:', combinedData);
       setReservations(combinedData);
@@ -182,6 +196,10 @@ export function TodayReservations() {
   }, []);
 
   const getEquipmentIcon = (type: string) => {
+    if (type.startsWith('laboratory_')) {
+      return <FlaskConical className="h-4 w-4" />;
+    }
+    
     switch (type) {
       case 'projector':
         return <Projector className="h-4 w-4" />;
@@ -190,12 +208,16 @@ export function TodayReservations() {
       case 'auditorium':
         return <Building className="h-4 w-4" />;
       default:
-        return null;
+        return <FlaskConical className="h-4 w-4" />;
     }
   };
 
-  const getEquipmentLabel = (type: string) => {
-    switch (type) {
+  const getEquipmentLabel = (reservation: Reservation) => {
+    if (reservation.display_type && reservation.equipment_type.startsWith('laboratory_')) {
+      return reservation.display_type;
+    }
+    
+    switch (reservation.equipment_type) {
       case 'projector':
         return 'Projetor';
       case 'speaker':
@@ -203,7 +225,7 @@ export function TodayReservations() {
       case 'auditorium':
         return 'Auditório';
       default:
-        return '';
+        return reservation.equipment_type;
     }
   };
 
@@ -328,14 +350,8 @@ export function TodayReservations() {
                 <h3 className="font-semibold text-lg mb-3">{teacherName}</h3>
                  <div className="space-y-3">
                    {teacherReservations.map((reservation) => {
-                     const equipmentLabel = getEquipmentLabel(reservation.equipment_type);
+                     const equipmentLabel = getEquipmentLabel(reservation);
                      const equipmentIcon = getEquipmentIcon(reservation.equipment_type);
-                     
-                     // Só renderizar se for um equipamento válido
-                     if (!equipmentLabel || !equipmentIcon) {
-                       console.warn('⚠️ TodayReservations: Invalid equipment type:', reservation.equipment_type);
-                       return null;
-                     }
                      
                      return (
                        <div

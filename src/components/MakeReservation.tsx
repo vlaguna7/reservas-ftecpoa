@@ -753,6 +753,7 @@ export function MakeReservation() {
                     date.setHours(0, 0, 0, 0);
                     return date < today;
                   }}
+                  locale={ptBR}
                   initialFocus
                   className={cn("p-3 pointer-events-auto")}
                 />
@@ -859,6 +860,7 @@ export function MakeReservation() {
                         date.setHours(0, 0, 0, 0);
                         return date < today;
                       }}
+                      locale={ptBR}
                       initialFocus
                       className={cn("p-3 pointer-events-auto")}
                     />

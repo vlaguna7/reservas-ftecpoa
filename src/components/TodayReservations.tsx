@@ -380,6 +380,14 @@ export function TodayReservations() {
                      const equipmentLabel = getEquipmentLabel(reservation);
                      const equipmentIcon = getEquipmentIcon(reservation.equipment_type);
                      
+                     console.log(`🔍 TodayReservations: Rendering reservation:`, {
+                       id: reservation.id,
+                       equipment_type: reservation.equipment_type,
+                       display_type: reservation.display_type,
+                       equipmentLabel,
+                       hasIcon: !!equipmentIcon
+                     });
+                     
                      return (
                        <div
                          key={reservation.id}

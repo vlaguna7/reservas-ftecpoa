@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Projector, Speaker, Trash2, CheckCircle, FlaskConical } from 'lucide-react';
+import { Calendar, Projector, Speaker, Trash2, CheckCircle, FlaskConical, Users } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,8 +187,11 @@ export function MyReservations() {
       case 'speaker':
         return <Speaker className="h-4 w-4" />;
       case 'auditorium':
-        return <FlaskConical className="h-4 w-4" />;
+        return <Users className="h-4 w-4" />;
       default:
+        if (type.startsWith('laboratory_')) {
+          return <FlaskConical className="h-4 w-4" />;
+        }
         return <Projector className="h-4 w-4" />;
     }
   };
@@ -240,6 +243,9 @@ export function MyReservations() {
       case 'auditorium':
         return 'bg-purple-100 text-purple-800';
       default:
+        if (type.startsWith('laboratory_')) {
+          return 'bg-orange-100 text-orange-800';
+        }
         return 'bg-gray-100 text-gray-800';
     }
   };

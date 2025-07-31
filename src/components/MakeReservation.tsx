@@ -454,16 +454,23 @@ export function MakeReservation() {
       
       if (hasExistingReservation) {
         // Atualizar reserva existente
-        console.log('🔄 Usuário já tem reserva - atualizando...');
+        console.log('🔄 CONFIRMAÇÃO - Usuário já tem reserva - atualizando...');
         const existingReservation = existingReservations[0];
         const existingSlots = existingReservation.time_slots || [];
         
+        console.log('🔄 CONFIRMAÇÃO - Reserva existente completa:', existingReservation);
+        console.log('🔄 CONFIRMAÇÃO - Horários existentes na reserva:', existingSlots);
+        console.log('🔄 CONFIRMAÇÃO - Novos horários selecionados:', selectedTimeSlots);
+        
         // Verificar se o usuário já tem estes horários reservados
         const duplicateSlots = selectedTimeSlots.filter(slot => existingSlots.includes(slot));
+        console.log('🔄 CONFIRMAÇÃO - Horários duplicados encontrados:', duplicateSlots);
+        
         if (duplicateSlots.length > 0) {
           const duplicateLabels = duplicateSlots.map(slot => 
             TIME_SLOTS.find(ts => ts.value === slot)?.label
           ).join(', ');
+          console.log('❌ CONFIRMAÇÃO - Bloqueando por duplicatas:', duplicateLabels);
           setAuditoriumError(`Você já reservou os seguintes horários: ${duplicateLabels}.`);
           return;
         }
@@ -471,9 +478,10 @@ export function MakeReservation() {
         // Combinar horários existentes com novos
         const allSlots = [...existingSlots, ...selectedTimeSlots];
         
-        console.log('🔄 Horários existentes:', existingSlots);
-        console.log('🔄 Novos horários:', selectedTimeSlots);
-        console.log('🔄 Todos os horários combinados:', allSlots);
+        console.log('🔄 CONFIRMAÇÃO - Horários existentes:', existingSlots);
+        console.log('🔄 CONFIRMAÇÃO - Novos horários:', selectedTimeSlots);
+        console.log('🔄 CONFIRMAÇÃO - Todos os horários combinados:', allSlots);
+        console.log('🔄 CONFIRMAÇÃO - ID da reserva a ser atualizada:', existingReservation.id);
         
         const { data, error } = await supabase
           .from('reservations')
@@ -973,9 +981,12 @@ export function MakeReservation() {
                       id={slot.value}
                       checked={selectedTimeSlots.includes(slot.value)}
                       onCheckedChange={async (checked) => {
+                        console.log('🔍 CHECKBOX - Clique em horário:', slot.value, 'checked:', checked);
+                        
                         if (checked === true) {
                           // Verificar se este horário já está reservado
                           const dateStr = formatDateToLocalString(auditoriumDate!);
+                          console.log('🔍 CHECKBOX - Data formatada:', dateStr);
                           
                           // Buscar reservas de outros usuários para esta data
                           const { data: otherReservations, error: otherError } = await supabase
@@ -985,6 +996,8 @@ export function MakeReservation() {
                             .eq('reservation_date', dateStr)
                             .neq('user_id', user?.id);
                           
+                          console.log('🔍 CHECKBOX - Reservas de outros usuários:', otherReservations);
+                          
                           if (otherError) {
                             console.error('Erro ao verificar disponibilidade:', otherError);
                             setAuditoriumError('Erro ao verificar disponibilidade. Tente novamente.');
@@ -992,16 +1005,24 @@ export function MakeReservation() {
                           }
                           
                           const otherUsersSlots = otherReservations?.flatMap(res => res.time_slots || []) || [];
+                          console.log('🔍 CHECKBOX - Horários de outros usuários:', otherUsersSlots);
                           
                           // Verificar se outro usuário já reservou este horário
                           if (otherUsersSlots.includes(slot.value)) {
+                            console.log('❌ CHECKBOX - Horário já reservado por outro usuário:', slot.value);
                             setAuditoriumError(`Este horário já está reservado por outro usuário.`);
                             return; // Impedir a seleção
                           }
                           
                           // Se chegou até aqui, pode selecionar (permitir adicionar novos turnos)
-                          setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
+                          console.log('✅ CHECKBOX - Horário disponível, adicionando:', slot.value);
+                          console.log('🔍 CHECKBOX - Horários atuais antes de adicionar:', selectedTimeSlots);
+                          
+                          const newTimeSlots = [...selectedTimeSlots, slot.value];
+                          setSelectedTimeSlots(newTimeSlots);
                           setAuditoriumError(''); // Limpar qualquer erro anterior
+                          
+                          console.log('🔍 CHECKBOX - Novos horários após adição:', newTimeSlots);
                           
                           // Buscar reserva do próprio usuário para controlar observação
                           const { data: userReservations } = await supabase
@@ -1011,12 +1032,21 @@ export function MakeReservation() {
                             .eq('reservation_date', dateStr)
                             .eq('user_id', user?.id);
                           
+                          console.log('🔍 CHECKBOX - Reservas do usuário:', userReservations);
+                          
                           const hasExistingReservation = userReservations && userReservations.length > 0;
-                          const newTimeSlots = [...selectedTimeSlots, slot.value];
                           setShowAuditoriumObservation(newTimeSlots.length > 0 && !hasExistingReservation);
+                          
+                          console.log('🔍 CHECKBOX - Mostrar observação?', newTimeSlots.length > 0 && !hasExistingReservation);
                         } else {
-                          setSelectedTimeSlots(selectedTimeSlots.filter(s => s !== slot.value));
+                          console.log('🔍 CHECKBOX - Removendo horário:', slot.value);
+                          console.log('🔍 CHECKBOX - Horários antes da remoção:', selectedTimeSlots);
+                          
+                          const newTimeSlots = selectedTimeSlots.filter(s => s !== slot.value);
+                          setSelectedTimeSlots(newTimeSlots);
                           setAuditoriumError(''); // Limpar erro ao deselecionar
+                          
+                          console.log('🔍 CHECKBOX - Horários após remoção:', newTimeSlots);
                           
                           // Verificar se há reserva existente para controlar observação
                           if (auditoriumDate) {
@@ -1029,7 +1059,6 @@ export function MakeReservation() {
                               .eq('user_id', user?.id);
                             
                             const hasExistingReservation = userReservations && userReservations.length > 0;
-                            const newTimeSlots = selectedTimeSlots.filter(s => s !== slot.value);
                             setShowAuditoriumObservation(newTimeSlots.length > 0 && !hasExistingReservation);
                           }
                         }

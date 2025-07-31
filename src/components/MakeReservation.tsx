@@ -243,7 +243,7 @@ export function MakeReservation() {
     
     const { data, error } = await supabase
       .from('reservations')
-      .select('id, reservation_date, equipment_type')
+      .select('id, reservation_date, equipment_type, time_slots, observation')
       .eq('user_id', user.id)
       .in('reservation_date', dateList);
 
@@ -261,7 +261,9 @@ export function MakeReservation() {
       const dateStr = reservation.reservation_date;
       userRes[dateStr].push({
         id: reservation.id,
-        equipment_type: reservation.equipment_type
+        equipment_type: reservation.equipment_type,
+        time_slots: reservation.time_slots,
+        observation: reservation.observation
       });
     });
 
@@ -383,7 +385,11 @@ export function MakeReservation() {
   const hasExistingAuditoriumReservation = useMemo(() => {
     if (!auditoriumDate || !user) return false;
     const dateStr = formatDateToLocalString(auditoriumDate);
-    return userReservations[dateStr]?.some(res => res.equipment_type === 'auditorium') || false;
+    const auditoriumReservation = userReservations[dateStr]?.find(res => res.equipment_type === 'auditorium');
+    console.log('🔍 VERIFICAÇÃO RESERVA EXISTENTE - Data:', dateStr);
+    console.log('🔍 VERIFICAÇÃO RESERVA EXISTENTE - Reservas para data:', userReservations[dateStr]);
+    console.log('🔍 VERIFICAÇÃO RESERVA EXISTENTE - Reserva auditório encontrada:', auditoriumReservation);
+    return !!auditoriumReservation;
   }, [auditoriumDate, userReservations, user]);
 
   const confirmAuditoriumReservation = async () => {
@@ -1376,7 +1382,7 @@ export function MakeReservation() {
       <Button 
         type="submit" 
       disabled={loading || !selectedEquipment || 
-        (selectedEquipment === 'auditorium' ? (!auditoriumDate || selectedTimeSlots.length === 0 || !!auditoriumError || (!hasExistingAuditoriumReservation && !auditoriumObservation.trim())) : 
+        (selectedEquipment === 'auditorium' ? (!auditoriumDate || selectedTimeSlots.length === 0 || !!auditoriumError || (!hasExistingAuditoriumReservation && !auditoriumObservation.trim())) :
           selectedEquipment === 'laboratory' ? (!selectedLaboratory || !laboratoryDate || needsSupplies === null || (needsSupplies && !laboratoryObservation.trim())) :
           (!selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)))}
         className="w-full"

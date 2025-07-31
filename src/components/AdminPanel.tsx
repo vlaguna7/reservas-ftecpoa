@@ -970,6 +970,9 @@ export function AdminPanel() {
         setSelectedAuditoriumDate(date);
         setShowAuditoriumDetails(true);
       }
+    } else {
+      setSelectedAuditoriumDate(undefined);
+      setShowAuditoriumDetails(false);
     }
   };
 
@@ -980,6 +983,9 @@ export function AdminPanel() {
         setSelectedLabDate(date);
         setShowLabDetails(true);
       }
+    } else {
+      setSelectedLabDate(undefined);
+      setShowLabDetails(false);
     }
   };
 
@@ -1031,7 +1037,7 @@ export function AdminPanel() {
   return (
     <div className="space-y-6">
       {/* Equipment Settings */}
-      <Card>
+      <Card className="shadow-md">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -1111,7 +1117,7 @@ export function AdminPanel() {
       </Card>
 
       {/* Auditorium Calendar */}
-      <Card>
+      <Card className="shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
@@ -1171,7 +1177,7 @@ export function AdminPanel() {
       </Card>
 
       {/* Laboratory Calendar */}
-      <Card>
+      <Card className="shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FlaskConical className="h-5 w-5" />
@@ -1241,7 +1247,7 @@ export function AdminPanel() {
       </Card>
 
       {/* System Statistics */}
-      <Card>
+      <Card className="shadow-md">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
@@ -1306,7 +1312,7 @@ export function AdminPanel() {
       </Card>
 
       {/* User Management */}
-      <Card>
+      <Card className="shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserCheck className="h-5 w-5" />
@@ -1527,7 +1533,7 @@ export function AdminPanel() {
       </Card>
 
       {/* Laboratory Management */}
-      <Card>
+      <Card className="shadow-md">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

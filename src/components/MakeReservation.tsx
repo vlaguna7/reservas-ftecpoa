@@ -412,6 +412,13 @@ export function MakeReservation() {
       return;
     }
 
+    // Verificar se o laboratório está ativo
+    const selectedLab = laboratoryOptions.find(lab => lab.value === selectedLaboratory);
+    if (!selectedLab || !selectedLab.isActive) {
+      setLaboratoryError('Este laboratório está desativado pela administração e não pode ser reservado.');
+      return;
+    }
+
     if (needsSupplies === null) {
       setLaboratoryError('Por favor, responda se precisa comprar insumos.');
       return;

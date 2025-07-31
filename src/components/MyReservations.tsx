@@ -44,14 +44,19 @@ export function MyReservations() {
       .select('laboratory_code, laboratory_name')
       .eq('is_active', true);
 
-    if (!error && data) {
+    if (error) {
+      console.error('Error fetching laboratories:', error);
+    } else {
+      console.log('Laboratories data:', data); // Debug log
       const labMap: {[key: string]: string} = {};
-      data.forEach(lab => {
+      data?.forEach(lab => {
         if (lab.laboratory_code) {
           labMap[lab.laboratory_code] = lab.laboratory_name;
+          console.log(`Lab mapping: ${lab.laboratory_code} -> ${lab.laboratory_name}`); // Debug log
         }
       });
       setLaboratories(labMap);
+      console.log('Final laboratories map:', labMap); // Debug log
     }
   };
 
@@ -163,6 +168,9 @@ export function MyReservations() {
   };
 
   const getBadgeLabel = (type: string) => {
+    console.log('getBadgeLabel called with type:', type); // Debug log
+    console.log('Available laboratories:', laboratories); // Debug log
+    
     switch (type) {
       case 'projector':
         return 'Projetor';
@@ -174,8 +182,10 @@ export function MyReservations() {
         if (type.startsWith('laboratory_')) {
           // Extrair o código do laboratório (ex: laboratory_LAB01 -> LAB01)
           const labCode = type.replace('laboratory_', '');
+          console.log('Lab code extracted:', labCode); // Debug log
           // Buscar o nome real do laboratório
           const labName = laboratories[labCode];
+          console.log('Lab name found:', labName); // Debug log
           return labName ? labName : `Laboratório ${labCode}`;
         }
         return type;
@@ -272,9 +282,6 @@ export function MyReservations() {
                   <div className="flex items-center gap-2">
                     {isFinished && <CheckCircle className="h-4 w-4 text-green-600" />}
                     {getEquipmentIcon(reservation.equipment_type)}
-                    <span className="font-medium">
-                      {getEquipmentLabel(reservation.equipment_type)}
-                    </span>
                     <Badge className={getEquipmentColor(reservation.equipment_type)}>
                       {getBadgeLabel(reservation.equipment_type)}
                     </Badge>

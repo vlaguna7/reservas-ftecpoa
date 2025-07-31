@@ -53,6 +53,7 @@ export function MakeReservation() {
   const [laboratoryError, setLaboratoryError] = useState('');
   const [laboratoryOptions, setLaboratoryOptions] = useState<Array<{value: string, label: string, isActive: boolean}>>([]);
   const [laboratoryCalendarOpen, setLaboratoryCalendarOpen] = useState(false);
+  const [laboratoryNames, setLaboratoryNames] = useState<Record<string, string>>({});
   
   const isMobile = useIsMobile();
 
@@ -176,7 +177,14 @@ export function MakeReservation() {
       isActive: lab.is_active
     }));
     
+    // Criar mapeamento de códigos para nomes
+    const labNames: Record<string, string> = {};
+    sortedLabs.forEach(lab => {
+      labNames[lab.laboratory_code] = lab.laboratory_name;
+    });
+    
     setLaboratoryOptions(labOptions);
+    setLaboratoryNames(labNames);
   };
 
   const fetchAvailability = async () => {
@@ -671,6 +679,10 @@ export function MakeReservation() {
   };
 
   const getEquipmentIcon = (type: string) => {
+    if (type.startsWith('laboratory_')) {
+      return <FlaskConical className="h-4 w-4" />;
+    }
+    
     switch (type) {
       case 'projector':
         return <Projector className="h-4 w-4" />;
@@ -686,6 +698,11 @@ export function MakeReservation() {
   };
 
   const getEquipmentLabel = (type: string) => {
+    // Se for um laboratório específico, buscar o nome no mapeamento
+    if (type.startsWith('laboratory_')) {
+      return laboratoryNames[type] || type;
+    }
+    
     switch (type) {
       case 'projector':
         return 'Projetor';

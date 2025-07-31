@@ -910,11 +910,13 @@ export function MakeReservation() {
                           const availability = await checkAuditoriumAvailability(dateStr, [slot.value], true);
                           
                           if (!availability.available) {
-                            setAuditoriumError(`O horário "${slot.label}" já está reservado por outro usuário para esta data.`);
-                            // Não impedir a seleção, apenas mostrar o aviso
+                            setAuditoriumError(`Este horário já está reservado.`);
+                            // Impedir a seleção de horários já reservados
+                            return;
                           }
                           
                           setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
+                          setAuditoriumError(''); // Limpar erro se conseguiu selecionar
                         } else {
                           setSelectedTimeSlots(selectedTimeSlots.filter(s => s !== slot.value));
                           // Limpar erro se deselecionar
@@ -923,11 +925,17 @@ export function MakeReservation() {
                           }
                         }
                         
-                        // Mostrar observação apenas quando algum horário for selecionado
+                        // Mostrar observação apenas quando algum horário for selecionado E não houver conflitos
                         const newTimeSlots = checked === true 
                           ? [...selectedTimeSlots, slot.value]
                           : selectedTimeSlots.filter(s => s !== slot.value);
-                        setShowAuditoriumObservation(newTimeSlots.length > 0);
+                        
+                        // Só mostrar observação se não houver erros de conflito
+                        if (newTimeSlots.length > 0 && !auditoriumError) {
+                          setShowAuditoriumObservation(true);
+                        } else if (newTimeSlots.length === 0) {
+                          setShowAuditoriumObservation(false);
+                        }
                       }}
                     />
                     <Label htmlFor={slot.value} className="cursor-pointer">
@@ -942,7 +950,15 @@ export function MakeReservation() {
             </div>
           )}
 
-          {auditoriumDate && selectedTimeSlots.length > 0 && (
+          {/* Mostrar erro sempre que houver, mas só mostrar observação se não houver conflitos */}
+          {auditoriumError && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{auditoriumError}</AlertDescription>
+            </Alert>
+          )}
+
+          {auditoriumDate && selectedTimeSlots.length > 0 && showAuditoriumObservation && !auditoriumError && (
             <div>
               <Label className="text-base font-medium">Observação (obrigatória):</Label>
               <Textarea
@@ -950,7 +966,6 @@ export function MakeReservation() {
                 value={auditoriumObservation}
                 onChange={(e) => {
                   setAuditoriumObservation(e.target.value);
-                  setAuditoriumError(''); // Limpar erro ao digitar
                 }}
                 maxLength={600}
                 className="mt-2"
@@ -959,12 +974,6 @@ export function MakeReservation() {
               <div className="text-sm text-muted-foreground mt-1">
                 {auditoriumObservation.length}/600 caracteres
               </div>
-              {auditoriumError && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{auditoriumError}</AlertDescription>
-                </Alert>
-              )}
             </div>
           )}
         </div>
@@ -1229,10 +1238,10 @@ export function MakeReservation() {
 
       <Button 
         type="submit" 
-        disabled={loading || !selectedEquipment || 
-          (selectedEquipment === 'auditorium' ? (!auditoriumDate || !auditoriumObservation.trim()) : 
-            selectedEquipment === 'laboratory' ? (!selectedLaboratory || !laboratoryDate || needsSupplies === null || (needsSupplies && !laboratoryObservation.trim())) :
-            (!selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)))}
+      disabled={loading || !selectedEquipment || 
+        (selectedEquipment === 'auditorium' ? (!auditoriumDate || selectedTimeSlots.length === 0 || !auditoriumObservation.trim() || !!auditoriumError) : 
+          selectedEquipment === 'laboratory' ? (!selectedLaboratory || !laboratoryDate || needsSupplies === null || (needsSupplies && !laboratoryObservation.trim())) :
+          (!selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)))}
         className="w-full"
       >
         {loading ? 'Reservando...' : selectedEquipment === 'laboratory' ? 'Reservar Laboratório' : 'Confirmar Reserva'}

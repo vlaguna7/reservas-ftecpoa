@@ -344,7 +344,8 @@ export function MakeReservation() {
     
     return {
       available: conflictingSlots.length === 0,
-      conflictingSlots
+      conflictingSlots,
+      existingSlots // Retornar os horários existentes para verificação
     };
   };
   
@@ -374,6 +375,18 @@ export function MakeReservation() {
   const confirmAuditoriumReservation = async () => {
     if (!auditoriumDate || selectedTimeSlots.length === 0 || !auditoriumObservation.trim()) {
       setAuditoriumError('Por favor, selecione uma data, pelo menos um horário e adicione uma observação.');
+      return;
+    }
+
+    // Verificar novamente se há conflitos antes de confirmar
+    const dateStr = format(auditoriumDate, 'yyyy-MM-dd');
+    const availability = await checkAuditoriumAvailability(dateStr, selectedTimeSlots);
+    
+    if (!availability.available) {
+      const conflictingLabels = availability.conflictingSlots.map(slot => 
+        TIME_SLOTS.find(ts => ts.value === slot)?.label
+      ).join(', ');
+      setAuditoriumError(`Os seguintes horários já estão reservados: ${conflictingLabels}. Por favor, remova-os da sua seleção.`);
       return;
     }
 
@@ -886,15 +899,18 @@ export function MakeReservation() {
                           const availability = await checkAuditoriumAvailability(dateStr, [slot.value]);
                           
                           if (!availability.available) {
-                            setAuditoriumError(`O horário ${slot.label} já está reservado. Por favor, selecione outro horário.`);
-                            return;
+                            setAuditoriumError(`O horário "${slot.label}" já está reservado para esta data.`);
+                            // Não impedir a seleção, apenas mostrar o aviso
                           }
                           
                           setSelectedTimeSlots([...selectedTimeSlots, slot.value]);
                         } else {
                           setSelectedTimeSlots(selectedTimeSlots.filter(s => s !== slot.value));
+                          // Limpar erro se deselecionar
+                          if (auditoriumError.includes(slot.label)) {
+                            setAuditoriumError('');
+                          }
                         }
-                        setAuditoriumError('');
                         
                         // Mostrar observação apenas quando algum horário for selecionado
                         const newTimeSlots = checked === true 

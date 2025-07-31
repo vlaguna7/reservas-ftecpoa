@@ -47,6 +47,30 @@ export function MyReservations() {
   useEffect(() => {
     fetchLaboratories();
     fetchReservations();
+
+    // Configurar realtime updates para reservations
+    const channel = supabase
+      .channel('my-reservations-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reservations'
+        },
+        (payload) => {
+          console.log('🔄 MyReservations: Real-time change detected:', payload);
+          // Aguardar um pouco para garantir que a operação foi concluída
+          setTimeout(() => {
+            fetchReservations();
+          }, 100);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchLaboratories = async () => {

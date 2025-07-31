@@ -150,6 +150,32 @@ export function AdminPanel() {
     fetchSystemStats();
     fetchAuditoriumReservations();
     fetchLaboratoryReservations();
+
+    // Configurar realtime updates para reservations
+    const channel = supabase
+      .channel('admin-reservations-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reservations'
+        },
+        (payload) => {
+          console.log('🔄 AdminPanel: Real-time change detected:', payload);
+          // Aguardar um pouco para garantir que a operação foi concluída
+          setTimeout(() => {
+            fetchAuditoriumReservations();
+            fetchLaboratoryReservations();
+            fetchAllReservations();
+          }, 100);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchEquipmentSettings = async () => {
@@ -933,40 +959,57 @@ export function AdminPanel() {
   };
 
   const fetchAuditoriumReservations = async () => {
-    const { data, error } = await supabase
-      .from('reservations')
-      .select(`
-        id,
-        reservation_date,
-        observation,
-        created_at,
-        time_slots,
-        user_id
-      `)
-      .eq('equipment_type', 'auditorium')
-      .order('reservation_date', { ascending: true });
+    try {
+      // Buscar todas as reservas do auditório a partir de hoje
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-    if (error) {
+      const { data: reservationData, error: reservationError } = await supabase
+        .from('reservations')
+        .select('id, reservation_date, observation, user_id, created_at, time_slots')
+        .eq('equipment_type', 'auditorium')
+        .gte('reservation_date', todayStr)
+        .order('reservation_date', { ascending: true });
+
+      if (reservationError) {
+        console.error('Error fetching auditorium reservations:', reservationError);
+        return;
+      }
+
+      if (!reservationData || reservationData.length === 0) {
+        setAuditoriumReservations([]);
+        return;
+      }
+
+      // Buscar perfis dos usuários
+      const userIds = reservationData.map(r => r.user_id);
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, display_name')
+        .in('user_id', userIds);
+
+      if (profileError) {
+        console.error('Error fetching profiles:', profileError);
+        return;
+      }
+
+      // Combinar dados
+      const profileMap = new Map(profileData?.map(p => [p.user_id, p]) || []);
+      const combinedData = reservationData.map(reservation => ({
+        id: reservation.id,
+        reservation_date: reservation.reservation_date,
+        observation: reservation.observation || '',
+        created_at: reservation.created_at,
+        time_slots: reservation.time_slots || [],
+        user_profile: {
+          display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
+        }
+      }));
+
+      setAuditoriumReservations(combinedData);
+    } catch (error) {
       console.error('Error fetching auditorium reservations:', error);
-      return;
     }
-
-    const reservationsWithProfiles = await Promise.all(
-      (data || []).map(async (reservation) => {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('user_id', reservation.user_id)
-          .single();
-
-        return {
-          ...reservation,
-          user_profile: profileData || { display_name: 'N/A' }
-        };
-      })
-    );
-
-    setAuditoriumReservations(reservationsWithProfiles);
   };
 
   const fetchLaboratoryReservations = async () => {

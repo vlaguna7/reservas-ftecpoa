@@ -254,9 +254,8 @@ export function MyReservations() {
                 {canCancelReservation(reservation.reservation_date) && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Cancelar
+                      <Button variant="outline" size="icon" className="text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>

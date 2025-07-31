@@ -49,30 +49,31 @@ export default function Dashboard() {
         <div className="container mx-auto px-4 py-4">
           {/* Layout Mobile */}
           <div className="md:hidden">
-            {/* Linha com menu e botão sair */}
-            <div className="flex justify-between items-center mb-2">
+            {/* Cabeçalho alinhado: menu à esquerda, textos no centro, botão sair à direita */}
+            <div className="flex items-center justify-between">
               <MobileSidebar 
                 onNavigate={setActiveTab} 
                 currentSection={activeTab}
                 isAdmin={profile.is_admin}
               />
+              
+              {/* Conteúdo centralizado */}
+              <div className="flex-1 text-center">
+                <h1 className="text-lg font-bold">Sistema de Reservas</h1>
+                <p className="text-sm text-muted-foreground">
+                  Olá, {profile.display_name}
+                  {profile.is_admin && (
+                    <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
+                      Admin
+                    </span>
+                  )}
+                </p>
+              </div>
+              
               <Button variant="outline" onClick={signOut} size="sm">
                 <LogOut className="h-4 w-4 mr-1" />
                 Sair
               </Button>
-            </div>
-            
-            {/* Título e saudação */}
-            <div className="text-center">
-              <h1 className="text-lg font-bold">Sistema de Reservas</h1>
-              <p className="text-sm text-muted-foreground">
-                Olá, {profile.display_name}
-                {profile.is_admin && (
-                  <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
-                    Admin
-                  </span>
-                )}
-              </p>
             </div>
           </div>
 

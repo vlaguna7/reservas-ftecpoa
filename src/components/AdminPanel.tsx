@@ -1037,7 +1037,7 @@ export function AdminPanel() {
   return (
     <div className="space-y-6">
       {/* Equipment Settings */}
-      <Card className="shadow-md">
+      <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -1117,7 +1117,7 @@ export function AdminPanel() {
       </Card>
 
       {/* Auditorium Calendar */}
-      <Card className="shadow-md">
+      <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
@@ -1177,7 +1177,7 @@ export function AdminPanel() {
       </Card>
 
       {/* Laboratory Calendar */}
-      <Card className="shadow-md">
+      <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FlaskConical className="h-5 w-5" />
@@ -1247,7 +1247,7 @@ export function AdminPanel() {
       </Card>
 
       {/* System Statistics */}
-      <Card className="shadow-md">
+      <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
@@ -1270,7 +1270,7 @@ export function AdminPanel() {
             
             <div className="p-4 bg-muted rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-4 w-4 text-green-600" />
+                <BarChart3 className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium">Total de Reservas</span>
               </div>
               <div className="text-2xl font-bold">{stats?.totalReservations || 0}</div>
@@ -1312,7 +1312,7 @@ export function AdminPanel() {
       </Card>
 
       {/* User Management */}
-      <Card className="shadow-md">
+      <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserCheck className="h-5 w-5" />
@@ -1533,7 +1533,7 @@ export function AdminPanel() {
       </Card>
 
       {/* Laboratory Management */}
-      <Card className="shadow-md">
+      <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

@@ -47,7 +47,7 @@ export function TodayReservations() {
       const targetDate = getTodayDate();
       const dateStr = format(targetDate, 'yyyy-MM-dd');
       
-      console.log('Fetching reservations for date:', dateStr);
+      console.log('🔍 TodayReservations: Fetching reservations for date:', dateStr);
 
       // Primeira query: buscar reservas (apenas equipamentos: projector e speaker)
       const { data: reservationData, error: reservationError } = await supabase
@@ -57,31 +57,49 @@ export function TodayReservations() {
         .in('equipment_type', ['projector', 'speaker'])
         .order('created_at', { ascending: true });
 
+      console.log('🔍 TodayReservations: Raw reservation data:', reservationData);
+
       if (reservationError) {
-        console.error('Error fetching reservations:', reservationError);
+        console.error('❌ TodayReservations: Error fetching reservations:', reservationError);
         return;
       }
 
       if (!reservationData || reservationData.length === 0) {
+        console.log('📭 TodayReservations: No reservations found for today');
+        setReservations([]);
+        return;
+      }
+
+      // Filtrar apenas equipamentos válidos para garantir que não há laboratórios
+      const validReservations = reservationData.filter(r => 
+        r.equipment_type === 'projector' || r.equipment_type === 'speaker'
+      );
+      
+      console.log('✅ TodayReservations: Valid reservations after filter:', validReservations);
+
+      if (validReservations.length === 0) {
+        console.log('📭 TodayReservations: No valid equipment reservations found');
         setReservations([]);
         return;
       }
 
       // Segunda query: buscar perfis dos usuários
-      const userIds = reservationData.map(r => r.user_id);
+      const userIds = validReservations.map(r => r.user_id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('user_id, display_name')
         .in('user_id', userIds);
 
       if (profileError) {
-        console.error('Error fetching profiles:', profileError);
+        console.error('❌ TodayReservations: Error fetching profiles:', profileError);
         return;
       }
 
+      console.log('👥 TodayReservations: Profile data:', profileData);
+
       // Combinar dados
       const profileMap = new Map(profileData?.map(p => [p.user_id, p]) || []);
-      const combinedData = reservationData.map(reservation => ({
+      const combinedData = validReservations.map(reservation => ({
         id: reservation.id,
         equipment_type: reservation.equipment_type,
         created_at: reservation.created_at,
@@ -90,7 +108,7 @@ export function TodayReservations() {
         }
       }));
 
-      console.log('Combined reservations:', combinedData);
+      console.log('✅ TodayReservations: Final combined data:', combinedData);
       setReservations(combinedData);
     } catch (error) {
       console.error('Error fetching reservations:', error);
@@ -308,17 +326,27 @@ export function TodayReservations() {
             {Object.entries(groupedReservations).map(([teacherName, teacherReservations]) => (
               <div key={teacherName} className="border rounded-lg p-4">
                 <h3 className="font-semibold text-lg mb-3">{teacherName}</h3>
-                <div className="space-y-3">
-                   {teacherReservations.map((reservation) => (
-                      <div
-                        key={reservation.id}
-                        className="bg-primary/10 rounded-lg p-3"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-primary mb-2">
-                            {getEquipmentIcon(reservation.equipment_type)}
-                            <span className="font-medium">{getEquipmentLabel(reservation.equipment_type)}</span>
-                          </div>
+                 <div className="space-y-3">
+                   {teacherReservations.map((reservation) => {
+                     const equipmentLabel = getEquipmentLabel(reservation.equipment_type);
+                     const equipmentIcon = getEquipmentIcon(reservation.equipment_type);
+                     
+                     // Só renderizar se for um equipamento válido
+                     if (!equipmentLabel || !equipmentIcon) {
+                       console.warn('⚠️ TodayReservations: Invalid equipment type:', reservation.equipment_type);
+                       return null;
+                     }
+                     
+                     return (
+                       <div
+                         key={reservation.id}
+                         className="bg-primary/10 rounded-lg p-3"
+                       >
+                         <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-2 text-primary mb-2">
+                             {equipmentIcon}
+                             <span className="font-medium">{equipmentLabel}</span>
+                           </div>
                           {canUserCancelReservation(reservation) && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -354,10 +382,11 @@ export function TodayReservations() {
                         <div className="text-sm text-muted-foreground">
                           <span className="font-medium">Horário da solicitação:</span>{" "}
                           <span>{format(new Date(reservation.created_at), 'HH:mm')}</span>
-                        </div>
-                      </div>
-                   ))}
-                </div>
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
               </div>
             ))}
           </div>

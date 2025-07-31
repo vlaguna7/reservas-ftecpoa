@@ -49,12 +49,12 @@ export function TodayReservations() {
       
       console.log('Fetching reservations for date:', dateStr);
 
-      // Primeira query: buscar reservas (excluindo auditório)
+      // Primeira query: buscar reservas (apenas equipamentos: projector e speaker)
       const { data: reservationData, error: reservationError } = await supabase
         .from('reservations')
         .select('id, equipment_type, user_id, created_at')
         .eq('reservation_date', dateStr)
-        .neq('equipment_type', 'auditorium')
+        .in('equipment_type', ['projector', 'speaker'])
         .order('created_at', { ascending: true });
 
       if (reservationError) {

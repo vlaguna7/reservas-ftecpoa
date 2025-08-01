@@ -84,13 +84,10 @@ const handler = async (req: Request): Promise<Response> => {
       });
     };
 
-    // Formatar horários para auditório
+    // Formatar horários para auditório - mantém o formato original selecionado pelo usuário
     const formatTimeSlots = (slots?: string[]) => {
       if (!slots || slots.length === 0) return '';
-      return slots.map(slot => {
-        const [start, end] = slot.split('-');
-        return `${start}h às ${end}h`;
-      }).join(', ');
+      return slots.join(', ');
     };
 
     const equipmentLabel = getEquipmentLabel(reservationData.equipment_type);
@@ -122,7 +119,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Data:</td>
                 <td style="padding: 8px 0; color: #1e293b; font-weight: 500;">${formattedDate}</td>
               </tr>
-              ${reservationData.time_slots && reservationData.time_slots.length > 0 ? `
+              ${reservationData.equipment_type === 'auditorium' && reservationData.time_slots && reservationData.time_slots.length > 0 ? `
               <tr>
                 <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Horários:</td>
                 <td style="padding: 8px 0; color: #1e293b; font-weight: 500;">${formatTimeSlots(reservationData.time_slots)}</td>

@@ -26,10 +26,10 @@ export const sendReservationNotification = async (
       return;
     }
 
-    // Buscar email do usuário
-    const { data: authUser, error: authError } = await supabase.auth.getUser();
+    // Buscar email do usuário através do Supabase
+    const { data: { user }, error: authError } = await supabase.auth.admin.getUserById(reservationData.user_id);
     
-    if (authError || !authUser.user?.email) {
+    if (authError || !user?.email) {
       console.error('Error fetching user email for notification:', authError);
       return;
     }
@@ -37,7 +37,7 @@ export const sendReservationNotification = async (
     const notificationData = {
       reservationData,
       userName: profile.display_name,
-      userEmail: authUser.user.email,
+      userEmail: user.email,
       action
     };
 

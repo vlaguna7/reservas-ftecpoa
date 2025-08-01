@@ -41,11 +41,11 @@ const Index = () => {
       
       <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Logo */}
-        <div className="text-center md:text-left mb-8">
+        <div className="text-center mb-8">
           <img 
             src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
             alt="FTEC Logo" 
-            className="mx-auto md:mx-0 md:block md:w-auto md:h-24 h-20 object-contain animate-fade-in"
+            className="mx-auto h-20 md:h-24 w-auto object-contain animate-fade-in"
           />
         </div>
         

@@ -191,20 +191,40 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     // Enviar emails para todos os administradores com logs detalhados
-    console.log('📨 [EMAIL] Preparing to send emails...');
+    // RESPEITANDO O RATE LIMIT DO RESEND (2 emails/segundo)
+    console.log('📨 [EMAIL] Preparing to send emails sequentially...');
     
-    const emailPromises = emailList.map(({ email }, index) => {
-      console.log(`📧 [EMAIL ${index + 1}] Preparing email for: ${email}`);
-      return resend.emails.send({
-        from: "Sistema de Reservas FTEC <noreply@unidadepoazn.app>",
-        to: [email],
-        subject: `${emailEmoji} Reserva ${actionText} - ${equipmentLabel} em ${formattedDate}`,
-        html: emailHtml,
-      });
-    });
+    const results: any[] = [];
+    
+    for (let i = 0; i < emailList.length; i++) {
+      const { email } = emailList[i];
+      console.log(`📧 [EMAIL ${i + 1}/${emailList.length}] Sending to: ${email}`);
+      
+      try {
+        const result = await resend.emails.send({
+          from: "Sistema de Reservas FTEC <noreply@unidadepoazn.app>",
+          to: [email],
+          subject: `${emailEmoji} Reserva ${actionText} - ${equipmentLabel} em ${formattedDate}`,
+          html: emailHtml,
+        });
+        
+        results.push({ status: 'fulfilled', value: result });
+        console.log(`✅ [EMAIL ${i + 1}] SUCCESS for ${email}`);
+        console.log(`📊 [EMAIL ${i + 1}] Response:`, result);
+        
+        // Aguardar 600ms entre envios para respeitar rate limit (2/segundo)
+        if (i < emailList.length - 1) {
+          console.log(`⏳ [EMAIL] Waiting 600ms before next email...`);
+          await new Promise(resolve => setTimeout(resolve, 600));
+        }
+        
+      } catch (error) {
+        results.push({ status: 'rejected', reason: error });
+        console.error(`❌ [EMAIL ${i + 1}] FAILED for ${email}:`, error);
+      }
+    }
 
-    console.log(`🚀 [EMAIL] Executing ${emailPromises.length} email promises...`);
-    const results = await Promise.allSettled(emailPromises);
+    console.log(`🚀 [EMAIL] Completed sending ${emailList.length} emails sequentially`);
     
     const successCount = results.filter(result => result.status === 'fulfilled').length;
     const failureCount = results.length - successCount;

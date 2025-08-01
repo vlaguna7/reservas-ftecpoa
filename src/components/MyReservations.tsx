@@ -322,6 +322,18 @@ export function MyReservations() {
         break;
     }
 
+    // Sempre priorizar reservas em aberto (futuras) primeiro
+    filtered.sort((a, b) => {
+      const aIsOpen = !isReservationFinished(a.reservation_date);
+      const bIsOpen = !isReservationFinished(b.reservation_date);
+      
+      if (aIsOpen && !bIsOpen) return -1;
+      if (!aIsOpen && bIsOpen) return 1;
+      
+      // Se ambas têm o mesmo status (abertas ou fechadas), manter ordem existente
+      return 0;
+    });
+
     setFilteredReservations(filtered);
   };
 

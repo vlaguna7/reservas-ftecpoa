@@ -112,14 +112,14 @@ export default function Dashboard() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-3' : 'grid-cols-4'} ${isMobile ? 'md:hidden' : ''}`}>
-            <TabsTrigger value="reservations" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Fazer Reserva
+          <TabsList className={`grid w-full ${isMobile ? (profile.is_admin ? 'grid-cols-3' : 'grid-cols-2') : 'grid-cols-4'} ${isMobile ? 'md:hidden gap-1' : ''}`}>
+            <TabsTrigger value="reservations" className={`flex items-center ${isMobile ? 'gap-1 text-xs px-2' : 'gap-2'}`}>
+              <Calendar className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              {isMobile ? 'Fazer' : 'Fazer Reserva'}
             </TabsTrigger>
-             <TabsTrigger value="my-reservations" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2' : 'gap-2'}`}>
-               <List className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-               {isMobile ? 'Minhas' : 'Minhas Reservas'}
+            <TabsTrigger value="my-reservations" className={`flex items-center ${isMobile ? 'gap-1 text-xs px-2' : 'gap-2'}`}>
+              <List className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              {isMobile ? 'Minhas' : 'Minhas Reservas'}
             </TabsTrigger>
             {!isMobile && (
               <TabsTrigger value="profile" className="flex items-center gap-2">
@@ -128,8 +128,8 @@ export default function Dashboard() {
               </TabsTrigger>
             )}
             {profile.is_admin && (
-              <TabsTrigger value="admin" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
+              <TabsTrigger value="admin" className={`flex items-center ${isMobile ? 'gap-1 text-xs px-2' : 'gap-2'}`}>
+                <Settings className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
                 Admin
               </TabsTrigger>
             )}

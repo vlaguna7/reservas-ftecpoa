@@ -84,10 +84,17 @@ const handler = async (req: Request): Promise<Response> => {
       });
     };
 
-    // Formatar horários para auditório - mantém o formato original selecionado pelo usuário
+    // Formatar horários para auditório - mapear valores para labels exatos
     const formatTimeSlots = (slots?: string[]) => {
       if (!slots || slots.length === 0) return '';
-      return slots.join(', ');
+      
+      const timeSlotLabels: Record<string, string> = {
+        'morning': 'Manhã - 09h/12h',
+        'afternoon': 'Tarde - 13h/18h', 
+        'evening': 'Noite - 19h/22h'
+      };
+      
+      return slots.map(slot => timeSlotLabels[slot] || slot).join(', ');
     };
 
     const equipmentLabel = getEquipmentLabel(reservationData.equipment_type);
@@ -141,7 +148,6 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="background-color: #f1f5f9; padding: 20px; border-radius: 12px; margin-top: 25px;">
             <h3 style="color: #1e293b; margin: 0 0 15px 0; font-size: 16px;">Dados do Usuário</h3>
             <p style="margin: 5px 0; color: #64748b;"><strong>Nome:</strong> ${userName}</p>
-            <p style="margin: 5px 0; color: #64748b;"><strong>Email:</strong> ${userEmail}</p>
           </div>
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center;">

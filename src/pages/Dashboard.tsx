@@ -117,9 +117,9 @@ export default function Dashboard() {
               <Calendar className="h-4 w-4" />
               Fazer Reserva
             </TabsTrigger>
-            <TabsTrigger value="my-reservations" className={`flex items-center gap-2 ${isMobile ? 'text-[0.85em]' : ''}`}>
-              <List className="h-4 w-4" />
-              Minhas Reservas
+             <TabsTrigger value="my-reservations" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2' : 'gap-2'}`}>
+               <List className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+               {isMobile ? 'Minhas' : 'Minhas Reservas'}
             </TabsTrigger>
             {!isMobile && (
               <TabsTrigger value="profile" className="flex items-center gap-2">

@@ -1577,10 +1577,10 @@ export function AdminPanel() {
             <BarChart3 className="h-5 w-5" />
             Estatísticas do Sistema
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={exportReservations}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar Relatório
-          </Button>
+           <Button variant="outline" size="sm" onClick={exportReservations} className={`${isMobile ? 'px-2' : ''}`}>
+             <Download className="h-4 w-4 mr-2" />
+             {isMobile ? 'Relatório' : 'Exportar Relatório'}
+           </Button>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -1861,9 +1861,9 @@ export function AdminPanel() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <FlaskConical className="h-5 w-5" />
-                Gestão de Laboratórios
+               <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-base' : ''}`}>
+                 <FlaskConical className="h-5 w-5" />
+                 Gestão de Laboratórios
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Ativar, inativar, renomear laboratórios ou adicionar novos

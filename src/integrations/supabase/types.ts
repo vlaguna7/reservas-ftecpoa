@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_alerts: {
+        Row: {
+          created_at: string
+          duration: number
+          id: string
+          is_active: boolean
+          message: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration?: number
+          id?: string
+          is_active?: boolean
+          message: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration?: number
+          id?: string
+          is_active?: boolean
+          message?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_notification_emails: {
         Row: {
           created_at: string

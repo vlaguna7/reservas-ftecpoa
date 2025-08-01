@@ -105,6 +105,16 @@ interface NotificationEmail {
   updated_at: string;
 }
 
+interface AdminAlert {
+  id: string;
+  title: string;
+  message: string;
+  duration: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 interface AuditoriumReservation {
   id: string;
   reservation_date: string;
@@ -180,6 +190,22 @@ export function AdminPanel() {
     email: ''
   });
   
+  // Estados para alertas admin
+  const [adminAlerts, setAdminAlerts] = useState<AdminAlert[]>([]);
+  const [addingAlert, setAddingAlert] = useState(false);
+  const [editingAlert, setEditingAlert] = useState<string | null>(null);
+  const [newAlertForm, setNewAlertForm] = useState({
+    title: '',
+    message: '',
+    duration: 5
+  });
+  const [alertEditForm, setAlertEditForm] = useState({
+    title: '',
+    message: '',
+    duration: 5,
+    is_active: true
+  });
+  
   const [auditoriumReservations, setAuditoriumReservations] = useState<AuditoriumReservation[]>([]);
   const [laboratoryReservations, setLaboratoryReservations] = useState<LaboratoryReservation[]>([]);
   const [selectedAuditoriumDate, setSelectedAuditoriumDate] = useState<Date | undefined>(undefined);
@@ -194,6 +220,7 @@ export function AdminPanel() {
     fetchLaboratorySettings();
     fetchFaqs();
     fetchNotificationEmails();
+    fetchAdminAlerts();
     fetchSystemStats();
     fetchAuditoriumReservations();
     fetchLaboratoryReservations();
@@ -338,6 +365,158 @@ export function AdminPanel() {
     }
 
     setNotificationEmails(data || []);
+  };
+
+  const fetchAdminAlerts = async () => {
+    const { data, error } = await supabase
+      .from('admin_alerts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching admin alerts:', error);
+      return;
+    }
+
+    setAdminAlerts(data || []);
+  };
+
+  const createAlert = async () => {
+    if (!newAlertForm.title.trim() || !newAlertForm.message.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha o título e a mensagem.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newAlertForm.duration < 1) {
+      toast({
+        title: "Duração inválida",
+        description: "A duração deve ser pelo menos 1 segundo.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('admin_alerts')
+        .insert({
+          title: newAlertForm.title.trim(),
+          message: newAlertForm.message.trim(),
+          duration: newAlertForm.duration
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Alerta criado!",
+        description: "O alerta foi criado com sucesso."
+      });
+
+      setAddingAlert(false);
+      setNewAlertForm({ title: '', message: '', duration: 5 });
+      fetchAdminAlerts();
+    } catch (error) {
+      console.error('Error creating alert:', error);
+      toast({
+        title: "Erro ao criar alerta",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateAlert = async (alertId: string) => {
+    if (!alertEditForm.title.trim() || !alertEditForm.message.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha o título e a mensagem.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('admin_alerts')
+        .update({
+          title: alertEditForm.title.trim(),
+          message: alertEditForm.message.trim(),
+          duration: alertEditForm.duration,
+          is_active: alertEditForm.is_active
+        })
+        .eq('id', alertId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Alerta atualizado!",
+        description: "As alterações foram salvas."
+      });
+
+      setEditingAlert(null);
+      fetchAdminAlerts();
+    } catch (error) {
+      console.error('Error updating alert:', error);
+      toast({
+        title: "Erro ao atualizar alerta",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteAlert = async (alertId: string) => {
+    try {
+      const { error } = await supabase
+        .from('admin_alerts')
+        .delete()
+        .eq('id', alertId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Alerta excluído!",
+        description: "O alerta foi removido."
+      });
+
+      fetchAdminAlerts();
+    } catch (error) {
+      console.error('Error deleting alert:', error);
+      toast({
+        title: "Erro ao excluir alerta",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleAlertStatus = async (alertId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('admin_alerts')
+        .update({ is_active: !currentStatus })
+        .eq('id', alertId);
+
+      if (error) throw error;
+
+      toast({
+        title: `Alerta ${!currentStatus ? 'ativado' : 'desativado'}!`,
+        description: `O alerta foi ${!currentStatus ? 'ativado' : 'desativado'}.`
+      });
+
+      fetchAdminAlerts();
+    } catch (error) {
+      console.error('Error toggling alert status:', error);
+      toast({
+        title: "Erro ao alterar status",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   const createNotificationEmail = async () => {
@@ -2606,6 +2785,240 @@ export function AdminPanel() {
                         </AlertDialog>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Admin Alerts Management */}
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-lg' : ''}`}>
+              <AlertCircle className="h-5 w-5" />
+              Gerenciar Alertas
+            </CardTitle>
+            <p className={`text-muted-foreground mt-1 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+              Crie alertas em mini pop-up que serão exibidos para os usuários
+            </p>
+          </div>
+          <Dialog open={addingAlert} onOpenChange={setAddingAlert}>
+            <DialogTrigger asChild>
+              <Button className={`flex items-center ${isMobile ? 'p-2' : 'gap-2'}`}>
+                <Plus className="h-4 w-4" />
+                {!isMobile && "Criar Alerta"}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="mx-4 max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Criar Novo Alerta</DialogTitle>
+                <DialogDescription>
+                  Crie um alerta que será exibido em mini pop-up para os usuários.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="alert-title">Título</Label>
+                  <Input
+                    id="alert-title"
+                    placeholder="Título do alerta"
+                    value={newAlertForm.title}
+                    onChange={(e) => setNewAlertForm({ ...newAlertForm, title: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="alert-message">Mensagem</Label>
+                  <Textarea
+                    id="alert-message"
+                    placeholder="Mensagem do alerta"
+                    value={newAlertForm.message}
+                    onChange={(e) => setNewAlertForm({ ...newAlertForm, message: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="alert-duration">Duração (segundos)</Label>
+                  <Input
+                    id="alert-duration"
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={newAlertForm.duration}
+                    onChange={(e) => setNewAlertForm({ ...newAlertForm, duration: parseInt(e.target.value) || 5 })}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={createAlert}>Criar Alerta</Button>
+                <Button variant="outline" onClick={() => {
+                  setAddingAlert(false);
+                  setNewAlertForm({ title: '', message: '', duration: 5 });
+                }}>
+                  Cancelar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          {adminAlerts.length === 0 ? (
+            <div className="text-center py-8">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                Nenhum alerta criado.
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Crie alertas para informar os usuários sobre novidades.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {adminAlerts.map((alert) => (
+                <Card key={alert.id} className={`${isMobile ? 'p-3' : 'p-4'}`}>
+                  <CardContent className="p-0">
+                    {editingAlert === alert.id ? (
+                      <div className="space-y-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor={`edit-title-${alert.id}`}>Título</Label>
+                          <Input
+                            id={`edit-title-${alert.id}`}
+                            value={alertEditForm.title}
+                            onChange={(e) => setAlertEditForm({ ...alertEditForm, title: e.target.value })}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor={`edit-message-${alert.id}`}>Mensagem</Label>
+                          <Textarea
+                            id={`edit-message-${alert.id}`}
+                            value={alertEditForm.message}
+                            onChange={(e) => setAlertEditForm({ ...alertEditForm, message: e.target.value })}
+                            rows={3}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor={`edit-duration-${alert.id}`}>Duração (segundos)</Label>
+                          <Input
+                            id={`edit-duration-${alert.id}`}
+                            type="number"
+                            min="1"
+                            max="30"
+                            value={alertEditForm.duration}
+                            onChange={(e) => setAlertEditForm({ ...alertEditForm, duration: parseInt(e.target.value) || 5 })}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={alertEditForm.is_active}
+                            onCheckedChange={(checked) => setAlertEditForm({ ...alertEditForm, is_active: checked })}
+                          />
+                          <Label>Ativo</Label>
+                        </div>
+                        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>
+                          <Button onClick={() => updateAlert(alert.id)} className={isMobile ? 'w-full' : ''}>
+                            <Save className="h-4 w-4 mr-1" />
+                            Salvar
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setEditingAlert(null)}
+                            className={isMobile ? 'w-full' : ''}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={`flex ${isMobile ? 'flex-col space-y-3' : 'items-start justify-between'}`}>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className={`font-semibold ${isMobile ? 'text-sm' : ''}`}>
+                              {alert.title}
+                            </h4>
+                            <Badge variant={alert.is_active ? "default" : "secondary"} 
+                                   className={isMobile ? 'text-xs' : ''}>
+                              {alert.is_active ? "Ativo" : "Inativo"}
+                            </Badge>
+                          </div>
+                          <p className={`text-muted-foreground mb-2 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                            {alert.message}
+                          </p>
+                          <div className={`flex gap-4 text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                            <span>Duração: {alert.duration}s</span>
+                            <span>Criado: {new Date(alert.created_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
+                        <div className={`flex ${isMobile ? 'w-full flex-col space-y-2' : 'items-center gap-2'}`}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingAlert(alert.id);
+                              setAlertEditForm({
+                                title: alert.title,
+                                message: alert.message,
+                                duration: alert.duration,
+                                is_active: alert.is_active
+                              });
+                            }}
+                            className={isMobile ? 'w-full' : ''}
+                          >
+                            <Edit3 className="h-4 w-4 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleAlertStatus(alert.id, alert.is_active)}
+                            className={isMobile ? 'w-full' : ''}
+                          >
+                            {alert.is_active ? (
+                              <>
+                                <PowerOff className="h-4 w-4 mr-1" />
+                                Desativar
+                              </>
+                            ) : (
+                              <>
+                                <Power className="h-4 w-4 mr-1" />
+                                Ativar
+                              </>
+                            )}
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm" className={isMobile ? 'w-full' : ''}>
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Excluir
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="mx-4 max-w-lg">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir este alerta?
+                                  <br />
+                                  <strong>Título:</strong> {alert.title}
+                                  <br />
+                                  Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteAlert(alert.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Sim, excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

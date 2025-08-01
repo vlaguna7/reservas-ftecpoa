@@ -14,11 +14,14 @@ import { TodayReservations } from '@/components/TodayReservations';
 import { AuditoriumReservations } from '@/components/AuditoriumReservations';
 import { LaboratoryReservations } from '@/components/LaboratoryReservations';
 import { MobileSidebar } from '@/components/MobileSidebar';
+import { AlertPopup } from '@/components/AlertPopup';
+import { useAlerts } from '@/hooks/useAlerts';
 
 export default function Dashboard() {
   const { user, profile, loading, signOut } = useAuth();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('reservations');
+  const { currentAlert, closeCurrentAlert } = useAlerts();
 
   // Show loading while authentication is being verified
   if (loading) {
@@ -45,6 +48,10 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Alert Popup */}
+      {currentAlert && (
+        <AlertPopup alert={currentAlert} onClose={closeCurrentAlert} />
+      )}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           {/* Layout Mobile */}
@@ -88,35 +95,43 @@ export default function Dashboard() {
               />
             </div>
             
-            {/* Título centralizado */}
-            <div className="text-center mb-6">
-              <h1 className="text-3xl font-bold text-foreground">Sistema de Reservas</h1>
-            </div>
-            
-            {/* Linha com saudação à esquerda e botão sair à direita */}
-            <div className="flex justify-between items-center">
-              <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-6 py-4 rounded-xl border border-primary/20">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                    <User className="h-5 w-5 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground font-medium">Bem-vindo(a)</p>
-                    <p className="text-lg font-bold text-foreground flex items-center gap-2">
-                      {profile.display_name}
-                      {profile.is_admin && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
-                          Admin
-                        </span>
-                      )}
-                    </p>
+            {/* Cabeçalho compacto - linha única */}
+            <div className="flex items-center justify-between mb-3">
+              {/* Logo + Título centralizados */}
+              <div className="flex items-center gap-4 flex-1 justify-center">
+                <img 
+                  src="/lovable-uploads/652209de-1cde-4696-a6f1-f944987dde24.png" 
+                  alt="Logo" 
+                  className="h-8 w-8"
+                />
+                <h1 className="text-2xl font-bold text-foreground">Sistema de Reservas</h1>
+              </div>
+              
+              {/* Saudação + Admin badge + Botão sair - lado direito */}
+              <div className="flex items-center gap-4">
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-4 py-2 rounded-lg border border-primary/20">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Olá,</p>
+                      <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                        {profile.display_name}
+                        {profile.is_admin && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
+                            Admin
+                          </span>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                <Button variant="outline" size="sm" onClick={signOut}>
+                  <LogOut className="h-3 w-3 mr-2" />
+                  Sair
+                </Button>
               </div>
-              <Button variant="outline" onClick={signOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sair
-              </Button>
             </div>
           </div>
         </div>

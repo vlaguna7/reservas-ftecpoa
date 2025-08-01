@@ -517,16 +517,18 @@ export function MakeReservation() {
       
       const result = data?.[0];
       
-      // Enviar notificação por email
+      // Enviar notificação por email em background
       if (result) {
-        await sendReservationNotification({
+        sendReservationNotification({
           id: result.id,
           equipment_type: result.equipment_type,
           reservation_date: result.reservation_date,
           observation: result.observation,
           time_slots: result.time_slots,
           user_id: result.user_id
-        }, 'created');
+        }, 'created').catch(error => {
+          console.error('Error sending email notification:', error);
+        });
       }
       
       const selectedLabels = selectedTimeSlots.map(slot => 
@@ -619,17 +621,19 @@ export function MakeReservation() {
         throw error;
       }
 
-      // Enviar notificação por email
+      // Enviar notificação por email em background
       const result = data?.[0];
       if (result) {
-        await sendReservationNotification({
+        sendReservationNotification({
           id: result.id,
           equipment_type: result.equipment_type,
           reservation_date: result.reservation_date,
           observation: result.observation,
           time_slots: result.time_slots,
           user_id: result.user_id
-        }, 'created');
+        }, 'created').catch(error => {
+          console.error('Error sending email notification:', error);
+        });
       }
 
       const laboratoryName = laboratoryOptions.find(lab => lab.value === selectedLaboratory)?.label || 'Laboratório';

@@ -44,10 +44,16 @@ export const sendReservationNotification = async (
     console.log('🚀 [FRONTEND] Sending reservation notification:', notificationData);
     console.log('📧 [FRONTEND] Action:', action, 'Equipment:', reservationData.equipment_type);
 
-    // Chamar a edge function para envio de email
-    const { data, error } = await supabase.functions.invoke('send-reservation-notification', {
+    // Chamar a edge function para envio de email com timeout de 5 segundos
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Email notification timeout')), 5000)
+    );
+    
+    const emailPromise = supabase.functions.invoke('send-reservation-notification', {
       body: notificationData
     });
+    
+    const { data, error } = await Promise.race([emailPromise, timeoutPromise]) as any;
 
     if (error) {
       console.error('❌ [FRONTEND] Error calling email notification function:', error);

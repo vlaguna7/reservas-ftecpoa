@@ -49,7 +49,7 @@ const Index = () => {
           />
         </div>
         
-        <div className="text-center md:text-left mb-12">
+        <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4 text-foreground animate-fade-in">
             Sistema de Reservas de Equipamentos
           </h1>

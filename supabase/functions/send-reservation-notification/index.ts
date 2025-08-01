@@ -40,6 +40,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Processing reservation notification:', { reservationData, userName, userEmail, action });
 
+    // Buscar o email correto do usuário dono da reserva
+    const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(reservationData.user_id);
+    
+    let actualUserEmail = userEmail; // usar o email passado como fallback
+    
+    if (!userError && user?.email) {
+      actualUserEmail = user.email; // usar o email correto do usuário
+    } else {
+      console.warn('Could not fetch user email from auth, using provided email:', userError);
+    }
+
     // Buscar emails de notificação ativos
     const { data: emailList, error: emailError } = await supabase
       .from('admin_notification_emails')

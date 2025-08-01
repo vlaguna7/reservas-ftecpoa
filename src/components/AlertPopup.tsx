@@ -7,6 +7,7 @@ interface Alert {
   title: string;
   message: string;
   duration: number;
+  expires_at?: string;
 }
 
 interface AlertPopupProps {

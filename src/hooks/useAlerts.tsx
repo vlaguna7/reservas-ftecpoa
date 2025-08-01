@@ -7,6 +7,7 @@ interface Alert {
   title: string;
   message: string;
   duration: number;
+  expires_at?: string;
 }
 
 export const useAlerts = () => {
@@ -24,11 +25,12 @@ export const useAlerts = () => {
     if (!user) return;
     
     try {
-      // Get all active alerts
+      // Get all active alerts that haven't expired
       const { data: allAlerts, error: alertsError } = await supabase
         .from('admin_alerts')
         .select('*')
         .eq('is_active', true)
+        .or('expires_at.is.null,expires_at.gt.now()')
         .order('created_at', { ascending: false });
 
       if (alertsError) {

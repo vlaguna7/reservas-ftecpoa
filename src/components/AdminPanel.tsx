@@ -113,6 +113,7 @@ interface AdminAlert {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  expires_at?: string;
 }
 
 interface AuditoriumReservation {
@@ -197,13 +198,15 @@ export function AdminPanel() {
   const [newAlertForm, setNewAlertForm] = useState({
     title: '',
     message: '',
-    duration: 5
+    duration: 5,
+    expires_at: null as Date | null
   });
   const [alertEditForm, setAlertEditForm] = useState({
     title: '',
     message: '',
     duration: 5,
-    is_active: true
+    is_active: true,
+    expires_at: null as Date | null
   });
   
   const [auditoriumReservations, setAuditoriumReservations] = useState<AuditoriumReservation[]>([]);
@@ -406,7 +409,8 @@ export function AdminPanel() {
         .insert({
           title: newAlertForm.title.trim(),
           message: newAlertForm.message.trim(),
-          duration: newAlertForm.duration
+          duration: newAlertForm.duration,
+          expires_at: newAlertForm.expires_at?.toISOString()
         });
 
       if (error) throw error;
@@ -417,7 +421,7 @@ export function AdminPanel() {
       });
 
       setAddingAlert(false);
-      setNewAlertForm({ title: '', message: '', duration: 5 });
+      setNewAlertForm({ title: '', message: '', duration: 5, expires_at: null });
       fetchAdminAlerts();
     } catch (error) {
       console.error('Error creating alert:', error);
@@ -446,7 +450,8 @@ export function AdminPanel() {
           title: alertEditForm.title.trim(),
           message: alertEditForm.message.trim(),
           duration: alertEditForm.duration,
-          is_active: alertEditForm.is_active
+          is_active: alertEditForm.is_active,
+          expires_at: alertEditForm.expires_at?.toISOString()
         })
         .eq('id', alertId);
 
@@ -2850,12 +2855,90 @@ export function AdminPanel() {
                     onChange={(e) => setNewAlertForm({ ...newAlertForm, duration: e.target.value === '' ? 5 : parseInt(e.target.value) || 5 })}
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="alert-expires">Data de Expiração (opcional)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newAlertForm.expires_at
+                          ? format(newAlertForm.expires_at, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                          : "Sem expiração"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <div className="p-3">
+                        <Calendar
+                          mode="single"
+                          selected={newAlertForm.expires_at}
+                          onSelect={(date) => {
+                            if (date) {
+                              const now = new Date();
+                              date.setHours(now.getHours() + 1);
+                              date.setMinutes(0);
+                            }
+                            setNewAlertForm({ ...newAlertForm, expires_at: date });
+                          }}
+                          disabled={(date) => date < new Date()}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                        {newAlertForm.expires_at && (
+                          <div className="mt-3 space-y-2 border-t pt-3">
+                            <Label className="text-sm">Horário</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="number"
+                                min="0"
+                                max="23"
+                                value={newAlertForm.expires_at.getHours()}
+                                onChange={(e) => {
+                                  const newDate = new Date(newAlertForm.expires_at!);
+                                  newDate.setHours(parseInt(e.target.value) || 0);
+                                  setNewAlertForm({ ...newAlertForm, expires_at: newDate });
+                                }}
+                                className="w-20"
+                                placeholder="HH"
+                              />
+                              <span className="flex items-center">:</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="59"
+                                step="15"
+                                value={newAlertForm.expires_at.getMinutes()}
+                                onChange={(e) => {
+                                  const newDate = new Date(newAlertForm.expires_at!);
+                                  newDate.setMinutes(parseInt(e.target.value) || 0);
+                                  setNewAlertForm({ ...newAlertForm, expires_at: newDate });
+                                }}
+                                className="w-20"
+                                placeholder="MM"
+                              />
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setNewAlertForm({ ...newAlertForm, expires_at: null })}
+                              className="w-full"
+                            >
+                              Remover Expiração
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               <DialogFooter>
                 <Button onClick={createAlert}>Criar Alerta</Button>
                 <Button variant="outline" onClick={() => {
                   setAddingAlert(false);
-                  setNewAlertForm({ title: '', message: '', duration: 5 });
+                  setNewAlertForm({ title: '', message: '', duration: 5, expires_at: null });
                 }}>
                   Cancelar
                 </Button>
@@ -2898,24 +2981,102 @@ export function AdminPanel() {
                             rows={3}
                           />
                         </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor={`edit-duration-${alert.id}`}>Duração (segundos)</Label>
-                          <Input
-                            id={`edit-duration-${alert.id}`}
-                            type="number"
-                            min="1"
-                            max="30"
-                            value={alertEditForm.duration || ''}
-                            onChange={(e) => setAlertEditForm({ ...alertEditForm, duration: e.target.value === '' ? 5 : parseInt(e.target.value) || 5 })}
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={alertEditForm.is_active}
-                            onCheckedChange={(checked) => setAlertEditForm({ ...alertEditForm, is_active: checked })}
-                          />
-                          <Label>Ativo</Label>
-                        </div>
+                         <div className="grid gap-2">
+                           <Label htmlFor={`edit-duration-${alert.id}`}>Duração (segundos)</Label>
+                           <Input
+                             id={`edit-duration-${alert.id}`}
+                             type="number"
+                             min="1"
+                             max="30"
+                             value={alertEditForm.duration || ''}
+                             onChange={(e) => setAlertEditForm({ ...alertEditForm, duration: e.target.value === '' ? 5 : parseInt(e.target.value) || 5 })}
+                           />
+                         </div>
+                         <div className="grid gap-2">
+                           <Label htmlFor={`edit-expires-${alert.id}`}>Data de Expiração</Label>
+                           <Popover>
+                             <PopoverTrigger asChild>
+                               <Button
+                                 variant="outline"
+                                 className="w-full justify-start text-left font-normal"
+                               >
+                                 <CalendarIcon className="mr-2 h-4 w-4" />
+                                 {alertEditForm.expires_at
+                                   ? format(alertEditForm.expires_at, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                                   : "Sem expiração"}
+                               </Button>
+                             </PopoverTrigger>
+                             <PopoverContent className="w-auto p-0" align="start">
+                               <div className="p-3">
+                                 <Calendar
+                                   mode="single"
+                                   selected={alertEditForm.expires_at}
+                                   onSelect={(date) => {
+                                     if (date && !alertEditForm.expires_at) {
+                                       const now = new Date();
+                                       date.setHours(now.getHours() + 1);
+                                       date.setMinutes(0);
+                                     }
+                                     setAlertEditForm({ ...alertEditForm, expires_at: date });
+                                   }}
+                                   disabled={(date) => date < new Date()}
+                                   initialFocus
+                                   className="pointer-events-auto"
+                                 />
+                                 {alertEditForm.expires_at && (
+                                   <div className="mt-3 space-y-2 border-t pt-3">
+                                     <Label className="text-sm">Horário</Label>
+                                     <div className="flex gap-2">
+                                       <Input
+                                         type="number"
+                                         min="0"
+                                         max="23"
+                                         value={alertEditForm.expires_at.getHours()}
+                                         onChange={(e) => {
+                                           const newDate = new Date(alertEditForm.expires_at!);
+                                           newDate.setHours(parseInt(e.target.value) || 0);
+                                           setAlertEditForm({ ...alertEditForm, expires_at: newDate });
+                                         }}
+                                         className="w-20"
+                                         placeholder="HH"
+                                       />
+                                       <span className="flex items-center">:</span>
+                                       <Input
+                                         type="number"
+                                         min="0"
+                                         max="59"
+                                         step="15"
+                                         value={alertEditForm.expires_at.getMinutes()}
+                                         onChange={(e) => {
+                                           const newDate = new Date(alertEditForm.expires_at!);
+                                           newDate.setMinutes(parseInt(e.target.value) || 0);
+                                           setAlertEditForm({ ...alertEditForm, expires_at: newDate });
+                                         }}
+                                         className="w-20"
+                                         placeholder="MM"
+                                       />
+                                     </div>
+                                     <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={() => setAlertEditForm({ ...alertEditForm, expires_at: null })}
+                                       className="w-full"
+                                     >
+                                       Remover Expiração
+                                     </Button>
+                                   </div>
+                                 )}
+                               </div>
+                             </PopoverContent>
+                           </Popover>
+                         </div>
+                         <div className="flex items-center space-x-2">
+                           <Switch
+                             checked={alertEditForm.is_active}
+                             onCheckedChange={(checked) => setAlertEditForm({ ...alertEditForm, is_active: checked })}
+                           />
+                           <Label>Ativo</Label>
+                         </div>
                         <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>
                           <Button onClick={() => updateAlert(alert.id)} className={isMobile ? 'w-full' : ''}>
                             <Save className="h-4 w-4 mr-1" />
@@ -2946,9 +3107,22 @@ export function AdminPanel() {
                           <p className={`text-muted-foreground mb-2 ${isMobile ? 'text-xs' : 'text-sm'}`}>
                             {alert.message}
                           </p>
-                          <div className={`flex gap-4 text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                          <div className={`flex ${isMobile ? 'flex-col gap-1' : 'gap-4'} text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'}`}>
                             <span>Duração: {alert.duration}s</span>
                             <span>Criado: {new Date(alert.created_at).toLocaleDateString('pt-BR')}</span>
+                            {alert.expires_at && (
+                              <span className={
+                                new Date(alert.expires_at) < new Date()
+                                  ? "text-red-500 font-medium"
+                                  : new Date(alert.expires_at) < new Date(Date.now() + 24 * 60 * 60 * 1000)
+                                  ? "text-yellow-600 font-medium"
+                                  : ""
+                              }>
+                                {new Date(alert.expires_at) < new Date()
+                                  ? "Expirado"
+                                  : `Expira: ${format(new Date(alert.expires_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className={`flex ${isMobile ? 'w-full flex-col space-y-2' : 'items-center gap-2'}`}>
@@ -2961,7 +3135,8 @@ export function AdminPanel() {
                                 title: alert.title,
                                 message: alert.message,
                                 duration: alert.duration,
-                                is_active: alert.is_active
+                                is_active: alert.is_active,
+                                expires_at: alert.expires_at ? new Date(alert.expires_at) : null
                               });
                             }}
                             className={isMobile ? 'w-full' : ''}

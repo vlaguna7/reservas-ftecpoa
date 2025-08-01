@@ -2496,6 +2496,33 @@ export function AdminPanel() {
                   <Button onClick={createNotificationEmail} className="flex-1">
                     Adicionar Email
                   </Button>
+                  <Button 
+                    variant="secondary" 
+                    onClick={async () => {
+                      try {
+                        console.log('🧪 Testing email notifications...');
+                        const { data, error } = await supabase.functions.invoke('test-email-send');
+                        if (error) {
+                          console.error('Test error:', error);
+                          toast({
+                            title: "Erro no teste",
+                            description: "Não foi possível executar o teste de emails.",
+                            variant: "destructive"
+                          });
+                        } else {
+                          console.log('Test result:', data);
+                          toast({
+                            title: "Teste enviado!",
+                            description: `Emails de teste enviados para ${data.emailsFound} endereços.`
+                          });
+                        }
+                      } catch (error) {
+                        console.error('Test exception:', error);
+                      }
+                    }}
+                  >
+                    Testar
+                  </Button>
                   <Button variant="outline" onClick={() => {
                     setAddingEmail(false);
                     setNewEmailForm({ email: '' });

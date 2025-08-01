@@ -201,6 +201,8 @@ export function AdminPanel() {
     duration: 5,
     expires_at: null as Date | null
   });
+  const [tempEditMinutes, setTempEditMinutes] = useState<string>('');
+  const [tempMinutes, setTempMinutes] = useState<string>('');
   const [alertEditForm, setAlertEditForm] = useState({
     title: '',
     message: '',
@@ -215,6 +217,23 @@ export function AdminPanel() {
   const [selectedLabDate, setSelectedLabDate] = useState<Date | undefined>(undefined);
   const [showAuditoriumDetails, setShowAuditoriumDetails] = useState(false);
   const [showLabDetails, setShowLabDetails] = useState(false);
+
+  // Sync temp minutes with actual dates
+  useEffect(() => {
+    if (newAlertForm.expires_at) {
+      setTempMinutes(newAlertForm.expires_at.getMinutes().toString());
+    } else {
+      setTempMinutes('');
+    }
+  }, [newAlertForm.expires_at]);
+
+  useEffect(() => {
+    if (alertEditForm.expires_at) {
+      setTempEditMinutes(alertEditForm.expires_at.getMinutes().toString());
+    } else {
+      setTempEditMinutes('');
+    }
+  }, [alertEditForm.expires_at]);
 
   useEffect(() => {
     fetchEquipmentSettings();
@@ -2915,11 +2934,19 @@ export function AdminPanel() {
                                 min="0"
                                 max="59"
                                 step="15"
-                                value={newAlertForm.expires_at.getMinutes()}
+                                value={tempMinutes}
                                 onChange={(e) => {
-                                  const newDate = new Date(newAlertForm.expires_at!);
-                                  newDate.setMinutes(parseInt(e.target.value) || 0);
-                                  setNewAlertForm({ ...newAlertForm, expires_at: newDate });
+                                  const value = e.target.value;
+                                  setTempMinutes(value);
+                                  
+                                  if (value === '') return;
+                                  
+                                  const minutes = parseInt(value);
+                                  if (!isNaN(minutes) && minutes >= 0 && minutes <= 59) {
+                                    const newDate = new Date(newAlertForm.expires_at!);
+                                    newDate.setMinutes(minutes);
+                                    setNewAlertForm({ ...newAlertForm, expires_at: newDate });
+                                  }
                                 }}
                                 className="w-20"
                                 placeholder="MM"
@@ -3053,20 +3080,28 @@ export function AdminPanel() {
                                          placeholder="HH"
                                        />
                                        <span className="flex items-center">:</span>
-                                       <Input
-                                         type="number"
-                                         min="0"
-                                         max="59"
-                                         step="15"
-                                         value={alertEditForm.expires_at.getMinutes()}
-                                         onChange={(e) => {
-                                           const newDate = new Date(alertEditForm.expires_at!);
-                                           newDate.setMinutes(parseInt(e.target.value) || 0);
-                                           setAlertEditForm({ ...alertEditForm, expires_at: newDate });
-                                         }}
-                                         className="w-20"
-                                         placeholder="MM"
-                                       />
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          max="59"
+                                          step="15"
+                                          value={tempEditMinutes}
+                                          onChange={(e) => {
+                                            const value = e.target.value;
+                                            setTempEditMinutes(value);
+                                            
+                                            if (value === '') return;
+                                            
+                                            const minutes = parseInt(value);
+                                            if (!isNaN(minutes) && minutes >= 0 && minutes <= 59) {
+                                              const newDate = new Date(alertEditForm.expires_at!);
+                                              newDate.setMinutes(minutes);
+                                              setAlertEditForm({ ...alertEditForm, expires_at: newDate });
+                                            }
+                                          }}
+                                          className="w-20"
+                                          placeholder="MM"
+                                        />
                                      </div>
                                      <Button
                                        variant="outline"

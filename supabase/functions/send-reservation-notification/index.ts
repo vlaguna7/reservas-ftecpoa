@@ -47,8 +47,10 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (!userError && user?.email) {
       actualUserEmail = user.email; // usar o email correto do usuário
+      console.log('Using user email from auth:', actualUserEmail);
     } else {
       console.warn('Could not fetch user email from auth, using provided email:', userError);
+      console.log('Using fallback email:', actualUserEmail);
     }
 
     // Buscar emails de notificação ativos
@@ -69,6 +71,8 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders }
       });
     }
+
+    console.log('Active notification emails found:', emailList.length, 'emails:', emailList.map(e => e.email));
 
     // Formatar tipo de equipamento
     const getEquipmentLabel = (type: string) => {
@@ -113,9 +117,11 @@ const handler = async (req: Request): Promise<Response> => {
     const actionText = action === 'created' ? 'CRIADA' : 'CANCELADA';
     const actionColor = action === 'created' ? '#22c55e' : '#ef4444';
 
+    const emailEmoji = action === 'created' ? '✅' : '❌';
+
     const emailHtml = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+        <div style="background: #1e3a8a; padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Sistema de Reservas</h1>
           <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">FTEC - Faculdade de Tecnologia</p>
         </div>
@@ -159,6 +165,7 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="background-color: #f1f5f9; padding: 20px; border-radius: 12px; margin-top: 25px;">
             <h3 style="color: #1e293b; margin: 0 0 15px 0; font-size: 16px;">Dados do Usuário</h3>
             <p style="margin: 5px 0; color: #64748b;"><strong>Nome:</strong> ${userName}</p>
+            <p style="margin: 5px 0; color: #64748b;"><strong>Email:</strong> ${actualUserEmail}</p>
           </div>
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center;">
@@ -176,7 +183,7 @@ const handler = async (req: Request): Promise<Response> => {
       resend.emails.send({
         from: "Sistema de Reservas FTEC <noreply@resend.dev>",
         to: [email],
-        subject: `🔔 Reserva ${actionText} - ${equipmentLabel} em ${formattedDate}`,
+        subject: `${emailEmoji} Reserva ${actionText} - ${equipmentLabel} em ${formattedDate}`,
         html: emailHtml,
       })
     );
@@ -185,6 +192,15 @@ const handler = async (req: Request): Promise<Response> => {
     
     const successCount = results.filter(result => result.status === 'fulfilled').length;
     const failureCount = results.length - successCount;
+
+    // Log dos resultados detalhados
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(`Email ${index + 1} failed:`, result.reason);
+      } else {
+        console.log(`Email ${index + 1} sent successfully to:`, emailList[index].email);
+      }
+    });
 
     console.log(`Email notifications sent - Success: ${successCount}, Failed: ${failureCount}`);
 

@@ -212,6 +212,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_viewed_alerts: {
+        Row: {
+          alert_id: string
+          created_at: string
+          id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          alert_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          alert_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_viewed_alerts_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "admin_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

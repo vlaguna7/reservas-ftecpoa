@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Alert {
   id: string;
@@ -11,28 +12,44 @@ interface Alert {
 export const useAlerts = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [currentAlert, setCurrentAlert] = useState<Alert | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchActiveAlerts();
-  }, []);
+    if (user) {
+      fetchActiveAlerts();
+    }
+  }, [user]);
 
   const fetchActiveAlerts = async () => {
+    if (!user) return;
+    
     try {
-      const { data, error } = await supabase
+      // Get all active alerts
+      const { data: allAlerts, error: alertsError } = await supabase
         .from('admin_alerts')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching alerts:', error);
+      if (alertsError) {
+        console.error('Error fetching alerts:', alertsError);
         return;
       }
 
-      if (data) {
-        // Filter out alerts that the user has already seen
-        const viewedAlerts = getViewedAlerts();
-        const unviewedAlerts = data.filter(alert => !viewedAlerts.includes(alert.id));
+      // Get viewed alerts for this user
+      const { data: viewedAlerts, error: viewedError } = await supabase
+        .from('user_viewed_alerts')
+        .select('alert_id')
+        .eq('user_id', user.id);
+
+      if (viewedError) {
+        console.error('Error fetching viewed alerts:', viewedError);
+        return;
+      }
+
+      if (allAlerts) {
+        const viewedAlertIds = viewedAlerts?.map(v => v.alert_id) || [];
+        const unviewedAlerts = allAlerts.filter(alert => !viewedAlertIds.includes(alert.id));
         
         setAlerts(unviewedAlerts);
         
@@ -46,41 +63,40 @@ export const useAlerts = () => {
     }
   };
 
-  const getViewedAlerts = (): string[] => {
+  const markAsViewed = async (alertId: string) => {
+    if (!user) return;
+    
     try {
-      const viewed = localStorage.getItem('viewedAlerts');
-      return viewed ? JSON.parse(viewed) : [];
-    } catch {
-      return [];
-    }
-  };
+      const { error } = await supabase
+        .from('user_viewed_alerts')
+        .insert({
+          user_id: user.id,
+          alert_id: alertId
+        });
 
-  const markAsViewed = (alertId: string) => {
-    try {
-      const viewedAlerts = getViewedAlerts();
-      const updatedViewed = [...viewedAlerts, alertId];
-      localStorage.setItem('viewedAlerts', JSON.stringify(updatedViewed));
+      if (error) {
+        console.error('Error saving viewed alert:', error);
+      }
     } catch (error) {
       console.error('Error saving viewed alert:', error);
     }
   };
 
   const showNextAlert = () => {
-    const unviewedAlerts = alerts.filter(alert => {
-      const viewedAlerts = getViewedAlerts();
-      return !viewedAlerts.includes(alert.id);
-    });
+    // Find the next unviewed alert from the current alerts list
+    const currentIndex = alerts.findIndex(alert => alert.id === currentAlert?.id);
+    const nextAlerts = alerts.slice(currentIndex + 1);
     
-    if (unviewedAlerts.length > 0) {
-      setCurrentAlert(unviewedAlerts[0]);
+    if (nextAlerts.length > 0) {
+      setCurrentAlert(nextAlerts[0]);
     } else {
       setCurrentAlert(null);
     }
   };
 
-  const closeCurrentAlert = () => {
+  const closeCurrentAlert = async () => {
     if (currentAlert) {
-      markAsViewed(currentAlert.id);
+      await markAsViewed(currentAlert.id);
       showNextAlert();
     }
   };

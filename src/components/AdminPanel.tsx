@@ -2869,7 +2869,7 @@ export function AdminPanel() {
                           : "Sem expiração"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto max-w-sm p-0" align="start">
                       <div className="p-3">
                         <Calendar
                           mode="single"
@@ -2882,7 +2882,13 @@ export function AdminPanel() {
                             }
                             setNewAlertForm({ ...newAlertForm, expires_at: date });
                           }}
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const compareDate = new Date(date);
+                            compareDate.setHours(0, 0, 0, 0);
+                            return compareDate < today;
+                          }}
                           initialFocus
                           className="pointer-events-auto"
                         />
@@ -3006,23 +3012,29 @@ export function AdminPanel() {
                                    : "Sem expiração"}
                                </Button>
                              </PopoverTrigger>
-                             <PopoverContent className="w-auto p-0" align="start">
-                               <div className="p-3">
-                                 <Calendar
-                                   mode="single"
-                                   selected={alertEditForm.expires_at}
-                                   onSelect={(date) => {
-                                     if (date && !alertEditForm.expires_at) {
-                                       const now = new Date();
-                                       date.setHours(now.getHours() + 1);
-                                       date.setMinutes(0);
-                                     }
-                                     setAlertEditForm({ ...alertEditForm, expires_at: date });
-                                   }}
-                                   disabled={(date) => date < new Date()}
-                                   initialFocus
-                                   className="pointer-events-auto"
-                                 />
+                              <PopoverContent className="w-auto max-w-sm p-0" align="start">
+                                <div className="p-3">
+                                  <Calendar
+                                    mode="single"
+                                    selected={alertEditForm.expires_at}
+                                    onSelect={(date) => {
+                                      if (date && !alertEditForm.expires_at) {
+                                        const now = new Date();
+                                        date.setHours(now.getHours() + 1);
+                                        date.setMinutes(0);
+                                      }
+                                      setAlertEditForm({ ...alertEditForm, expires_at: date });
+                                    }}
+                                    disabled={(date) => {
+                                      const today = new Date();
+                                      today.setHours(0, 0, 0, 0);
+                                      const compareDate = new Date(date);
+                                      compareDate.setHours(0, 0, 0, 0);
+                                      return compareDate < today;
+                                    }}
+                                    initialFocus
+                                    className="pointer-events-auto"
+                                  />
                                  {alertEditForm.expires_at && (
                                    <div className="mt-3 space-y-2 border-t pt-3">
                                      <Label className="text-sm">Horário</Label>

@@ -65,19 +65,23 @@ export const useAlerts = () => {
     }
   };
 
+  const showNextAlert = () => {
+    const unviewedAlerts = alerts.filter(alert => {
+      const viewedAlerts = getViewedAlerts();
+      return !viewedAlerts.includes(alert.id);
+    });
+    
+    if (unviewedAlerts.length > 0) {
+      setCurrentAlert(unviewedAlerts[0]);
+    } else {
+      setCurrentAlert(null);
+    }
+  };
+
   const closeCurrentAlert = () => {
     if (currentAlert) {
       markAsViewed(currentAlert.id);
-      
-      // Find next unviewed alert
-      const remainingAlerts = alerts.filter(alert => alert.id !== currentAlert.id);
-      setAlerts(remainingAlerts);
-      
-      if (remainingAlerts.length > 0) {
-        setCurrentAlert(remainingAlerts[0]);
-      } else {
-        setCurrentAlert(null);
-      }
+      showNextAlert();
     }
   };
 

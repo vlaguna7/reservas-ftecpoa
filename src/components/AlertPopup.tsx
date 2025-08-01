@@ -23,14 +23,14 @@ export const AlertPopup = ({ alert, onClose }: AlertPopupProps) => {
     
     // Auto-close after duration
     const autoCloseTimer = setTimeout(() => {
-      handleClose();
+      onClose();
     }, alert.duration * 1000);
 
     return () => {
       clearTimeout(timer);
       clearTimeout(autoCloseTimer);
     };
-  }, [alert.duration]);
+  }, [alert.duration, onClose]);
 
   const handleClose = () => {
     setIsVisible(false);

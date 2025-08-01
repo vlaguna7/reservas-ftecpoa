@@ -148,7 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="padding: 8px 0; color: #64748b; font-weight: 600; width: 40%;">Equipamento:</td>
+                <td style="padding: 8px 0; color: #64748b; font-weight: 600; width: 40%;">Local/Equipamento:</td>
                 <td style="padding: 8px 0; color: #1e293b; font-weight: 500;">${equipmentLabel}</td>
               </tr>
               <tr>
@@ -177,7 +177,7 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="background-color: #f1f5f9; padding: 20px; border-radius: 12px; margin-top: 25px;">
             <h3 style="color: #1e293b; margin: 0 0 15px 0; font-size: 16px;">Dados do Usuário</h3>
             <p style="margin: 5px 0; color: #64748b;"><strong>Nome:</strong> ${userName}</p>
-            <p style="margin: 5px 0; color: #64748b;"><strong>Email:</strong> ${actualUserEmail}</p>
+            ${actualUserEmail && !actualUserEmail.includes('@temp.com') ? `<p style="margin: 5px 0; color: #64748b;"><strong>Email:</strong> ${actualUserEmail}</p>` : ''}
           </div>
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center;">

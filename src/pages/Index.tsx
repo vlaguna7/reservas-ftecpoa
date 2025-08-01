@@ -53,7 +53,7 @@ const Index = () => {
           <h1 className="text-4xl font-bold mb-4 text-foreground animate-fade-in">
             Sistema de Reservas de Equipamentos
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl md:mx-0 mx-auto animate-fade-in">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in">
             Plataforma para professores e parceiros reservarem projetores, caixas de som e nosso Auditório na unidade FTEC POA.
           </p>
         </div>

@@ -88,18 +88,30 @@ export default function Dashboard() {
               />
             </div>
             
-            {/* Linha com título à esquerda e botão sair à direita */}
+            {/* Título centralizado */}
+            <div className="text-center mb-6">
+              <h1 className="text-3xl font-bold text-foreground">Sistema de Reservas</h1>
+            </div>
+            
+            {/* Linha com saudação à esquerda e botão sair à direita */}
             <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-bold">Sistema de Reservas</h1>
-                <p className="text-muted-foreground">
-                  Olá, {profile.display_name}
-                  {profile.is_admin && (
-                    <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
-                      Admin
-                    </span>
-                  )}
-                </p>
+              <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-6 py-4 rounded-xl border border-primary/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">Bem-vindo(a)</p>
+                    <p className="text-lg font-bold text-foreground flex items-center gap-2">
+                      {profile.display_name}
+                      {profile.is_admin && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
+                          Admin
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
               <Button variant="outline" onClick={signOut}>
                 <LogOut className="h-4 w-4 mr-2" />

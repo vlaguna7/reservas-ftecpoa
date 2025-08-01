@@ -96,7 +96,18 @@ const handler = async (req: Request): Promise<Response> => {
         case 'auditorium':
           return 'Auditório';
         default:
-          return type.startsWith('laboratory_') ? 'Laboratório' : type;
+          if (type.startsWith('laboratory_')) {
+            // Extrair o nome do laboratório do código
+            const parts = type.split('_');
+            if (parts.length >= 3) {
+              // Formato: laboratory_XX_nome_do_lab
+              const labName = parts.slice(2).join(' ').replace(/_/g, ' ');
+              const labNumber = parts[1];
+              return `Laboratório ${labNumber} - ${labName.charAt(0).toUpperCase() + labName.slice(1)}`;
+            }
+            return 'Laboratório';
+          }
+          return type;
       }
     };
 

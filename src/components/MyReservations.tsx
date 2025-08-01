@@ -36,6 +36,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { sendReservationNotification } from '@/lib/emailNotifications';
 
 interface Reservation {
   id: string;
@@ -159,6 +160,18 @@ export function MyReservations() {
 
       if (data && data.length > 0) {
         console.log('Reservation successfully deleted:', data[0]);
+        
+        // Enviar notificação por email
+        const deletedReservation = data[0];
+        await sendReservationNotification({
+          id: deletedReservation.id,
+          equipment_type: deletedReservation.equipment_type,
+          reservation_date: deletedReservation.reservation_date,
+          observation: deletedReservation.observation,
+          time_slots: deletedReservation.time_slots,
+          user_id: deletedReservation.user_id
+        }, 'cancelled');
+        
         toast({
           title: "Reserva cancelada",
           description: "Sua reserva foi cancelada com sucesso."

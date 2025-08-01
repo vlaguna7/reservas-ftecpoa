@@ -517,6 +517,18 @@ export function MakeReservation() {
       
       const result = data?.[0];
       
+      // Enviar notificação por email
+      if (result) {
+        await sendReservationNotification({
+          id: result.id,
+          equipment_type: result.equipment_type,
+          reservation_date: result.reservation_date,
+          observation: result.observation,
+          time_slots: result.time_slots,
+          user_id: result.user_id
+        }, 'created');
+      }
+      
       const selectedLabels = selectedTimeSlots.map(slot => 
         TIME_SLOTS.find(ts => ts.value === slot)?.label
       ).join(', ');
@@ -593,17 +605,31 @@ export function MakeReservation() {
         ? laboratoryObservation.trim()
         : 'Não deseja insumos extras.';
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('reservations')
         .insert({
           user_id: user.id,
           equipment_type: selectedLaboratory,
           reservation_date: dateStr,
           observation: observation
-        });
+        })
+        .select();
 
       if (error) {
         throw error;
+      }
+
+      // Enviar notificação por email
+      const result = data?.[0];
+      if (result) {
+        await sendReservationNotification({
+          id: result.id,
+          equipment_type: result.equipment_type,
+          reservation_date: result.reservation_date,
+          observation: result.observation,
+          time_slots: result.time_slots,
+          user_id: result.user_id
+        }, 'created');
       }
 
       const laboratoryName = laboratoryOptions.find(lab => lab.value === selectedLaboratory)?.label || 'Laboratório';
@@ -701,9 +727,10 @@ export function MakeReservation() {
       reservationData.observation = observation.trim();
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('reservations')
-      .insert(reservationData);
+      .insert(reservationData)
+      .select();
 
     if (error) {
       toast({
@@ -712,6 +739,18 @@ export function MakeReservation() {
         variant: "destructive"
       });
     } else {
+      // Enviar notificação por email
+      const result = data?.[0];
+      if (result) {
+        await sendReservationNotification({
+          id: result.id,
+          equipment_type: result.equipment_type,
+          reservation_date: result.reservation_date,
+          observation: result.observation,
+          time_slots: result.time_slots,
+          user_id: result.user_id
+        }, 'created');
+      }
       // Disparar confetes quando a reserva for realizada com sucesso
       const confetti = await import('canvas-confetti');
       
@@ -786,10 +825,11 @@ export function MakeReservation() {
   };
 
   const cancelReservation = async (reservationId: string) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('reservations')
       .delete()
-      .eq('id', reservationId);
+      .eq('id', reservationId)
+      .select();
 
     if (error) {
       toast({
@@ -798,6 +838,19 @@ export function MakeReservation() {
         variant: "destructive"
       });
     } else {
+      // Enviar notificação por email
+      const deletedReservation = data?.[0];
+      if (deletedReservation) {
+        await sendReservationNotification({
+          id: deletedReservation.id,
+          equipment_type: deletedReservation.equipment_type,
+          reservation_date: deletedReservation.reservation_date,
+          observation: deletedReservation.observation,
+          time_slots: deletedReservation.time_slots,
+          user_id: deletedReservation.user_id
+        }, 'cancelled');
+      }
+      
       toast({
         title: "Reserva cancelada!",
         description: "Sua reserva foi cancelada com sucesso."

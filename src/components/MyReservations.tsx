@@ -161,16 +161,18 @@ export function MyReservations() {
       if (data && data.length > 0) {
         console.log('Reservation successfully deleted:', data[0]);
         
-        // Enviar notificação por email
+        // Enviar notificação por email em background (não bloquear UI)
         const deletedReservation = data[0];
-        await sendReservationNotification({
+        sendReservationNotification({
           id: deletedReservation.id,
           equipment_type: deletedReservation.equipment_type,
           reservation_date: deletedReservation.reservation_date,
           observation: deletedReservation.observation,
           time_slots: deletedReservation.time_slots,
           user_id: deletedReservation.user_id
-        }, 'cancelled');
+        }, 'cancelled').catch(error => {
+          console.error('Error sending email notification:', error);
+        });
         
         toast({
           title: "Reserva cancelada",

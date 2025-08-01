@@ -39,6 +39,10 @@ const handler = async (req: Request): Promise<Response> => {
     const { reservationData, userName, userEmail, action }: ReservationNotificationRequest = await req.json();
 
     console.log('Processing reservation notification:', { reservationData, userName, userEmail, action });
+    
+    // Debug: verificar se há algum problema com a consulta de emails
+    console.log('Supabase URL:', Deno.env.get('SUPABASE_URL'));
+    console.log('Service Role Key exists:', !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
 
     // Buscar o email correto do usuário dono da reserva
     const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(reservationData.user_id);

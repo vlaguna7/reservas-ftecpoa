@@ -739,17 +739,20 @@ export function MakeReservation() {
         variant: "destructive"
       });
     } else {
-      // Enviar notificação por email
+      // Enviar notificação por email em background (não bloquear UI)
       const result = data?.[0];
       if (result) {
-        await sendReservationNotification({
+        // Não aguardar o envio do email para não deixar lento
+        sendReservationNotification({
           id: result.id,
           equipment_type: result.equipment_type,
           reservation_date: result.reservation_date,
           observation: result.observation,
           time_slots: result.time_slots,
           user_id: result.user_id
-        }, 'created');
+        }, 'created').catch(error => {
+          console.error('Error sending email notification:', error);
+        });
       }
       // Disparar confetes quando a reserva for realizada com sucesso
       const confetti = await import('canvas-confetti');
@@ -838,17 +841,20 @@ export function MakeReservation() {
         variant: "destructive"
       });
     } else {
-      // Enviar notificação por email
+      // Enviar notificação por email em background (não bloquear UI)
       const deletedReservation = data?.[0];
       if (deletedReservation) {
-        await sendReservationNotification({
+        // Não aguardar o envio do email para não deixar lento
+        sendReservationNotification({
           id: deletedReservation.id,
           equipment_type: deletedReservation.equipment_type,
           reservation_date: deletedReservation.reservation_date,
           observation: deletedReservation.observation,
           time_slots: deletedReservation.time_slots,
           user_id: deletedReservation.user_id
-        }, 'cancelled');
+        }, 'cancelled').catch(error => {
+          console.error('Error sending email notification:', error);
+        });
       }
       
       toast({

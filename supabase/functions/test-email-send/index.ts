@@ -49,7 +49,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       try {
         const result = await resend.emails.send({
-          from: "Teste Sistema FTEC <noreply@resend.dev>",
+          from: "Teste Sistema FTEC <noreply@unidadepoazn.app>",
           to: [email],
           subject: "🧪 Teste de Email - Sistema de Reservas FTEC",
           html: `

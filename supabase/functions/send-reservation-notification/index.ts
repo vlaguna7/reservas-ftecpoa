@@ -196,7 +196,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailPromises = emailList.map(({ email }, index) => {
       console.log(`📧 [EMAIL ${index + 1}] Preparing email for: ${email}`);
       return resend.emails.send({
-        from: "Sistema de Reservas FTEC <noreply@resend.dev>",
+        from: "Sistema de Reservas FTEC <noreply@unidadepoazn.app>",
         to: [email],
         subject: `${emailEmoji} Reserva ${actionText} - ${equipmentLabel} em ${formattedDate}`,
         html: emailHtml,

@@ -1653,10 +1653,10 @@ export function AdminPanel() {
                   id="projector-limit"
                   type="number"
                   min="0"
-                  value={settingsForm.projector_limit}
+                  value={settingsForm.projector_limit || ''}
                   onChange={(e) => setSettingsForm(prev => ({ 
                     ...prev, 
-                    projector_limit: parseInt(e.target.value) || 0 
+                    projector_limit: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 
                   }))}
                 />
               ) : (
@@ -1674,10 +1674,10 @@ export function AdminPanel() {
                   id="speaker-limit"
                   type="number"
                   min="0"
-                  value={settingsForm.speaker_limit}
+                  value={settingsForm.speaker_limit || ''}
                   onChange={(e) => setSettingsForm(prev => ({ 
                     ...prev, 
-                    speaker_limit: parseInt(e.target.value) || 0 
+                    speaker_limit: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 
                   }))}
                 />
               ) : (
@@ -2846,8 +2846,8 @@ export function AdminPanel() {
                     type="number"
                     min="1"
                     max="30"
-                    value={newAlertForm.duration}
-                    onChange={(e) => setNewAlertForm({ ...newAlertForm, duration: parseInt(e.target.value) || 5 })}
+                    value={newAlertForm.duration || ''}
+                    onChange={(e) => setNewAlertForm({ ...newAlertForm, duration: e.target.value === '' ? 5 : parseInt(e.target.value) || 5 })}
                   />
                 </div>
               </div>
@@ -2905,8 +2905,8 @@ export function AdminPanel() {
                             type="number"
                             min="1"
                             max="30"
-                            value={alertEditForm.duration}
-                            onChange={(e) => setAlertEditForm({ ...alertEditForm, duration: parseInt(e.target.value) || 5 })}
+                            value={alertEditForm.duration || ''}
+                            onChange={(e) => setAlertEditForm({ ...alertEditForm, duration: e.target.value === '' ? 5 : parseInt(e.target.value) || 5 })}
                           />
                         </div>
                         <div className="flex items-center space-x-2">

@@ -38,11 +38,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { reservationData, userName, userEmail, action }: ReservationNotificationRequest = await req.json();
 
-    console.log('Processing reservation notification:', { reservationData, userName, userEmail, action });
-    
-    // Debug: verificar se há algum problema com a consulta de emails
-    console.log('Supabase URL:', Deno.env.get('SUPABASE_URL'));
-    console.log('Service Role Key exists:', !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
+    console.log('🔔 [RESERVATION NOTIFICATION] Processing:', { 
+      reservationId: reservationData.id, 
+      equipmentType: reservationData.equipment_type, 
+      action,
+      userEmail 
+    });
 
     // Buscar o email correto do usuário dono da reserva
     const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(reservationData.user_id);
@@ -51,32 +52,39 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (!userError && user?.email) {
       actualUserEmail = user.email; // usar o email correto do usuário
-      console.log('Using user email from auth:', actualUserEmail);
+      console.log('✅ [EMAIL] Using user email from auth:', actualUserEmail);
     } else {
-      console.warn('Could not fetch user email from auth, using provided email:', userError);
-      console.log('Using fallback email:', actualUserEmail);
+      console.warn('⚠️ [EMAIL] Could not fetch user email from auth, using provided email:', userError);
+      console.log('📧 [EMAIL] Using fallback email:', actualUserEmail);
     }
 
-    // Buscar emails de notificação ativos
+    // Buscar emails de notificação ativos - com logs detalhados
+    console.log('🔍 [DATABASE] Fetching active notification emails...');
     const { data: emailList, error: emailError } = await supabase
       .from('admin_notification_emails')
-      .select('email')
+      .select('email, is_active, id')
       .eq('is_active', true);
 
+    console.log('📊 [DATABASE] Email query result:', { 
+      emailCount: emailList?.length || 0,
+      emails: emailList?.map(e => ({ email: e.email, id: e.id })) || [],
+      error: emailError 
+    });
+
     if (emailError) {
-      console.error('Error fetching notification emails:', emailError);
+      console.error('❌ [DATABASE] Error fetching notification emails:', emailError);
       throw new Error('Failed to fetch notification emails');
     }
 
     if (!emailList || emailList.length === 0) {
-      console.log('No active notification emails found');
+      console.log('⚠️ [DATABASE] No active notification emails found');
       return new Response(JSON.stringify({ message: 'No active notification emails' }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders }
       });
     }
 
-    console.log('Active notification emails found:', emailList.length, 'emails:', emailList.map(e => e.email));
+    console.log(`✅ [DATABASE] Found ${emailList.length} active notification emails`);
 
     // Formatar tipo de equipamento
     const getEquipmentLabel = (type: string) => {
@@ -182,16 +190,20 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    // Enviar emails para todos os administradores
-    const emailPromises = emailList.map(({ email }) => 
-      resend.emails.send({
+    // Enviar emails para todos os administradores com logs detalhados
+    console.log('📨 [EMAIL] Preparing to send emails...');
+    
+    const emailPromises = emailList.map(({ email }, index) => {
+      console.log(`📧 [EMAIL ${index + 1}] Preparing email for: ${email}`);
+      return resend.emails.send({
         from: "Sistema de Reservas FTEC <noreply@resend.dev>",
         to: [email],
         subject: `${emailEmoji} Reserva ${actionText} - ${equipmentLabel} em ${formattedDate}`,
         html: emailHtml,
-      })
-    );
+      });
+    });
 
+    console.log(`🚀 [EMAIL] Executing ${emailPromises.length} email promises...`);
     const results = await Promise.allSettled(emailPromises);
     
     const successCount = results.filter(result => result.status === 'fulfilled').length;
@@ -199,19 +211,26 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Log dos resultados detalhados
     results.forEach((result, index) => {
+      const emailAddress = emailList[index].email;
       if (result.status === 'rejected') {
-        console.error(`Email ${index + 1} failed:`, result.reason);
+        console.error(`❌ [EMAIL ${index + 1}] FAILED for ${emailAddress}:`, result.reason);
       } else {
-        console.log(`Email ${index + 1} sent successfully to:`, emailList[index].email);
+        console.log(`✅ [EMAIL ${index + 1}] SUCCESS for ${emailAddress}`);
+        console.log(`📊 [EMAIL ${index + 1}] Response:`, result.value);
       }
     });
 
-    console.log(`Email notifications sent - Success: ${successCount}, Failed: ${failureCount}`);
+    console.log(`📈 [SUMMARY] Emails sent - Success: ${successCount}, Failed: ${failureCount}`);
 
     return new Response(JSON.stringify({ 
       success: true, 
       emailsSent: successCount,
-      emailsFailed: failureCount 
+      emailsFailed: failureCount,
+      emailDetails: emailList.map((email, index) => ({
+        email: email.email,
+        status: results[index].status,
+        error: results[index].status === 'rejected' ? results[index].reason : null
+      }))
     }), {
       status: 200,
       headers: {
@@ -221,7 +240,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
   } catch (error: any) {
-    console.error("Error in send-reservation-notification function:", error);
+    console.error("❌ [ERROR] In send-reservation-notification function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

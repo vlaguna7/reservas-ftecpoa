@@ -41,7 +41,8 @@ export const sendReservationNotification = async (
       action
     };
 
-    console.log('Sending reservation notification:', notificationData);
+    console.log('🚀 [FRONTEND] Sending reservation notification:', notificationData);
+    console.log('📧 [FRONTEND] Action:', action, 'Equipment:', reservationData.equipment_type);
 
     // Chamar a edge function para envio de email
     const { data, error } = await supabase.functions.invoke('send-reservation-notification', {
@@ -49,11 +50,12 @@ export const sendReservationNotification = async (
     });
 
     if (error) {
-      console.error('Error calling email notification function:', error);
+      console.error('❌ [FRONTEND] Error calling email notification function:', error);
+      console.error('❌ [FRONTEND] Error details:', JSON.stringify(error, null, 2));
       return;
     }
 
-    console.log('Email notification sent successfully:', data);
+    console.log('✅ [FRONTEND] Email notification sent successfully:', data);
   } catch (error) {
     console.error('Exception in sendReservationNotification:', error);
   }

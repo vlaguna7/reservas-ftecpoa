@@ -2191,119 +2191,122 @@ export function AdminPanel() {
                             rows={4}
                           />
                         </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id={`active-${faq.id}`}
-                              checked={faqEditForm.is_active}
-                              onCheckedChange={(checked) => setFaqEditForm(prev => ({ ...prev, is_active: checked }))}
-                            />
-                            <Label htmlFor={`active-${faq.id}`}>Ativa</Label>
-                          </div>
-                          <div>
-                            <Label htmlFor={`edit-order-${faq.id}`}>Ordem</Label>
-                            <Input
-                              id={`edit-order-${faq.id}`}
-                              type="number"
-                              min="0"
-                              value={faqEditForm.sort_order}
-                              onChange={(e) => setFaqEditForm(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
-                              className="w-20"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button onClick={() => updateFaq(faq.id)} size="sm">
-                            <Save className="h-4 w-4 mr-1" />
-                            Salvar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingFaq(null)}
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Cancelar
-                          </Button>
-                        </div>
+                         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                           <div className="flex items-center space-x-2">
+                             <Switch
+                               id={`active-${faq.id}`}
+                               checked={faqEditForm.is_active}
+                               onCheckedChange={(checked) => setFaqEditForm(prev => ({ ...prev, is_active: checked }))}
+                             />
+                             <Label htmlFor={`active-${faq.id}`}>Ativa</Label>
+                           </div>
+                           <div className="w-full sm:w-auto">
+                             <Label htmlFor={`edit-order-${faq.id}`}>Ordem</Label>
+                             <Input
+                               id={`edit-order-${faq.id}`}
+                               type="number"
+                               min="0"
+                               value={faqEditForm.sort_order}
+                               onChange={(e) => setFaqEditForm(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+                               className="w-full sm:w-20"
+                             />
+                           </div>
+                         </div>
+                         <div className="flex flex-col sm:flex-row gap-2">
+                           <Button onClick={() => updateFaq(faq.id)} size="sm" className="w-full sm:w-auto">
+                             <Save className="h-4 w-4 mr-1" />
+                             Salvar
+                           </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => setEditingFaq(null)}
+                             className="w-full sm:w-auto"
+                           >
+                             <X className="h-4 w-4 mr-1" />
+                             Cancelar
+                           </Button>
+                         </div>
                       </div>
                     ) : (
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-semibold text-lg">{faq.question}</h4>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={faq.is_active ? 'default' : 'secondary'}>
-                              {faq.is_active ? 'Ativa' : 'Inativa'}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">#{faq.sort_order}</span>
-                          </div>
-                        </div>
-                        <p className="text-muted-foreground mb-4 whitespace-pre-wrap">{faq.answer}</p>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEditingFaq(faq.id);
-                              setFaqEditForm({
-                                question: faq.question,
-                                answer: faq.answer,
-                                is_active: faq.is_active,
-                                sort_order: faq.sort_order
-                              });
-                            }}
-                          >
-                            <Edit3 className="h-4 w-4 mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleFaqStatus(faq.id, faq.is_active)}
-                          >
-                            {faq.is_active ? (
-                              <>
-                                <PowerOff className="h-4 w-4 mr-1" />
-                                Desativar
-                              </>
-                            ) : (
-                              <>
-                                <Power className="h-4 w-4 mr-1" />
-                                Ativar
-                              </>
-                            )}
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Excluir
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir esta pergunta frequente?
-                                  <br />
-                                  <strong>Pergunta:</strong> {faq.question}
-                                  <br />
-                                  Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteFaq(faq.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Sim, excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
+                       <div>
+                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+                           <h4 className="font-semibold text-base sm:text-lg break-words">{faq.question}</h4>
+                           <div className="flex items-center gap-2 flex-shrink-0">
+                             <Badge variant={faq.is_active ? 'default' : 'secondary'}>
+                               {faq.is_active ? 'Ativa' : 'Inativa'}
+                             </Badge>
+                             <span className="text-xs text-muted-foreground">#{faq.sort_order}</span>
+                           </div>
+                         </div>
+                         <p className="text-muted-foreground mb-4 whitespace-pre-wrap text-sm sm:text-base break-words">{faq.answer}</p>
+                         <div className="flex flex-col sm:flex-row gap-2">
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => {
+                               setEditingFaq(faq.id);
+                               setFaqEditForm({
+                                 question: faq.question,
+                                 answer: faq.answer,
+                                 is_active: faq.is_active,
+                                 sort_order: faq.sort_order
+                               });
+                             }}
+                             className="w-full sm:w-auto"
+                           >
+                             <Edit3 className="h-4 w-4 mr-1" />
+                             Editar
+                           </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => toggleFaqStatus(faq.id, faq.is_active)}
+                             className="w-full sm:w-auto"
+                           >
+                             {faq.is_active ? (
+                               <>
+                                 <PowerOff className="h-4 w-4 mr-1" />
+                                 Desativar
+                               </>
+                             ) : (
+                               <>
+                                 <Power className="h-4 w-4 mr-1" />
+                                 Ativar
+                               </>
+                             )}
+                           </Button>
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                               <Button variant="destructive" size="sm" className="w-full sm:w-auto">
+                                 <Trash2 className="h-4 w-4 mr-1" />
+                                 Excluir
+                               </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent className="mx-4 max-w-lg">
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   Tem certeza que deseja excluir esta pergunta frequente?
+                                   <br />
+                                   <strong>Pergunta:</strong> {faq.question}
+                                   <br />
+                                   Esta ação não pode ser desfeita.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                 <AlertDialogAction
+                                   onClick={() => deleteFaq(faq.id)}
+                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                 >
+                                   Sim, excluir
+                                 </AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                         </div>
+                       </div>
                     )}
                   </CardContent>
                 </Card>

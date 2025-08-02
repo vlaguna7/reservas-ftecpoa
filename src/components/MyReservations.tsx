@@ -136,32 +136,52 @@ export function MyReservations() {
     setLoading(false);
   };
 
+  // ===== FUNÇÃO DE CANCELAMENTO DE RESERVA (MINHAS RESERVAS) =====
+  // Esta função cancela uma reserva específica do usuário atual
+  // e envia notificação por e-mail para os administradores
   const cancelReservation = async (reservationId: string) => {
     try {
-      console.log('Attempting to cancel reservation:', reservationId);
+      console.log('🔄 Iniciando cancelamento da reserva:', reservationId);
       
+      // ===== DELETAR RESERVA DO BANCO DE DADOS =====
+      // Usando Supabase client para deletar a reserva específica
+      // 🔄 ADAPTAÇÃO PARA OUTROS BANCOS:
+      // - MySQL: DELETE FROM reservations WHERE id = ? AND user_id = ?
+      // - PostgreSQL: DELETE FROM reservations WHERE id = $1 AND user_id = $2
+      // - MongoDB: db.reservations.deleteOne({_id: ObjectId(id), user_id: userId})
+      // - Firebase: doc(db, 'reservations', reservationId).delete()
       const { data, error } = await supabase
         .from('reservations')
         .delete()
         .eq('id', reservationId)
-        .select(); // Retornar dados para confirmar a deleção
+        .select(); // 📝 O .select() retorna os dados deletados para uso posterior
 
-      console.log('Delete result:', { data, error });
+      console.log('📊 Resultado da operação de deleção:', { data, error });
 
+      // ===== VERIFICAR SE HOUVE ERRO NA DELEÇÃO =====
       if (error) {
-        console.error('Error canceling reservation:', error);
+        console.error('❌ Erro ao deletar reserva do banco:', error);
         toast({
           title: "Erro ao cancelar reserva",
           description: error.message,
           variant: "destructive"
         });
-        return;
+        return; // 🛑 Para a execução se houver erro
       }
 
+      // ===== PROCESSAR DELEÇÃO BEM-SUCEDIDA =====
       if (data && data.length > 0) {
-        console.log('Reservation successfully deleted:', data[0]);
+        console.log('✅ Reserva deletada com sucesso:', data[0]);
         
-        // Enviar notificação por email em background (não bloquear UI)
+        // ===== ENVIO DE NOTIFICAÇÃO POR E-MAIL =====
+        // Enviamos e-mail em background para não bloquear a interface do usuário
+        // 📧 Esta função chama uma Edge Function que usa o serviço Resend.com
+        // 🔄 ADAPTAÇÃO PARA OUTROS SISTEMAS DE E-MAIL:
+        // - Node.js + Express: criar endpoint que usa nodemailer ou sendgrid
+        // - PHP: usar PHPMailer, mail() nativo ou SendGrid API
+        // - Python + FastAPI: usar smtplib, sendgrid ou mailgun
+        // - .NET Core: usar System.Net.Mail ou SendGrid SDK
+        // - Laravel: usar Mail facade ou Notification system
         const deletedReservation = data[0];
         sendReservationNotification({
           id: deletedReservation.id,
@@ -171,26 +191,40 @@ export function MyReservations() {
           time_slots: deletedReservation.time_slots,
           user_id: deletedReservation.user_id
         }, 'cancelled').catch(error => {
-          console.error('Error sending email notification:', error);
+          // ⚠️ Capturamos erro de e-mail mas não bloqueamos o cancelamento
+          // O usuário já conseguiu cancelar, mesmo que o e-mail falhe
+          console.error('❌ Erro ao enviar notificação por e-mail:', error);
         });
         
+        // ===== FEEDBACK POSITIVO PARA O USUÁRIO =====
         toast({
           title: "Reserva cancelada",
           description: "Sua reserva foi cancelada com sucesso."
         });
         
-        // Forçar atualização imediata dos dados
+        // ===== ATUALIZAÇÃO DA INTERFACE =====
+        // Busca novamente os dados para sincronizar a lista de reservas
         await fetchReservations();
         
-        // Delay adicional para sincronização completa
+        // ===== SINCRONIZAÇÃO ADICIONAL =====
+        // Delay para garantir que o banco de dados processou completamente
+        // e força um reload da página para sincronização total
+        // 🔄 ALTERNATIVAS MAIS ELEGANTES:
+        // - WebSockets para atualização em tempo real
+        // - Server-Sent Events (SSE) para push de atualizações
+        // - Polling periódico mais sofisticado
+        // - Estado global com Redux/Zustand para sincronização
         setTimeout(async () => {
           await fetchReservations();
-          // Força reload da página para garantir sincronização total
+          // 🔄 window.location.reload() força reload completo da página
+          // Em sistemas SPA modernos, prefira atualização de estado local
           window.location.reload();
         }, 1000);
         
       } else {
-        console.error('No data returned from delete operation');
+        // ===== CASO NENHUM DADO FOI RETORNADO =====
+        // Pode acontecer se a reserva já foi deletada por outro processo
+        console.error('❌ Nenhum dado retornado da operação de deleção');
         toast({
           title: "Erro ao cancelar reserva",
           description: "A reserva não pôde ser encontrada ou já foi cancelada.",
@@ -198,7 +232,9 @@ export function MyReservations() {
         });
       }
     } catch (error) {
-      console.error('Exception in cancelReservation:', error);
+      // ===== TRATAMENTO DE EXCEÇÕES GERAIS =====
+      // Captura erros de rede, timeout, etc.
+      console.error('💥 Exceção inesperada no cancelamento:', error);
       toast({
         title: "Erro ao cancelar reserva",
         description: "Erro interno. Tente novamente.",

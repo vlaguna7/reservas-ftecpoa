@@ -1,14 +1,38 @@
+// ===== IMPORTAÇÕES DE BIBLIOTECAS =====
+// React hooks para estado e efeitos colaterais
 import { useState, useEffect } from 'react';
+// Hook customizado para autenticação
 import { useAuth } from '@/hooks/useAuth';
+// Cliente Supabase para operações de banco de dados
+// 🔄 ADAPTAÇÃO PARA OUTROS BANCOS:
+// - MySQL/PostgreSQL: import mysql2 ou pg
+// - MongoDB: import mongoose ou mongodb driver
+// - Firebase: import { getFirestore } from 'firebase/firestore'
 import { supabase } from '@/integrations/supabase/client';
+// Componentes de UI do shadcn/ui
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+// Ícones do Lucide React
 import { FlaskConical, Calendar, ChevronDown, ChevronRight, X } from 'lucide-react';
+// Biblioteca para formatação de datas
+// 🔄 ADAPTAÇÃO: Pode usar moment.js, dayjs ou Date nativo
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+// Hook para notificações toast
 import { toast } from '@/hooks/use-toast';
+// Componentes para expandir/colapsar conteúdo
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+// Componentes para diálogos de confirmação
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+// ===== FUNÇÃO DE NOTIFICAÇÃO POR E-MAIL =====
+// Importa função que envia e-mails via Edge Function
+// 📧 Esta função chama uma API serverless que usa Resend.com
+// 🔄 ADAPTAÇÃO PARA OUTROS SISTEMAS:
+// - Node.js: criar endpoint Express que usa nodemailer
+// - PHP: criar script PHP que usa PHPMailer
+// - Python: criar endpoint FastAPI que usa smtplib
+// - .NET: criar controller que usa System.Net.Mail
+import { sendReservationNotification } from '@/lib/emailNotifications';
 
 interface LaboratoryReservation {
   id: string;
@@ -142,14 +166,30 @@ export function LaboratoryReservations() {
     };
   }, []);
 
+  // ===== FUNÇÃO DE CANCELAMENTO DE RESERVA =====
+  // Esta função cancela uma reserva específica do laboratório
+  // e envia notificação por e-mail para os administradores
   const cancelReservation = async (reservationId: string) => {
     try {
-      const { error } = await supabase
+      console.log('🔄 Iniciando cancelamento da reserva:', reservationId);
+      
+      // ===== DELETAR RESERVA DO BANCO DE DADOS =====
+      // Usando Supabase client para deletar a reserva
+      // 🔄 ADAPTAÇÃO PARA OUTROS BANCOS:
+      // - MySQL/PostgreSQL: DELETE FROM reservations WHERE id = ?
+      // - MongoDB: db.reservations.deleteOne({_id: ObjectId(reservationId)})
+      // - Firebase: doc(db, 'reservations', reservationId).delete()
+      const { data, error } = await supabase
         .from('reservations')
         .delete()
-        .eq('id', reservationId);
+        .eq('id', reservationId)
+        .select(); // 📝 Retorna os dados deletados para confirmação e envio de e-mail
 
+      console.log('📊 Resultado da deleção:', { data, error });
+
+      // ===== TRATAMENTO DE ERRO NA DELEÇÃO =====
       if (error) {
+        console.error('❌ Erro ao deletar reserva:', error);
         toast({
           title: "Erro ao cancelar reserva",
           description: error.message,
@@ -158,14 +198,53 @@ export function LaboratoryReservations() {
         return;
       }
 
-      toast({
-        title: "Reserva cancelada!",
-        description: "A reserva do laboratório foi cancelada com sucesso."
-      });
-      
-      await fetchLaboratoryReservations();
+      // ===== VERIFICAR SE A RESERVA FOI REALMENTE DELETADA =====
+      if (data && data.length > 0) {
+        console.log('✅ Reserva deletada com sucesso:', data[0]);
+        
+        // ===== ENVIO DE NOTIFICAÇÃO POR E-MAIL =====
+        // Enviamos e-mail em background para não travar a interface
+        // 📧 Esta parte chama uma Edge Function do Supabase que usa Resend.com
+        // 🔄 ADAPTAÇÃO PARA OUTROS SISTEMAS:
+        // - Node.js: usar nodemailer ou sendgrid
+        // - PHP: usar PHPMailer ou mail() nativo
+        // - Python: usar smtplib ou sendgrid
+        // - .NET: usar System.Net.Mail ou SendGrid SDK
+        const deletedReservation = data[0];
+        sendReservationNotification({
+          id: deletedReservation.id,
+          equipment_type: deletedReservation.equipment_type,
+          reservation_date: deletedReservation.reservation_date,
+          observation: deletedReservation.observation,
+          time_slots: deletedReservation.time_slots,
+          user_id: deletedReservation.user_id
+        }, 'cancelled').catch(error => {
+          // ⚠️ Não bloqueamos a UI se o e-mail falhar
+          console.error('❌ Erro ao enviar notificação por e-mail:', error);
+        });
+        
+        // ===== FEEDBACK PARA O USUÁRIO =====
+        toast({
+          title: "Reserva cancelada!",
+          description: "A reserva do laboratório foi cancelada com sucesso."
+        });
+        
+        // ===== ATUALIZAR LISTA DE RESERVAS =====
+        // Busca novamente os dados para sincronizar a interface
+        await fetchLaboratoryReservations();
+        
+      } else {
+        // ===== CASO A RESERVA NÃO FOI ENCONTRADA =====
+        console.error('❌ Nenhum dado retornado da operação de deleção');
+        toast({
+          title: "Erro ao cancelar reserva",
+          description: "A reserva não pôde ser encontrada ou já foi cancelada.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
-      console.error('Exception in cancelReservation:', error);
+      // ===== TRATAMENTO DE EXCEÇÕES GERAIS =====
+      console.error('💥 Exceção no cancelamento da reserva:', error);
       toast({
         title: "Erro ao cancelar reserva",
         description: "Erro interno. Tente novamente.",

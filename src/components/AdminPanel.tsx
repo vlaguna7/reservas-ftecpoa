@@ -198,7 +198,7 @@ export function AdminPanel() {
   const [newAlertForm, setNewAlertForm] = useState({
     title: '',
     message: '',
-    duration: 5,
+    duration: 5 as string | number,
     expires_at: null as Date | null
   });
   const [tempEditMinutes, setTempEditMinutes] = useState<string>('');
@@ -206,7 +206,7 @@ export function AdminPanel() {
   const [alertEditForm, setAlertEditForm] = useState({
     title: '',
     message: '',
-    duration: 5,
+    duration: 5 as string | number,
     is_active: true,
     expires_at: null as Date | null
   });
@@ -413,7 +413,8 @@ export function AdminPanel() {
       return;
     }
 
-    if (newAlertForm.duration < 1) {
+    const durationNum = typeof newAlertForm.duration === 'string' ? parseInt(newAlertForm.duration) || 5 : newAlertForm.duration;
+    if (durationNum < 1) {
       toast({
         title: "Duração inválida",
         description: "A duração deve ser pelo menos 1 segundo.",
@@ -428,7 +429,7 @@ export function AdminPanel() {
         .insert({
           title: newAlertForm.title.trim(),
           message: newAlertForm.message.trim(),
-          duration: newAlertForm.duration,
+          duration: durationNum,
           expires_at: newAlertForm.expires_at?.toISOString()
         });
 
@@ -462,13 +463,15 @@ export function AdminPanel() {
       return;
     }
 
+    const durationNum = typeof alertEditForm.duration === 'string' ? parseInt(alertEditForm.duration) || 5 : alertEditForm.duration;
+
     try {
       const { error } = await supabase
         .from('admin_alerts')
         .update({
           title: alertEditForm.title.trim(),
           message: alertEditForm.message.trim(),
-          duration: alertEditForm.duration,
+          duration: durationNum,
           is_active: alertEditForm.is_active,
           expires_at: alertEditForm.expires_at?.toISOString()
         })
@@ -2871,7 +2874,13 @@ export function AdminPanel() {
                     min="1"
                     max="30"
                     value={newAlertForm.duration || ''}
-                    onChange={(e) => setNewAlertForm({ ...newAlertForm, duration: e.target.value === '' ? 5 : parseInt(e.target.value) || 5 })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNewAlertForm({ 
+                        ...newAlertForm, 
+                        duration: value === '' ? '' : parseInt(value) || 5 
+                      });
+                    }}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -3016,14 +3025,20 @@ export function AdminPanel() {
                         </div>
                          <div className="grid gap-2">
                            <Label htmlFor={`edit-duration-${alert.id}`}>Duração (segundos)</Label>
-                           <Input
-                             id={`edit-duration-${alert.id}`}
-                             type="number"
-                             min="1"
-                             max="30"
-                             value={alertEditForm.duration || ''}
-                             onChange={(e) => setAlertEditForm({ ...alertEditForm, duration: e.target.value === '' ? 5 : parseInt(e.target.value) || 5 })}
-                           />
+                            <Input
+                              id={`edit-duration-${alert.id}`}
+                              type="number"
+                              min="1"
+                              max="30"
+                              value={alertEditForm.duration || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setAlertEditForm({ 
+                                  ...alertEditForm, 
+                                  duration: value === '' ? '' : parseInt(value) || 5 
+                                });
+                              }}
+                            />
                          </div>
                          <div className="grid gap-2">
                            <Label htmlFor={`edit-expires-${alert.id}`}>Data de Expiração</Label>

@@ -45,6 +45,7 @@ interface Reservation {
   created_at: string;
   observation?: string;
   time_slots?: string[];
+  user_id?: string; // 🔐 OPCIONAL: Para consistência, mas não necessário pois já filtra no banco
 }
 
 export function MyReservations() {

@@ -15,6 +15,7 @@ interface Reservation {
   equipment_type: string;
   display_type?: string;
   created_at: string;
+  user_id: string; // 🔐 CRÍTICO: ID único do usuário para verificação de segurança
   user_profile: {
     display_name: string;
   };
@@ -121,6 +122,7 @@ export function TodayReservations() {
           equipment_type: reservation.equipment_type,
           display_type: displayType,
           created_at: reservation.created_at,
+          user_id: reservation.user_id, // 🔐 IMPORTANTE: Incluir user_id para verificação de segurança
           user_profile: {
             display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
           }
@@ -327,13 +329,25 @@ export function TodayReservations() {
     }
   };
 
+  // ===== VERIFICAÇÃO DE PERMISSÃO PARA CANCELAMENTO =====
+  // 🔐 CORREÇÃO DE SEGURANÇA: Usar user_id em vez de display_name
+  // Esta função previne que usuários com o mesmo nome cancelem reservas uns dos outros
   const canUserCancelReservation = (reservation: Reservation) => {
+    // ===== ADMINISTRADORES =====
     // Administradores podem cancelar qualquer reserva
     if (profile?.is_admin) {
       return true;
     }
-    // Usuários normais só podem cancelar suas próprias reservas
-    return user && reservation.user_profile?.display_name === profile?.display_name;
+    
+    // ===== USUÁRIOS NORMAIS =====
+    // Usuários só podem cancelar suas próprias reservas
+    // 🔐 CRÍTICO: Comparar user_id (UUID único) e não display_name (pode repetir)
+    // 🔄 ADAPTAÇÃO PARA OUTROS SISTEMAS:
+    // - JWT: usar user.sub ou user.id do token
+    // - Session: usar session.user_id
+    // - Auth0: usar user.sub
+    // - Firebase: usar user.uid
+    return user && user.id === reservation.user_id;
   };
 
   const targetDate = getTodayDate();

@@ -278,26 +278,25 @@ export function MakeReservation() {
       return;
     }
 
-    console.log('[DEBUG] User reservations from DB:', data);
-    console.log('[DEBUG] Current user ID:', user.id);
+    // Validação dupla - garantir que todos os dados retornados são do usuário atual
+    const validatedData = data.filter(reservation => reservation.user_id === user.id);
 
     const userRes: Record<string, any[]> = {};
     dateList.forEach(date => {
       userRes[date] = [];
     });
 
-    data.forEach(reservation => {
+    validatedData.forEach(reservation => {
       const dateStr = reservation.reservation_date;
       userRes[dateStr].push({
         id: reservation.id,
         equipment_type: reservation.equipment_type,
         time_slots: reservation.time_slots,
         observation: reservation.observation,
-        user_id: reservation.user_id // Incluir user_id nos dados do estado
+        user_id: reservation.user_id
       });
     });
 
-    console.log('[DEBUG] Processed reservations by date:', userRes);
     setUserReservations(userRes);
   };
 
@@ -319,7 +318,10 @@ export function MakeReservation() {
   };
 
   const hasUserReservation = (date: string, equipment: string) => {
-    return userReservations[date]?.some(res => res.equipment_type === equipment) || false;
+    if (!user) return false;
+    return userReservations[date]?.some(res => 
+      res.equipment_type === equipment && res.user_id === user.id
+    ) || false;
   };
 
   const hasUserReservationAsync = async (date: string, equipment: string) => {
@@ -341,8 +343,11 @@ export function MakeReservation() {
   };
 
   const isAvailable = (date: string, equipment: string) => {
+    if (!user) return false;
     const available = getAvailabilityForDate(date, equipment);
-    const userAlreadyHasReservation = hasUserReservation(date, equipment);
+    const userAlreadyHasReservation = userReservations[date]?.some(res => 
+      res.equipment_type === equipment && res.user_id === user.id
+    ) || false;
     return available !== null && available > 0 && !userAlreadyHasReservation;
   };
 
@@ -1377,13 +1382,14 @@ export function MakeReservation() {
             </div>
           )}
           
-          {selectedDate && userReservations[selectedDate]?.length > 0 && (
+          {selectedDate && userReservations[selectedDate]?.filter(res => res.user_id === user?.id).length > 0 && (
             <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
                 <strong className="text-green-800 text-sm">Suas reservas para este dia ({profile?.display_name || profile?.institutional_user}):</strong>
               </div>
               <div className="space-y-2">
                 {userReservations[selectedDate]
+                  .filter(res => res.user_id === user?.id)
                   .map((reservation, index) => (
                   <div key={reservation.id || index} className="flex items-center justify-between bg-white rounded p-2 border">
                     <div className="flex items-center gap-2">

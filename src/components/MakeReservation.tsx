@@ -269,7 +269,7 @@ export function MakeReservation() {
     
     const { data, error } = await supabase
       .from('reservations')
-      .select('id, reservation_date, equipment_type, time_slots, observation')
+      .select('id, reservation_date, equipment_type, time_slots, observation, user_id')
       .eq('user_id', user.id)
       .in('reservation_date', dateList);
 
@@ -277,6 +277,9 @@ export function MakeReservation() {
       console.error('Error fetching user reservations:', error);
       return;
     }
+
+    console.log('[DEBUG] User reservations from DB:', data);
+    console.log('[DEBUG] Current user ID:', user.id);
 
     const userRes: Record<string, any[]> = {};
     dateList.forEach(date => {
@@ -289,10 +292,12 @@ export function MakeReservation() {
         id: reservation.id,
         equipment_type: reservation.equipment_type,
         time_slots: reservation.time_slots,
-        observation: reservation.observation
+        observation: reservation.observation,
+        user_id: reservation.user_id // Incluir user_id nos dados do estado
       });
     });
 
+    console.log('[DEBUG] Processed reservations by date:', userRes);
     setUserReservations(userRes);
   };
 
@@ -1372,14 +1377,13 @@ export function MakeReservation() {
             </div>
           )}
           
-          {selectedDate && userReservations[selectedDate]?.filter(res => res.user_id === user?.id).length > 0 && (
+          {selectedDate && userReservations[selectedDate]?.length > 0 && (
             <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
                 <strong className="text-green-800 text-sm">Suas reservas para este dia ({profile?.display_name || profile?.institutional_user}):</strong>
               </div>
               <div className="space-y-2">
                 {userReservations[selectedDate]
-                  .filter(res => res.user_id === user?.id)
                   .map((reservation, index) => (
                   <div key={reservation.id || index} className="flex items-center justify-between bg-white rounded p-2 border">
                     <div className="flex items-center gap-2">

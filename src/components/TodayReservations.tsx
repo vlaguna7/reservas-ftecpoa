@@ -366,25 +366,9 @@ export function TodayReservations() {
     return acc;
   }, {} as Record<string, Reservation[]>);
 
-  // Função helper para obter nome de exibição com identificador para duplicatas
+  // Função helper para obter nome de exibição
   const getDisplayName = (groupKey: string, reservationsList: Reservation[]): string => {
-    const teacherName = reservationsList[0]?.user_profile?.display_name || 'Professor não identificado';
-    
-    // Verificar se há outros grupos com o mesmo display_name
-    const sameNameGroups = Object.keys(groupedReservations).filter(key => {
-      const otherReservations = groupedReservations[key];
-      return otherReservations[0]?.user_profile?.display_name === teacherName;
-    });
-    
-    // Se há apenas um grupo com esse nome, mostrar apenas o nome
-    if (sameNameGroups.length === 1) {
-      return teacherName;
-    }
-    
-    // Se há múltiplos grupos com mesmo nome, adicionar identificador sutil
-    const userId = reservationsList[0]?.user_id;
-    const identifier = userId ? userId.slice(-4).toUpperCase() : 'XXXX';
-    return `${teacherName} (${identifier})`;
+    return reservationsList[0]?.user_profile?.display_name || 'Professor não identificado';
   };
 
   if (loading) {

@@ -71,16 +71,6 @@ export const sendReservationNotification = async (
     console.log('🚀 [FRONTEND] Enviando notificação de reserva:', notificationData);
     console.log('📧 [FRONTEND] Ação:', action, 'Equipamento:', reservationData.equipment_type);
 
-    // ===== CONFIGURAR TIMEOUT PARA O E-MAIL =====
-    // Cria uma Promise que falha após 5 segundos para evitar travamento
-    // 🔄 ALTERNATIVAS:
-    // - AbortController para cancelar fetch nativo
-    // - Axios timeout para bibliotecas HTTP
-    // - Queue de e-mails em background (Redis, Bull, etc.)
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Email notification timeout')), 5000)
-    );
-    
     // ===== CHAMAR EDGE FUNCTION PARA ENVIO DE E-MAIL =====
     // Esta é uma função serverless que processa o envio via Resend.com
     // 📧 A Edge Function cuida de:
@@ -92,14 +82,11 @@ export const sendReservationNotification = async (
     // - PHP: curl para endpoint interno ou serviço de e-mail
     // - Python: requests.post() para API Flask/FastAPI
     // - .NET: HttpClient.PostAsync() para endpoint ASP.NET
-    const emailPromise = supabase.functions.invoke('send-reservation-notification', {
+    
+    // Executar sem bloquear - fire and forget
+    const { data, error } = await supabase.functions.invoke('send-reservation-notification', {
       body: notificationData
     });
-    
-    // ===== EXECUTAR COM TIMEOUT =====
-    // Promise.race garante que se o e-mail demorar mais que 5s, vai falhar
-    // Isso evita travar a interface do usuário
-    const { data, error } = await Promise.race([emailPromise, timeoutPromise]) as any;
 
     // ===== TRATAMENTO DE ERRO NO ENVIO =====
     if (error) {

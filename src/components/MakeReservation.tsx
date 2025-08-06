@@ -631,19 +631,21 @@ export function MakeReservation() {
         throw error;
       }
 
-      // Enviar notificação por email em background
+      // Enviar notificação por email em background (não espera concluir)
       const result = data?.[0];
       if (result) {
-        sendReservationNotification({
-          id: result.id,
-          equipment_type: result.equipment_type,
-          reservation_date: result.reservation_date,
-          observation: result.observation,
-          time_slots: result.time_slots,
-          user_id: result.user_id
-        }, 'created').catch(error => {
-          console.error('Error sending email notification:', error);
-        });
+        setTimeout(() => {
+          sendReservationNotification({
+            id: result.id,
+            equipment_type: result.equipment_type,
+            reservation_date: result.reservation_date,
+            observation: result.observation,
+            time_slots: result.time_slots,
+            user_id: result.user_id
+          }, 'created').catch(error => {
+            console.error('Error sending email notification:', error);
+          });
+        }, 100); // Envia email após 100ms sem bloquear a UI
       }
 
       const laboratoryName = laboratoryOptions.find(lab => lab.value === selectedLaboratory)?.label || 'Laboratório';

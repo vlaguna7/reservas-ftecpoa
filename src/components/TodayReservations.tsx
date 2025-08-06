@@ -442,12 +442,12 @@ export function TodayReservations() {
           <div className="space-y-4">
             {Object.entries(groupedReservations).map(([groupKey, teacherReservations]) => (
               <div key={groupKey} className="border rounded-lg p-3 sm:p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3">
+                <div className="flex items-center flex-wrap gap-2 mb-3">
                   <h3 className="font-semibold text-base sm:text-lg">
                     {getDisplayName(groupKey, teacherReservations)}
                   </h3>
                   {getCurrentDayClassroom(teacherReservations[0]?.user_profile) && (
-                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 w-fit">
+                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 shrink-0">
                       {getCurrentDayClassroom(teacherReservations[0]?.user_profile)}
                     </Badge>
                   )}

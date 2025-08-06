@@ -2085,23 +2085,21 @@ export function AdminPanel() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1 sm:gap-2">
-                        <div className="flex items-center justify-center gap-2">
-                          {user.green_tag_text ? (
-                            <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              {user.green_tag_text}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Sem tag</span>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleGreenTagClick(user)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
+                  <div className="flex items-center justify-center gap-2">
+                    {user.green_tag_text && (
+                      <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        {user.green_tag_text}
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleGreenTagClick(user)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
 
                         {/* Change PIN Dialog */}
                         <Dialog open={changingPin === user.user_id} onOpenChange={(open) => {

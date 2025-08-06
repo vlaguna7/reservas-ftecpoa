@@ -1101,12 +1101,7 @@ export function AdminPanel() {
   };
 
   const changeUserPin = async (userId: string) => {
-    console.log('🔑 Starting PIN change for user:', userId);
-    console.log('🔑 New PIN length:', newPin.length);
-    console.log('🔑 Confirm PIN length:', confirmPin.length);
-    
     if (!newPin || newPin.length !== 6 || !/^\d{6}$/.test(newPin)) {
-      console.log('❌ PIN validation failed: invalid format');
       toast({
         title: "PIN inválido",
         description: "O PIN deve conter exatamente 6 dígitos numéricos.",
@@ -1116,7 +1111,6 @@ export function AdminPanel() {
     }
 
     if (newPin !== confirmPin) {
-      console.log('❌ PIN validation failed: confirmation mismatch');
       toast({
         title: "PINs não coincidem",
         description: "A confirmação do PIN não confere.",
@@ -1126,42 +1120,51 @@ export function AdminPanel() {
     }
 
     try {
-      console.log('🔑 Hashing PIN...');
+      // Hash do PIN
       const bcrypt = await import('bcryptjs');
       const pinHash = await bcrypt.hash(newPin, 10);
-      console.log('🔑 PIN hashed successfully, length:', pinHash.length);
 
-      console.log('🔑 Updating database for user:', userId);
-      const { data, error } = await supabase
+      // Atualizar o pin_hash na tabela profiles
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({ pin_hash: pinHash })
-        .eq('user_id', userId)
-        .select();
+        .eq('user_id', userId);
 
-      console.log('🔑 Update result:', { data, error });
-
-      if (error) {
-        console.error('❌ Database error:', error);
+      if (profileError) {
         toast({
           title: "Erro ao alterar PIN",
-          description: error.message,
+          description: profileError.message,
           variant: "destructive"
         });
-      } else {
-        console.log('✅ PIN updated successfully');
-        toast({
-          title: "PIN alterado com sucesso!",
-          description: "O PIN do usuário foi atualizado."
-        });
-        setChangingPin(null);
-        setNewPin('');
-        setConfirmPin('');
-        
-        // Recarregar dados dos usuários para confirmar a atualização
-        fetchAllUsers();
+        return;
       }
+
+      // Atualizar a senha do usuário no auth usando a edge function
+      const { error: authError } = await supabase.functions.invoke('update-user-password', {
+        body: {
+          userId: userId,
+          newPassword: newPin
+        }
+      });
+
+      if (authError) {
+        toast({
+          title: "Erro ao alterar PIN de autenticação",
+          description: authError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "PIN alterado com sucesso!",
+        description: "O PIN do usuário foi atualizado."
+      });
+      setChangingPin(null);
+      setNewPin('');
+      setConfirmPin('');
+      fetchAllUsers();
     } catch (error) {
-      console.error('❌ Exception in changeUserPin:', error);
       toast({
         title: "Erro ao alterar PIN",
         description: "Erro interno. Tente novamente.",

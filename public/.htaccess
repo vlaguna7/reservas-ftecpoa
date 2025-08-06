@@ -16,12 +16,20 @@ RewriteRule . /index.html [L]
         Header set Cache-Control "max-age=31536000, public"
     </FilesMatch>
     
-    # Evitar cache para HTML
+    # Cache reduzido para HTML para melhorar loading
     <FilesMatch "\.(html|htm)$">
-        Header set Cache-Control "no-cache, no-store, must-revalidate"
-        Header set Pragma "no-cache"
-        Header set Expires 0
+        Header set Cache-Control "max-age=300, must-revalidate"
+        Header set Pragma "public"
     </FilesMatch>
+    
+    # Headers para melhor compatibilidade com Hostinger
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Timeout headers para conexões mais resilientes
+    Header always set Keep-Alive "timeout=5, max=100"
 </IfModule>
 
 # Compressão Gzip

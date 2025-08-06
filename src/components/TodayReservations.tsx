@@ -19,7 +19,7 @@ interface Reservation {
   user_id: string; // 🔐 CRÍTICO: ID único do usuário para verificação de segurança
   user_profile: {
     display_name: string;
-    has_green_tag?: boolean;
+    green_tag_text?: string | null;
   };
 }
 
@@ -99,7 +99,7 @@ export function TodayReservations() {
       const userIds = reservationData.map(r => r.user_id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, display_name, has_green_tag')
+        .select('user_id, display_name, green_tag_text')
         .in('user_id', userIds);
 
       if (profileError) {
@@ -127,7 +127,7 @@ export function TodayReservations() {
           user_id: reservation.user_id, // 🔐 IMPORTANTE: Incluir user_id para verificação de segurança
           user_profile: {
             display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado',
-            has_green_tag: profileMap.get(reservation.user_id)?.has_green_tag || false
+            green_tag_text: profileMap.get(reservation.user_id)?.green_tag_text || null
           }
         };
       });
@@ -419,9 +419,9 @@ export function TodayReservations() {
                   <h3 className="font-semibold text-base sm:text-lg">
                     {getDisplayName(groupKey, teacherReservations)}
                   </h3>
-                  {profile?.is_admin && teacherReservations[0]?.user_profile?.has_green_tag && (
+                  {profile?.is_admin && teacherReservations[0]?.user_profile?.green_tag_text && (
                     <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 w-fit">
-                      VIP
+                      {teacherReservations[0].user_profile.green_tag_text}
                     </Badge>
                   )}
                 </div>

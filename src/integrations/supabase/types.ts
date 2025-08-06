@@ -153,7 +153,7 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string
-          has_green_tag: boolean
+          green_tag_text: string | null
           id: string
           institutional_user: string
           is_admin: boolean
@@ -164,7 +164,7 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name: string
-          has_green_tag?: boolean
+          green_tag_text?: string | null
           id?: string
           institutional_user: string
           is_admin?: boolean
@@ -175,7 +175,7 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string
-          has_green_tag?: boolean
+          green_tag_text?: string | null
           id?: string
           institutional_user?: string
           is_admin?: boolean

@@ -1382,14 +1382,13 @@ export function MakeReservation() {
             </div>
           )}
           
-          {selectedDate && userReservations[selectedDate]?.filter(res => res.user_id === user?.id).length > 0 && (
+          {selectedDate && userReservations[selectedDate]?.length > 0 && (
             <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
                 <strong className="text-green-800 text-sm">Suas reservas para este dia ({profile?.display_name || profile?.institutional_user}):</strong>
               </div>
               <div className="space-y-2">
                 {userReservations[selectedDate]
-                  .filter(res => res.user_id === user?.id)
                   .map((reservation, index) => (
                   <div key={reservation.id || index} className="flex items-center justify-between bg-white rounded p-2 border">
                     <div className="flex items-center gap-2">

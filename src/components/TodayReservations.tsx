@@ -20,6 +20,11 @@ interface Reservation {
   user_profile: {
     display_name: string;
     green_tag_text?: string | null;
+    classroom_monday?: string;
+    classroom_tuesday?: string;
+    classroom_wednesday?: string;
+    classroom_thursday?: string;
+    classroom_friday?: string;
   };
 }
 
@@ -99,7 +104,7 @@ export function TodayReservations() {
       const userIds = reservationData.map(r => r.user_id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, display_name, green_tag_text')
+        .select('user_id, display_name, green_tag_text, classroom_monday, classroom_tuesday, classroom_wednesday, classroom_thursday, classroom_friday')
         .in('user_id', userIds);
 
       if (profileError) {
@@ -127,7 +132,12 @@ export function TodayReservations() {
           user_id: reservation.user_id, // 🔐 IMPORTANTE: Incluir user_id para verificação de segurança
           user_profile: {
             display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado',
-            green_tag_text: profileMap.get(reservation.user_id)?.green_tag_text || null
+            green_tag_text: profileMap.get(reservation.user_id)?.green_tag_text || null,
+            classroom_monday: profileMap.get(reservation.user_id)?.classroom_monday || null,
+            classroom_tuesday: profileMap.get(reservation.user_id)?.classroom_tuesday || null,
+            classroom_wednesday: profileMap.get(reservation.user_id)?.classroom_wednesday || null,
+            classroom_thursday: profileMap.get(reservation.user_id)?.classroom_thursday || null,
+            classroom_friday: profileMap.get(reservation.user_id)?.classroom_friday || null
           }
         };
       });
@@ -374,6 +384,23 @@ export function TodayReservations() {
     return reservationsList[0]?.user_profile?.display_name || 'Professor não identificado';
   };
 
+  // Get current day classroom
+  const getCurrentDayClassroom = (userProfile: any) => {
+    if (!userProfile || !profile?.is_admin) return null;
+    
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    switch (dayOfWeek) {
+      case 1: return userProfile.classroom_monday;
+      case 2: return userProfile.classroom_tuesday;
+      case 3: return userProfile.classroom_wednesday;
+      case 4: return userProfile.classroom_thursday;
+      case 5: return userProfile.classroom_friday;
+      default: return null; // Weekend
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -419,9 +446,9 @@ export function TodayReservations() {
                   <h3 className="font-semibold text-base sm:text-lg">
                     {getDisplayName(groupKey, teacherReservations)}
                   </h3>
-                  {profile?.is_admin && teacherReservations[0]?.user_profile?.green_tag_text && (
+                  {getCurrentDayClassroom(teacherReservations[0]?.user_profile) && (
                     <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 w-fit">
-                      {teacherReservations[0].user_profile.green_tag_text}
+                      {getCurrentDayClassroom(teacherReservations[0]?.user_profile)}
                     </Badge>
                   )}
                 </div>

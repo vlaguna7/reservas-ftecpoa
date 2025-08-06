@@ -70,6 +70,11 @@ interface UserProfile {
   is_admin: boolean;
   green_tag_text?: string | null;
   created_at: string;
+  classroom_monday?: string;
+  classroom_tuesday?: string;
+  classroom_wednesday?: string;
+  classroom_thursday?: string;
+  classroom_friday?: string;
 }
 
 interface SystemStats {
@@ -157,6 +162,17 @@ export function AdminPanel() {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [greenTagDialogOpen, setGreenTagDialogOpen] = useState(false);
   const [greenTagText, setGreenTagText] = useState("");
+  
+  // Classroom management states
+  const [editingClassrooms, setEditingClassrooms] = useState<string | null>(null);
+  const [classroomDialogOpen, setClassroomDialogOpen] = useState(false);
+  const [classroomData, setClassroomData] = useState({
+    monday: "",
+    tuesday: "",
+    wednesday: "",
+    thursday: "",
+    friday: ""
+  });
   const [settingsForm, setSettingsForm] = useState({
     projector_limit: 0,
     speaker_limit: 0
@@ -385,6 +401,60 @@ export function AdminPanel() {
         variant: "destructive",
         title: "Erro",
         description: "Falha ao atualizar o texto da tag",
+      });
+    }
+  };
+
+  const handleClassroomClick = (user: UserProfile) => {
+    setEditingClassrooms(user.user_id);
+    setClassroomData({
+      monday: user.classroom_monday || "",
+      tuesday: user.classroom_tuesday || "",
+      wednesday: user.classroom_wednesday || "",
+      thursday: user.classroom_thursday || "",
+      friday: user.classroom_friday || ""
+    });
+    setClassroomDialogOpen(true);
+  };
+
+  const handleClassroomSave = async () => {
+    if (!editingClassrooms) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          classroom_monday: classroomData.monday || null,
+          classroom_tuesday: classroomData.tuesday || null,
+          classroom_wednesday: classroomData.wednesday || null,
+          classroom_thursday: classroomData.thursday || null,
+          classroom_friday: classroomData.friday || null
+        })
+        .eq('user_id', editingClassrooms);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Salas atualizadas",
+        description: "As salas foram atualizadas com sucesso.",
+      });
+      
+      setClassroomDialogOpen(false);
+      setEditingClassrooms(null);
+      setClassroomData({
+        monday: "",
+        tuesday: "",
+        wednesday: "",
+        thursday: "",
+        friday: ""
+      });
+      fetchAllUsers();
+    } catch (error) {
+      console.error('Error updating classrooms:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar as salas.",
+        variant: "destructive",
       });
     }
   };
@@ -2094,10 +2164,10 @@ export function AdminPanel() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleGreenTagClick(user)}
+                      onClick={() => handleClassroomClick(user)}
                       className="h-8 w-8 p-0"
                     >
-                      <Plus className="h-4 w-4" />
+                      <Settings className="h-4 w-4" />
                     </Button>
                   </div>
 
@@ -3353,6 +3423,73 @@ export function AdminPanel() {
           </div>
           <div className="flex justify-end">
             <Button onClick={saveGreenTagText}>Salvar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Classroom Management Dialog */}
+      <Dialog open={classroomDialogOpen} onOpenChange={setClassroomDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Gestão de Salas</DialogTitle>
+            <DialogDescription>
+              Configure as salas para cada dia da semana.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="monday">Segunda-feira</Label>
+              <Input
+                id="monday"
+                value={classroomData.monday}
+                onChange={(e) => setClassroomData(prev => ({ ...prev, monday: e.target.value }))}
+                placeholder="Ex: S-20, LAB 1..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="tuesday">Terça-feira</Label>
+              <Input
+                id="tuesday"
+                value={classroomData.tuesday}
+                onChange={(e) => setClassroomData(prev => ({ ...prev, tuesday: e.target.value }))}
+                placeholder="Ex: S-20, LAB 1..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="wednesday">Quarta-feira</Label>
+              <Input
+                id="wednesday"
+                value={classroomData.wednesday}
+                onChange={(e) => setClassroomData(prev => ({ ...prev, wednesday: e.target.value }))}
+                placeholder="Ex: S-20, LAB 1..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="thursday">Quinta-feira</Label>
+              <Input
+                id="thursday"
+                value={classroomData.thursday}
+                onChange={(e) => setClassroomData(prev => ({ ...prev, thursday: e.target.value }))}
+                placeholder="Ex: S-20, LAB 1..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="friday">Sexta-feira</Label>
+              <Input
+                id="friday"
+                value={classroomData.friday}
+                onChange={(e) => setClassroomData(prev => ({ ...prev, friday: e.target.value }))}
+                placeholder="Ex: S-20, LAB 1..."
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setClassroomDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleClassroomSave}>
+              Salvar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

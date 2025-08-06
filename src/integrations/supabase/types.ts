@@ -151,6 +151,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          classroom_friday: string | null
+          classroom_monday: string | null
+          classroom_thursday: string | null
+          classroom_tuesday: string | null
+          classroom_wednesday: string | null
           created_at: string
           display_name: string
           green_tag_text: string | null
@@ -162,6 +167,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          classroom_friday?: string | null
+          classroom_monday?: string | null
+          classroom_thursday?: string | null
+          classroom_tuesday?: string | null
+          classroom_wednesday?: string | null
           created_at?: string
           display_name: string
           green_tag_text?: string | null
@@ -173,6 +183,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          classroom_friday?: string | null
+          classroom_monday?: string | null
+          classroom_thursday?: string | null
+          classroom_tuesday?: string | null
+          classroom_wednesday?: string | null
           created_at?: string
           display_name?: string
           green_tag_text?: string | null

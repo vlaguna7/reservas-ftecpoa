@@ -149,7 +149,7 @@ export default function Auth() {
                   <Input
                     id="institutional-user"
                     type="text"
-                    placeholder="Usuário da Ftec"
+                    placeholder="joao.silva"
                     value={loginData.institutionalUser}
                     onChange={(e) => setLoginData(prev => ({ ...prev, institutionalUser: e.target.value }))}
                     required
@@ -210,7 +210,7 @@ export default function Auth() {
                   <Input
                     id="signup-institutional-user"
                     type="text"
-                    placeholder="Usuário da Ftec"
+                    placeholder="joao.silva"
                     value={signupData.institutionalUser}
                     onChange={(e) => setSignupData(prev => ({ ...prev, institutionalUser: e.target.value }))}
                     required

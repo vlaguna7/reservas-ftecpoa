@@ -353,15 +353,39 @@ export function TodayReservations() {
   const targetDate = getTodayDate();
   const isWeekend = [0, 6].includes(new Date().getDay());
 
-  // Agrupar reservas por professor
+  // Agrupar reservas por professor (usando user_id para separar usuários com mesmo nome)
   const groupedReservations = reservations.reduce((acc, reservation) => {
     const teacherName = reservation.user_profile?.display_name || 'Professor não identificado';
-    if (!acc[teacherName]) {
-      acc[teacherName] = [];
+    const userId = reservation.user_id;
+    const groupKey = `${teacherName}_${userId}`;
+    
+    if (!acc[groupKey]) {
+      acc[groupKey] = [];
     }
-    acc[teacherName].push(reservation);
+    acc[groupKey].push(reservation);
     return acc;
   }, {} as Record<string, Reservation[]>);
+
+  // Função helper para obter nome de exibição com identificador para duplicatas
+  const getDisplayName = (groupKey: string, reservationsList: Reservation[]): string => {
+    const teacherName = reservationsList[0]?.user_profile?.display_name || 'Professor não identificado';
+    
+    // Verificar se há outros grupos com o mesmo display_name
+    const sameNameGroups = Object.keys(groupedReservations).filter(key => {
+      const otherReservations = groupedReservations[key];
+      return otherReservations[0]?.user_profile?.display_name === teacherName;
+    });
+    
+    // Se há apenas um grupo com esse nome, mostrar apenas o nome
+    if (sameNameGroups.length === 1) {
+      return teacherName;
+    }
+    
+    // Se há múltiplos grupos com mesmo nome, adicionar identificador sutil
+    const userId = reservationsList[0]?.user_id;
+    const identifier = userId ? userId.slice(-4).toUpperCase() : 'XXXX';
+    return `${teacherName} (${identifier})`;
+  };
 
   if (loading) {
     return (
@@ -402,9 +426,9 @@ export function TodayReservations() {
           </div>
         ) : (
           <div className="space-y-4">
-            {Object.entries(groupedReservations).map(([teacherName, teacherReservations]) => (
-              <div key={teacherName} className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3">{teacherName}</h3>
+            {Object.entries(groupedReservations).map(([groupKey, teacherReservations]) => (
+              <div key={groupKey} className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">{getDisplayName(groupKey, teacherReservations)}</h3>
                  <div className="space-y-3">
                    {teacherReservations.map((reservation) => {
                      const equipmentLabel = getEquipmentLabel(reservation);

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Projector, Speaker, Calendar, X, Building, FlaskConical } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -18,6 +19,7 @@ interface Reservation {
   user_id: string; // 🔐 CRÍTICO: ID único do usuário para verificação de segurança
   user_profile: {
     display_name: string;
+    has_green_tag?: boolean;
   };
 }
 
@@ -97,7 +99,7 @@ export function TodayReservations() {
       const userIds = reservationData.map(r => r.user_id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, display_name')
+        .select('user_id, display_name, has_green_tag')
         .in('user_id', userIds);
 
       if (profileError) {
@@ -124,7 +126,8 @@ export function TodayReservations() {
           created_at: reservation.created_at,
           user_id: reservation.user_id, // 🔐 IMPORTANTE: Incluir user_id para verificação de segurança
           user_profile: {
-            display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
+            display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado',
+            has_green_tag: profileMap.get(reservation.user_id)?.has_green_tag || false
           }
         };
       });
@@ -411,8 +414,17 @@ export function TodayReservations() {
         ) : (
           <div className="space-y-4">
             {Object.entries(groupedReservations).map(([groupKey, teacherReservations]) => (
-              <div key={groupKey} className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3">{getDisplayName(groupKey, teacherReservations)}</h3>
+              <div key={groupKey} className="border rounded-lg p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3">
+                  <h3 className="font-semibold text-base sm:text-lg">
+                    {getDisplayName(groupKey, teacherReservations)}
+                  </h3>
+                  {profile?.is_admin && teacherReservations[0]?.user_profile?.has_green_tag && (
+                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 w-fit">
+                      VIP
+                    </Badge>
+                  )}
+                </div>
                  <div className="space-y-3">
                    {teacherReservations.map((reservation) => {
                      const equipmentLabel = getEquipmentLabel(reservation);

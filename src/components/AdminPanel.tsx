@@ -68,6 +68,7 @@ interface UserProfile {
   display_name: string;
   institutional_user: string;
   is_admin: boolean;
+  has_green_tag?: boolean;
   created_at: string;
 }
 
@@ -343,6 +344,31 @@ export function AdminPanel() {
     }
 
     setUsers(data || []);
+  };
+
+  const updateUserGreenTag = async (userId: string, hasGreenTag: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ has_green_tag: hasGreenTag })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: hasGreenTag ? "Tag verde ativada!" : "Tag verde desativada!",
+        description: `A tag verde foi ${hasGreenTag ? 'ativada' : 'desativada'} para este usuário.`
+      });
+
+      fetchAllUsers();
+    } catch (error) {
+      console.error('Error updating green tag:', error);
+      toast({
+        title: "Erro ao atualizar tag",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   const fetchLaboratorySettings = async () => {
@@ -2040,7 +2066,51 @@ export function AdminPanel() {
                       {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-1 sm:gap-2">
+                        {/* Green Tag Dialog */}
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              className={`p-1 w-8 h-8 sm:w-auto sm:h-auto sm:px-2 ${
+                                user.has_green_tag 
+                                  ? 'text-green-600 hover:text-green-700 hover:bg-green-50' 
+                                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                              }`}
+                              title={user.has_green_tag ? "Tag verde ativa - Clique para gerenciar" : "Adicionar tag verde"}
+                            >
+                              <Plus className="h-3 w-3 sm:mr-1" />
+                              <span className="hidden sm:inline">Tag</span>
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="w-[95vw] max-w-md mx-auto">
+                            <DialogHeader>
+                              <DialogTitle className="text-base sm:text-lg">Gerenciar Tag Verde</DialogTitle>
+                              <DialogDescription className="text-sm">
+                                Configurar tag verde para {user.display_name}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  id={`green-tag-${user.user_id}`}
+                                  checked={user.has_green_tag || false}
+                                  onCheckedChange={async (checked) => {
+                                    await updateUserGreenTag(user.user_id, checked);
+                                  }}
+                                />
+                                <Label htmlFor={`green-tag-${user.user_id}`} className="text-sm sm:text-base">
+                                  {user.has_green_tag ? 'Tag verde ativa' : 'Ativar tag verde'}
+                                </Label>
+                              </div>
+                              <p className="text-xs sm:text-sm text-muted-foreground">
+                                A tag verde aparecerá ao lado do nome deste usuário nas "Reservas para" e será visível apenas para administradores.
+                              </p>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
                         {/* Change PIN Dialog */}
                         <Dialog open={changingPin === user.user_id} onOpenChange={(open) => {
                           if (!open) {

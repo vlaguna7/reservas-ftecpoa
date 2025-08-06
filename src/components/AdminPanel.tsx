@@ -1101,7 +1101,12 @@ export function AdminPanel() {
   };
 
   const changeUserPin = async (userId: string) => {
+    console.log('🔑 Starting PIN change for user:', userId);
+    console.log('🔑 New PIN length:', newPin.length);
+    console.log('🔑 Confirm PIN length:', confirmPin.length);
+    
     if (!newPin || newPin.length !== 6 || !/^\d{6}$/.test(newPin)) {
+      console.log('❌ PIN validation failed: invalid format');
       toast({
         title: "PIN inválido",
         description: "O PIN deve conter exatamente 6 dígitos numéricos.",
@@ -1111,6 +1116,7 @@ export function AdminPanel() {
     }
 
     if (newPin !== confirmPin) {
+      console.log('❌ PIN validation failed: confirmation mismatch');
       toast({
         title: "PINs não coincidem",
         description: "A confirmação do PIN não confere.",
@@ -1120,21 +1126,29 @@ export function AdminPanel() {
     }
 
     try {
+      console.log('🔑 Hashing PIN...');
       const bcrypt = await import('bcryptjs');
       const pinHash = await bcrypt.hash(newPin, 10);
+      console.log('🔑 PIN hashed successfully, length:', pinHash.length);
 
-      const { error } = await supabase
+      console.log('🔑 Updating database for user:', userId);
+      const { data, error } = await supabase
         .from('profiles')
         .update({ pin_hash: pinHash })
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select();
+
+      console.log('🔑 Update result:', { data, error });
 
       if (error) {
+        console.error('❌ Database error:', error);
         toast({
           title: "Erro ao alterar PIN",
           description: error.message,
           variant: "destructive"
         });
       } else {
+        console.log('✅ PIN updated successfully');
         toast({
           title: "PIN alterado com sucesso!",
           description: "O PIN do usuário foi atualizado."
@@ -1142,8 +1156,12 @@ export function AdminPanel() {
         setChangingPin(null);
         setNewPin('');
         setConfirmPin('');
+        
+        // Recarregar dados dos usuários para confirmar a atualização
+        fetchAllUsers();
       }
     } catch (error) {
+      console.error('❌ Exception in changeUserPin:', error);
       toast({
         title: "Erro ao alterar PIN",
         description: "Erro interno. Tente novamente.",

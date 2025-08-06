@@ -258,7 +258,7 @@ export function AdminPanel() {
           table: 'reservations'
         },
         (payload) => {
-          console.log('🔄 AdminPanel: Real-time change detected:', payload);
+          // Real-time change detected
           // Aguardar um pouco para garantir que a operação foi concluída
           setTimeout(() => {
             fetchAuditoriumReservations();
@@ -281,7 +281,6 @@ export function AdminPanel() {
       .single();
 
     if (error) {
-      console.error('Error fetching equipment settings:', error);
       return;
     }
 
@@ -305,7 +304,6 @@ export function AdminPanel() {
       .order('reservation_date', { ascending: true });
 
     if (error) {
-      console.error('Error fetching reservations:', error);
       toast({
         title: "Erro ao carregar reservas",
         description: error.message,

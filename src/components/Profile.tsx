@@ -29,8 +29,6 @@ export function Profile() {
     setLoading(true);
 
     try {
-      console.log('🔐 Starting profile save process...');
-
       // Handle PIN change if provided
       if (formData.newPin || formData.confirmPin) {
         if (!validatePin(formData.newPin)) {
@@ -67,7 +65,6 @@ export function Profile() {
             .eq('user_id', profile.user_id);
           
           if (pinHashError) {
-            console.error('❌ Error updating PIN hash:', pinHashError);
             toast({
               title: "Erro ao alterar PIN",
               description: `Erro na base de dados: ${pinHashError.message}`,
@@ -77,11 +74,8 @@ export function Profile() {
             return;
           }
 
-          console.log('✅ PIN hash updated in profiles table');
-
           // Try to update password in Auth system using edge function
           try {
-            console.log('🔐 Calling update-user-password edge function...');
             const { data: authData, error: authUpdateError } = await supabase.functions.invoke('update-user-password', {
               body: { 
                 userId: profile.user_id, 
@@ -89,15 +83,9 @@ export function Profile() {
               }
             });
 
-            console.log('🔐 Edge function response:', { authData, authUpdateError });
-
             if (authUpdateError) {
-              console.warn('⚠️ Auth password update failed:', authUpdateError);
-              
               // Check if it's a 404 (function not found) or other error
               if (authUpdateError.message?.includes('404') || authUpdateError.message?.includes('Not Found')) {
-                console.warn('⚠️ Edge function not available, using direct admin API...');
-                
                 // Fallback: try direct admin API call
                 try {
                   const { data: directAuthData, error: directAuthError } = await supabase.auth.admin.updateUserById(
@@ -105,24 +93,19 @@ export function Profile() {
                     { password: formData.newPin }
                   );
                   
-                  console.log('🔐 Direct admin API result:', { directAuthData, directAuthError });
-                  
                   if (directAuthError) {
-                    console.error('❌ Direct admin API also failed:', directAuthError);
                     toast({
                       title: "PIN parcialmente atualizado",
                       description: "PIN atualizado na base de dados. Faça logout e login novamente para sincronizar.",
                       variant: "default"
                     });
                   } else {
-                    console.log('✅ Password updated via direct admin API');
                     toast({
                       title: "PIN alterado com sucesso!",
                       description: "Seu PIN foi atualizado completamente."
                     });
                   }
                 } catch (directError: any) {
-                  console.error('❌ Direct admin API exception:', directError);
                   toast({
                     title: "PIN parcialmente atualizado",
                     description: "PIN atualizado na base de dados. Faça logout e login para sincronizar.",
@@ -137,41 +120,32 @@ export function Profile() {
                 });
               }
             } else {
-              console.log('✅ Auth password updated successfully via edge function');
               toast({
                 title: "PIN alterado com sucesso!",
                 description: "Seu PIN foi atualizado completamente."
               });
             }
           } catch (authError: any) {
-            console.warn('⚠️ Auth update exception:', authError);
-            
             // Try direct admin API as fallback
             try {
-              console.log('🔐 Trying direct admin API as fallback...');
               const { data: fallbackData, error: fallbackError } = await supabase.auth.admin.updateUserById(
                 profile.user_id,
                 { password: formData.newPin }
               );
               
-              console.log('🔐 Fallback admin API result:', { fallbackData, fallbackError });
-              
               if (fallbackError) {
-                console.error('❌ Fallback also failed:', fallbackError);
                 toast({
                   title: "PIN parcialmente atualizado",
                   description: "PIN atualizado na base de dados. Faça logout e login para sincronizar.",
                   variant: "default"
                 });
               } else {
-                console.log('✅ Password updated via fallback admin API');
                 toast({
                   title: "PIN alterado com sucesso!",
                   description: "Seu PIN foi atualizado completamente."
                 });
               }
             } catch (fallbackError: any) {
-              console.error('❌ Fallback exception:', fallbackError);
               toast({
                 title: "PIN parcialmente atualizado",
                 description: "PIN atualizado na base de dados. Faça logout e login para sincronizar.",
@@ -181,7 +155,6 @@ export function Profile() {
           }
 
         } catch (pinError: any) {
-          console.error('❌ Error in PIN update process:', pinError);
           toast({
             title: "Erro ao alterar PIN",
             description: `Erro interno: ${pinError.message}`,
@@ -198,8 +171,6 @@ export function Profile() {
         formData.institutional_user !== profile.institutional_user;
 
       if (hasOtherUpdates) {
-        console.log('📝 Updating profile information...');
-        
         const updates = {
           display_name: formData.display_name,
           institutional_user: formData.institutional_user
@@ -208,7 +179,6 @@ export function Profile() {
         const { error: profileError } = await updateProfile(updates);
 
         if (profileError) {
-          console.error('❌ Error updating profile:', profileError);
           toast({
             title: "Erro ao atualizar perfil",
             description: profileError.message,
@@ -217,8 +187,6 @@ export function Profile() {
           setLoading(false);
           return;
         }
-
-        console.log('✅ Profile updated successfully');
         
         if (!formData.newPin) {
           toast({
@@ -240,7 +208,6 @@ export function Profile() {
       setFormData(prev => ({ ...prev, newPin: '', confirmPin: '' }));
 
     } catch (error: any) {
-      console.error('❌ Exception in handleSave:', error);
       toast({
         title: "Erro interno",
         description: "Erro inesperado ao salvar. Tente novamente.",

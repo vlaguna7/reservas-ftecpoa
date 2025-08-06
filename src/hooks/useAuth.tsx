@@ -86,18 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;        // Flag para evitar atualizações após unmount
     let initialCheckDone = false; // Flag para controlar verificação inicial
 
-    console.log('🔄 AuthProvider useEffect iniciado');
+      // AuthProvider initialized
 
     // ===== FUNÇÃO PARA TRATAR ATUALIZAÇÕES DE SESSÃO =====
     // Centraliza o tratamento de mudanças de sessão
     const handleSession = (session: Session | null, source: string) => {
       if (!isMounted) return; // Evita atualizações se componente foi desmontado
-      
-      console.log(`🔐 Atualização de sessão de ${source}:`, {
-        hasSession: !!session,
-        userId: session?.user?.id,
-        accessToken: session?.access_token ? 'presente' : 'ausente'
-      });
       
       // Atualizar estados com dados da sessão
       setSession(session);
@@ -126,11 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (event, session) => {
         if (!isMounted) return;
         
-        console.log('🔐 Mudança de estado de auth:', event, {
-          hasSession: !!session,
-          userId: session?.user?.id,
-          initialCheckDone
-        });
+        // Auth state changed
         
         handleSession(session, `onAuthStateChange-${event}`);
         
@@ -146,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Sem isso, usuários logados seriam redirecionados para login ao recarregar
     const checkInitialSession = async () => {
       try {
-        console.log('🔍 Verificando sessão inicial...');
+        // Checking initial session
         
         // Buscar sessão existente no Supabase
         // 🔄 ADAPTAÇÃO PARA OUTROS SISTEMAS:
@@ -156,16 +146,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('❌ Erro ao obter sessão:', error);
           setLoading(false);
           return;
         }
-        
-        console.log('📋 Resultado da sessão inicial:', {
-          hasSession: !!session,
-          userId: session?.user?.id,
-          accessToken: session?.access_token ? 'presente' : 'ausente'
-        });
         
         handleSession(session, 'verificacao-inicial');
         initialCheckDone = true;
@@ -178,7 +161,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }, 100);
         
       } catch (error) {
-        console.error('❌ Exceção durante verificação inicial:', error);
         setLoading(false);
       }
     };
@@ -189,7 +171,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // ===== CLEANUP =====
     // Função executada quando componente é desmontado
     return () => {
-      console.log('🧹 Limpeza do AuthProvider');
       isMounted = false;
       subscription.unsubscribe(); // Remover listener
     };
@@ -210,7 +191,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle(); // Use maybeSingle() em vez de single() para evitar erro se não encontrar
 
       if (error) {
-        console.error('Erro ao buscar perfil:', error);
         return;
       }
 
@@ -218,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(data);
       }
     } catch (error) {
-      console.error('Erro ao buscar perfil:', error);
+      // Profile fetch error
     }
   };
 
@@ -228,8 +208,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const normalizedUser = institutionalUser.trim();
       const tempEmail = `${normalizedUser}@temp.com`; // Email temporário para Supabase
-      
-      console.log('🔄 Iniciando cadastro para:', normalizedUser);
 
       // ===== LIMPEZA DE PERFIL EXISTENTE =====
       // Verifica se já existe um perfil com este usuário institucional
@@ -244,7 +222,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Remover reservas e perfil antigos
         await supabase.from('reservations').delete().eq('user_id', existingProfile.user_id);
         await supabase.from('profiles').delete().eq('id', existingProfile.id);
-        console.log('🗑️ Perfil existente removido');
       }
 
       // ===== CRIAÇÃO DE USUÁRIO =====
@@ -271,7 +248,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        console.error('❌ Erro no cadastro:', error);
         if (error.message.includes('already registered')) {
           return { error: { message: 'Usuário já existe. Tente fazer login.' } };
         }
@@ -300,17 +276,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Verificar se criação do perfil foi bem-sucedida
       if (profileResult.status === 'rejected' || (profileResult.status === 'fulfilled' && profileResult.value.error)) {
-        console.error('❌ Falha na criação do perfil');
         // Reverter criação do usuário se perfil falhou
         await supabase.auth.admin.deleteUser(data.user.id);
         return { error: { message: 'Erro na criação do perfil' } };
       }
 
-      console.log('✅ Cadastro concluído com sucesso');
       return { error: null };
 
     } catch (error: any) {
-      console.error('❌ Exceção no cadastro:', error);
       return { error: { message: `Erro interno: ${error.message}` } };
     }
   };
@@ -365,12 +338,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const tempEmail = `${profileData.institutional_user}@temp.com`;
-      console.log('🔐 Tentativa de login com:', { 
-        tempEmail, 
-        pinLength: pin.length,
-        institutionalUser: profileData.institutional_user,
-        userCreatedAt: profileData.created_at
-      });
 
       // ===== TENTATIVA DE LOGIN COM MÚLTIPLOS FORMATOS =====
       // Suporta diferentes formatos de senha para compatibilidade
@@ -385,8 +352,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Tenta cada formato até um funcionar
       for (const [index, password] of passwordFormats.entries()) {
-        console.log(`🔐 Tentando formato de senha ${index + 1}/3`);
-        
         // 🔄 ADAPTAÇÃO PARA OUTROS SISTEMAS:
         // - Firebase: signInWithEmailAndPassword(auth, email, password)
         // - Auth0: auth0.loginWithUsernamePassword({username, password})
@@ -399,11 +364,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!result.error) {
           data = result.data;
           signInError = null;
-          console.log(`🔐 Login bem-sucedido com formato ${index + 1}`);
           break;
         } else {
           signInError = result.error;
-          console.log(`🔐 Formato ${index + 1} falhou:`, result.error.message);
         }
       }
 
@@ -415,7 +378,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             signInError.message?.includes('not confirmed')) {
           
           try {
-            console.log('🔧 Auto-confirmando usuário:', profileData.user_id);
             await supabase.functions.invoke('confirm-user', {
               body: { userId: profileData.user_id }
             });
@@ -425,15 +387,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             // Tentar formatos novamente após confirmação
             for (const [index, password] of passwordFormats.entries()) {
-              console.log(`🔧 Retry formato ${index + 1}/3 após confirmação`);
-              
               const result = await supabase.auth.signInWithPassword({
                 email: tempEmail,
                 password: password
               });
 
               if (!result.error) {
-                console.log(`🔧 Retry bem-sucedido com formato ${index + 1}`);
                 // Aguardar atualização do estado de auth
                 await new Promise(resolve => setTimeout(resolve, 200));
                 return { error: null };

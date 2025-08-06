@@ -35,8 +35,6 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Confirming user:', userId)
-
     // Confirm the user's email automatically
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
@@ -44,7 +42,6 @@ Deno.serve(async (req) => {
     )
 
     if (error) {
-      console.error('Error confirming user:', error)
       return new Response(
         JSON.stringify({ error: error.message }),
         { 
@@ -53,8 +50,6 @@ Deno.serve(async (req) => {
         }
       )
     }
-
-    console.log('User confirmed successfully:', data)
 
     return new Response(
       JSON.stringify({ success: true, user: data }),
@@ -65,7 +60,6 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Function error:', error)
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 

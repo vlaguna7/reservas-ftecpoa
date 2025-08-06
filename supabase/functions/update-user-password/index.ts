@@ -35,8 +35,6 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Updating password for user:', userId)
-
     // Update the user's password
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
@@ -44,7 +42,6 @@ Deno.serve(async (req) => {
     )
 
     if (error) {
-      console.error('Error updating user password:', error)
       return new Response(
         JSON.stringify({ error: error.message }),
         { 
@@ -53,8 +50,6 @@ Deno.serve(async (req) => {
         }
       )
     }
-
-    console.log('Password updated successfully:', data)
 
     return new Response(
       JSON.stringify({ success: true, user: data }),
@@ -65,7 +60,6 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Function error:', error)
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 

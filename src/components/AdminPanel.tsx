@@ -14,6 +14,8 @@ import { ptBR } from 'date-fns/locale';
 import { Settings, Users, Calendar as CalendarIcon, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff, Plus, HelpCircle, Mail, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { SecureLogger } from '@/lib/secureLogger';
+import { InputSanitizer } from '@/lib/inputSanitizer';
 
 import {
   AlertDialog,
@@ -820,15 +822,13 @@ export function AdminPanel() {
 
   const toggleUserAdmin = async (userId: string, currentAdminStatus: boolean) => {
     try {
-      console.log('Toggling admin status:', { userId, currentAdminStatus, newStatus: !currentAdminStatus });
+      SecureLogger.log('Updating admin status for user');
       
       const { data, error } = await supabase
         .from('profiles')
         .update({ is_admin: !currentAdminStatus })
         .eq('user_id', userId)
         .select();
-
-      console.log('Update result:', { data, error });
 
       if (error) {
         console.error('Error updating admin status:', error);
@@ -1101,7 +1101,8 @@ export function AdminPanel() {
   };
 
   const changeUserPin = async (userId: string) => {
-    if (!newPin || newPin.length !== 6 || !/^\d{6}$/.test(newPin)) {
+    // Validate PIN using secure input sanitizer
+    if (!InputSanitizer.validatePin(newPin)) {
       toast({
         title: "PIN inválido",
         description: "O PIN deve conter exatamente 6 dígitos numéricos.",
@@ -1114,6 +1115,17 @@ export function AdminPanel() {
       toast({
         title: "PINs não coincidem",
         description: "A confirmação do PIN não confere.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Rate limiting for PIN changes
+    const rateLimitKey = `pin-change-${userId}`;
+    if (!InputSanitizer.checkRateLimit(rateLimitKey, 3, 300000)) { // 3 attempts per 5 minutes
+      toast({
+        title: "Limite excedido",
+        description: "Muitas tentativas de alteração de PIN. Tente novamente em 5 minutos.",
         variant: "destructive"
       });
       return;
@@ -1389,18 +1401,16 @@ export function AdminPanel() {
 
   const cancelReservation = async (reservationId: string) => {
     try {
-      console.log('Admin attempting to cancel reservation:', reservationId);
+      SecureLogger.log('Admin attempting to cancel reservation');
       
       const { data, error } = await supabase
         .from('reservations')
         .delete()
         .eq('id', reservationId)
-        .select(); // Retornar dados para confirmar a deleção
-
-      console.log('Admin delete result:', { data, error });
+        .select();
 
       if (error) {
-        console.error('Error canceling reservation:', error);
+        SecureLogger.error('Error canceling reservation', error);
         toast({
           title: "Erro ao cancelar reserva",
           description: error.message,

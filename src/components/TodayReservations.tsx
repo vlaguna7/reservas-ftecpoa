@@ -386,7 +386,7 @@ export function TodayReservations() {
 
   // Get current day classroom
   const getCurrentDayClassroom = (userProfile: any) => {
-    if (!userProfile || !profile?.is_admin) return null;
+    if (!userProfile) return null;
     
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.

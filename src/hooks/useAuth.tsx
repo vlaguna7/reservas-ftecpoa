@@ -209,19 +209,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const normalizedUser = institutionalUser.trim();
       const tempEmail = `${normalizedUser}@temp.com`; // Email temporário para Supabase
 
-      // ===== LIMPEZA DE PERFIL EXISTENTE =====
-      // Verifica se já existe um perfil com este usuário institucional
-      // e remove para evitar conflitos
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('user_id, id')
-        .eq('institutional_user', normalizedUser)
-        .single();
+      // ===== VERIFICAÇÃO DE USUÁRIO EXISTENTE =====
+      // Use secure function to check if institutional user already exists
+      const { data: userExists, error: checkError } = await supabase
+        .rpc('check_institutional_user_exists', { 
+          p_institutional_user: normalizedUser 
+        });
 
-      if (existingProfile) {
-        // Remover reservas e perfil antigos
-        await supabase.from('reservations').delete().eq('user_id', existingProfile.user_id);
-        await supabase.from('profiles').delete().eq('id', existingProfile.id);
+      if (checkError) {
+        return { error: { message: 'Erro interno do sistema' } };
+      }
+
+      if (userExists) {
+        return { error: { message: 'Este usuário institucional já está cadastrado' } };
       }
 
       // ===== CRIAÇÃO DE USUÁRIO =====
@@ -299,15 +299,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
 
-      // ===== BUSCA DO USUÁRIO =====
-      // Primeiro tenta busca exata, depois busca normalizada
-      // 🔄 ADAPTAÇÃO PARA OUTROS BANCOS:
-      // - MongoDB: db.profiles.findOne({institutional_user: {$regex: /^user$/i}})
-      // - MySQL: SELECT * FROM profiles WHERE LOWER(institutional_user) = LOWER(?)
+      // ===== VERIFICAÇÃO DE USUÁRIO =====
+      // Use secure function to check if institutional user exists
+      const { data: userExists, error: checkError } = await supabase
+        .rpc('check_institutional_user_exists', { 
+          p_institutional_user: institutionalUser.trim() 
+        });
+
+      if (checkError) {
+        return { error: { message: 'Erro interno do sistema' } };
+      }
+
+      if (!userExists) {
+        return { error: { message: 'Usuário não encontrado' } };
+      }
+
+      // Get user profile data for authentication
       let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .ilike('institutional_user', institutionalUser.trim())
+        .eq('institutional_user', institutionalUser.trim())
         .maybeSingle();
 
       // Se não encontrou, tenta busca normalizada (sem acentos)

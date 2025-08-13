@@ -297,12 +297,46 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      reservation_availability: {
+        Row: {
+          created_at: string | null
+          equipment_type: string | null
+          reservation_date: string | null
+          time_slots: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          equipment_type?: string | null
+          reservation_date?: string | null
+          time_slots?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          equipment_type?: string | null
+          reservation_date?: string | null
+          time_slots?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      check_institutional_user_exists: {
+        Args: { p_institutional_user: string }
+        Returns: boolean
+      }
       cleanup_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_admin_notification_emails: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          email: string
+        }[]
+      }
+      get_profile_display_name: {
+        Args: { p_user_id: string }
+        Returns: string
       }
       handle_signup_with_profile: {
         Args: {

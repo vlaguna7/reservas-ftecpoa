@@ -302,18 +302,21 @@ export type Database = {
           created_at: string | null
           equipment_type: string | null
           reservation_date: string | null
+          status: string | null
           time_slots: string[] | null
         }
         Insert: {
           created_at?: string | null
           equipment_type?: string | null
           reservation_date?: string | null
+          status?: never
           time_slots?: string[] | null
         }
         Update: {
           created_at?: string | null
           equipment_type?: string | null
           reservation_date?: string | null
+          status?: never
           time_slots?: string[] | null
         }
         Relationships: []

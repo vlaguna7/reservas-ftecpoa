@@ -295,62 +295,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 INICIANDO LOGIN:', institutionalUser.trim());
 
       // ===== NORMALIZAÇÃO DO INPUT =====
-      const normalizedInput = institutionalUser.trim()
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
+      const normalizedInput = institutionalUser.trim();
 
-      console.log('🔍 Buscando usuário:', institutionalUser.trim());
+      console.log('🔍 Buscando usuário:', normalizedInput);
 
-      // ===== BUSCA DO PERFIL =====
-      // Primeira tentativa: busca exata case-insensitive
-      let { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .ilike('institutional_user', institutionalUser.trim())
-        .maybeSingle();
+      // ===== BUSCA DO PERFIL USANDO FUNÇÃO SECURITY DEFINER =====
+      // Usa função específica que bypassa RLS para verificação de login
+      const { data: profileData, error: profileError } = await supabase.rpc(
+        'verify_user_login',
+        { 
+          p_institutional_user: normalizedInput,
+          p_pin: pin 
+        }
+      );
 
-      console.log('📋 Primeira busca - resultado:', profileData ? 'ENCONTRADO' : 'NÃO ENCONTRADO');
+      console.log('📋 Resultado da busca:', profileData?.length || 0, 'perfis encontrados');
       
-      // Se não encontrou, tenta busca normalizada (sem acentos)
-      if (!profileData && !profileError) {
-        console.log('🔄 Tentando busca normalizada sem acentos...');
-        const { data: profiles, error: allProfilesError } = await supabase
-          .from('profiles')
-          .select('*');
-        
-        if (allProfilesError) {
-          console.error('❌ Erro ao buscar perfis:', allProfilesError);
-          return { error: { message: 'Erro interno. Tente novamente.' } };
-        }
-        
-        if (profiles) {
-          console.log('📊 Total de perfis para verificar:', profiles.length);
-          profileData = profiles.find(profile => {
-            const normalizedStored = profile.institutional_user
-              .toLowerCase()
-              .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '');
-            return normalizedStored === normalizedInput;
-          });
-          console.log('📋 Busca normalizada - resultado:', profileData ? 'ENCONTRADO' : 'NÃO ENCONTRADO');
-        }
-      }
-
-      // Tratamento de erros
       if (profileError) {
         console.error('❌ Erro na busca do perfil:', profileError);
         return { error: { message: 'Erro interno. Tente novamente.' } };
       }
 
-      if (!profileData) {
-        console.log('❌ Perfil não encontrado após todas as tentativas');
-        console.log('🔍 Input normalizado:', normalizedInput);
+      if (!profileData || profileData.length === 0) {
+        console.log('❌ Perfil não encontrado para:', normalizedInput);
         return { error: { message: 'Usuário não encontrado no sistema' } };
       }
 
-      console.log('✅ Perfil encontrado:', profileData.institutional_user);
-      console.log('🔑 User ID do perfil:', profileData.user_id);
+      const profile = profileData[0];
+      console.log('✅ Perfil encontrado:', profile.institutional_user);
+      console.log('🔑 User ID do perfil:', profile.user_id);
 
       // ===== VALIDAÇÃO DO PIN =====
       // PIN deve ter exatamente 6 dígitos
@@ -358,14 +331,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN deve ter exatamente 6 dígitos' } };
       }
 
-      const tempEmail = `${profileData.institutional_user}@temp.com`;
+      const tempEmail = `${profile.institutional_user}@temp.com`;
 
       // ===== TENTATIVA DE LOGIN COM MÚLTIPLOS FORMATOS =====
       // Suporta diferentes formatos de senha para compatibilidade
       const passwordFormats = [
         pin, // Formato atual (usuários novos)
-        `FTEC_${profileData.institutional_user}_${pin}_2024!`, // Formato legado
-        `${profileData.institutional_user}_${pin}`, // Formato alternativo
+        `FTEC_${profile.institutional_user}_${pin}_2024!`, // Formato legado
+        `${profile.institutional_user}_${pin}`, // Formato alternativo
       ];
 
       let signInError = null;
@@ -408,7 +381,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('🔧 Tentando confirmação automática...');
           try {
             await supabase.functions.invoke('confirm-user', {
-              body: { userId: profileData.user_id }
+              body: { userId: profile.user_id }
             });
             
             console.log('⏱️ Aguardando confirmação...');

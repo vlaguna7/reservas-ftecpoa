@@ -297,12 +297,58 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      reservation_availability: {
+        Row: {
+          created_at: string | null
+          equipment_type: string | null
+          reservation_date: string | null
+          status: string | null
+          time_slots: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          equipment_type?: string | null
+          reservation_date?: string | null
+          status?: never
+          time_slots?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          equipment_type?: string | null
+          reservation_date?: string | null
+          status?: never
+          time_slots?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      check_institutional_user_exists: {
+        Args: { p_institutional_user: string }
+        Returns: boolean
+      }
       cleanup_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_admin_notification_emails: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          email: string
+        }[]
+      }
+      get_equipment_availability: {
+        Args: { p_equipment_type: string; p_date: string }
+        Returns: {
+          reservation_date: string
+          equipment_type: string
+          time_slots: string[]
+          is_available: boolean
+        }[]
+      }
+      get_profile_display_name: {
+        Args: { p_user_id: string }
+        Returns: string
       }
       handle_signup_with_profile: {
         Args: {
@@ -316,6 +362,16 @@ export type Database = {
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      verify_user_login: {
+        Args: { p_institutional_user: string; p_pin: string }
+        Returns: {
+          user_id: string
+          institutional_user: string
+          display_name: string
+          is_admin: boolean
+          pin_hash: string
+        }[]
       }
     }
     Enums: {

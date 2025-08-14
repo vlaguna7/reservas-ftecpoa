@@ -292,8 +292,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Autentica usuário com usuário institucional e PIN
   const signIn = async (institutionalUser: string, pin: string) => {
     try {
-      console.log('🔍 DEBUG: Login iniciado para:', institutionalUser);
-      
       // ===== NORMALIZAÇÃO E VALIDAÇÃO =====
       const normalizedInput = institutionalUser.trim();
       
@@ -306,41 +304,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'PIN deve ter exatamente 6 dígitos' } };
       }
 
-      console.log('🔍 DEBUG: Input normalizado:', normalizedInput);
+      // ===== VERIFICAÇÃO DE USUÁRIO VIA RPC =====
+      const { data: userExists, error: checkError } = await supabase
+        .rpc('check_institutional_user_exists', { 
+          p_institutional_user: normalizedInput 
+        });
 
-      // ===== BUSCA DIRETA DO PERFIL =====
-      // Busca case-insensitive na tabela profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
-
-      console.log('🔍 DEBUG: Busca de perfis:', { profiles, profilesError });
-
-      if (profilesError) {
-        console.error('❌ DEBUG: Erro ao buscar perfis:', profilesError);
+      if (checkError) {
         return { error: { message: 'Erro interno do sistema' } };
       }
 
-      if (!profiles || profiles.length === 0) {
-        console.error('❌ DEBUG: Nenhum perfil encontrado na base');
-        return { error: { message: 'Sistema sem usuários cadastrados' } };
-      }
-
-      // Busca case-insensitive
-      const profileData = profiles.find(profile => {
-        const stored = profile.institutional_user.toLowerCase().trim();
-        const input = normalizedInput.toLowerCase().trim();
-        console.log('🔍 DEBUG: Comparando:', { stored, input, match: stored === input });
-        return stored === input;
-      });
-
-      if (!profileData) {
-        console.error('❌ DEBUG: Perfil não encontrado. Usuários disponíveis:', 
-          profiles.map(p => p.institutional_user));
+      if (!userExists) {
         return { error: { message: 'Usuário não encontrado' } };
       }
 
-      console.log('✅ DEBUG: Perfil encontrado:', profileData.institutional_user);
+      // ===== BUSCA DO PERFIL ESPECÍFICO =====
+      // Busca direta usando ilike para case-insensitive
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .ilike('institutional_user', normalizedInput)
+        .maybeSingle();
+
+      if (profileError) {
+        return { error: { message: 'Erro ao buscar perfil do usuário' } };
+      }
+
+      if (!profileData) {
+        return { error: { message: 'Perfil do usuário não encontrado' } };
+      }
 
       const tempEmail = `${profileData.institutional_user}@temp.com`;
 

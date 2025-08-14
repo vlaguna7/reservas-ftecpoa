@@ -1270,7 +1270,7 @@ export function MakeReservation() {
               {laboratoryDate && (
                 <>
                   <div>
-                    <Label className="text-base font-medium">Precisa comprar algum insumo para a aula?</Label>
+                    <Label className="text-base font-medium">Adicionar observação?</Label>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center space-x-2">
                         <input
@@ -1303,9 +1303,9 @@ export function MakeReservation() {
 
                   {needsSupplies === true && (
                     <div>
-                      <Label className="text-base font-medium">Observação (obrigatória para insumos):</Label>
+                      <Label className="text-base font-medium">Observação:</Label>
                       <Textarea
-                        placeholder="Para compra de insumos, esta aula deverá ser agendada com no mínimo 3 dias úteis de antecedência."
+                        placeholder="A compra de qualquer insumo deve ser previamente combinada com o coordenador do curso"
                         value={laboratoryObservation}
                         onChange={(e) => {
                           setLaboratoryObservation(e.target.value);

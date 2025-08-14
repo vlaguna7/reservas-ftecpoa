@@ -77,6 +77,44 @@ export function MakeReservation() {
   
   const isMobile = useIsMobile();
 
+  // Função reutilizável para disparar confetes
+  const triggerConfetti = async () => {
+    const confetti = await import('canvas-confetti');
+    
+    // Confetes em múltiplas rajadas para efeito mais impressionante
+    const duration = 3000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+    function randomInRange(min: number, max: number) {
+      return Math.random() * (max - min) + min;
+    }
+
+    const interval = setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+      
+      // Rajada da esquerda
+      confetti.default({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+      });
+      
+      // Rajada da direita
+      confetti.default({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+      });
+    }, 250);
+  };
+
   const getAvailableDate = () => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = domingo, 6 = sábado
@@ -545,9 +583,13 @@ export function MakeReservation() {
         TIME_SLOTS.find(ts => ts.value === slot)?.label
       ).join(', ');
 
+      // Disparar confetes para reserva de auditório
+      triggerConfetti();
+
       toast({
         title: "Reserva confirmada!",
-        description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })} nos horários: ${selectedLabels}.`
+        description: `Auditório reservado para ${format(auditoriumDate, "dd/MM/yyyy", { locale: ptBR })} nos horários: ${selectedLabels}.`,
+        className: "bg-blue-900 border-blue-800 text-white [&>*]:text-white animate-scale-in"
       });
 
       console.log('✅ Reserva processada com sucesso:', result);
@@ -650,9 +692,13 @@ export function MakeReservation() {
 
       const laboratoryName = laboratoryOptions.find(lab => lab.value === selectedLaboratory)?.label || 'Laboratório';
 
+      // Disparar confetes para reserva de laboratório
+      triggerConfetti();
+
       toast({
         title: "Reserva confirmada!",
-        description: `${laboratoryName} reservado para ${format(laboratoryDate, "dd/MM/yyyy", { locale: ptBR })}.`
+        description: `${laboratoryName} reservado para ${format(laboratoryDate, "dd/MM/yyyy", { locale: ptBR })}.`,
+        className: "bg-blue-900 border-blue-800 text-white [&>*]:text-white animate-scale-in"
       });
 
       // Scroll para o meio da página na versão mobile após sucesso
@@ -771,40 +817,7 @@ export function MakeReservation() {
         });
       }
       // Disparar confetes quando a reserva for realizada com sucesso
-      const confetti = await import('canvas-confetti');
-      
-      // Confetes em múltiplas rajadas para efeito mais impressionante
-      const duration = 3000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
-
-      function randomInRange(min: number, max: number) {
-        return Math.random() * (max - min) + min;
-      }
-
-      const interval = setInterval(() => {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-          return clearInterval(interval);
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-        
-        // Rajada da esquerda
-        confetti.default({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
-        });
-        
-        // Rajada da direita
-        confetti.default({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
-        });
-      }, 250);
+      triggerConfetti();
 
       // Toast customizado com background azul marinho e letras brancas
       toast({

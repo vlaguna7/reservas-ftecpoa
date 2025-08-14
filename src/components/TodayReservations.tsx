@@ -171,23 +171,14 @@ export function TodayReservations() {
         (payload) => {
           console.log('🔄 TodayReservations: Reservations change detected:', payload);
           
-          // Atualização imediata
-          setTimeout(() => {
-            console.log('🔄 TodayReservations: Fetching updated data...');
-            fetchTodayReservations();
-          }, 300);
+          // Atualização mais rápida
+          fetchTodayReservations();
           
           // Segunda atualização para garantir sincronização
           setTimeout(() => {
             console.log('🔄 TodayReservations: Second fetch for sync...');
             fetchTodayReservations();
-          }, 700);
-          
-          // Terceira atualização para casos mais lentos
-          setTimeout(() => {
-            console.log('🔄 TodayReservations: Third fetch for reliability...');
-            fetchTodayReservations();
-          }, 1000);
+          }, 500);
         }
       )
       .subscribe((status) => {
@@ -214,16 +205,38 @@ export function TodayReservations() {
           console.log('🔄 TodayReservations: Laboratory settings change detected:', payload);
           
           // Quando laboratórios são adicionados/modificados, recarregar dados
-          setTimeout(() => {
-            console.log('🔄 TodayReservations: Refreshing due to laboratory changes...');
-            fetchTodayReservations();
-          }, 200);
+          fetchTodayReservations();
         }
       )
       .subscribe((status) => {
         console.log('📡 TodayReservations laboratory settings realtime status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('✅ TodayReservations: Successfully subscribed to laboratory settings updates');
+        }
+      });
+
+    // Configurar realtime updates para profiles (quando nomes de display são alterados)
+    const profilesChannelName = `profiles-${Date.now()}`;
+    console.log('📡 TodayReservations: Creating profiles channel:', profilesChannelName);
+    
+    const profilesChannel = supabase
+      .channel(profilesChannelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('🔄 TodayReservations: Profile change detected:', payload);
+          fetchTodayReservations();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 TodayReservations profiles realtime status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ TodayReservations: Successfully subscribed to profiles updates');
         }
       });
     
@@ -241,6 +254,7 @@ export function TodayReservations() {
       console.log('🧹 TodayReservations: Cleaning up channels and interval');
       supabase.removeChannel(reservationsChannel);
       supabase.removeChannel(labChannel);
+      supabase.removeChannel(profilesChannel);
       clearInterval(interval);
     };
   }, []);

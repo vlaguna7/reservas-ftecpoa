@@ -292,12 +292,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Autentica usuário com usuário institucional e PIN
   const signIn = async (institutionalUser: string, pin: string) => {
     try {
+      console.log('🔍 DEBUG: Login iniciado para:', institutionalUser);
+      
       // ===== NORMALIZAÇÃO DO INPUT =====
       // Remove acentos e padroniza entrada para busca flexível
       const normalizedInput = institutionalUser.trim()
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
+
+      console.log('🔍 DEBUG: Input normalizado:', normalizedInput);
 
       // ===== VERIFICAÇÃO DE USUÁRIO =====
       // Use secure function to check if institutional user exists (case-insensitive)
@@ -306,11 +310,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           p_institutional_user: institutionalUser.trim() 
         });
 
+      console.log('🔍 DEBUG: Resultado da verificação:', { userExists, checkError });
+
       if (checkError) {
+        console.error('❌ DEBUG: Erro na verificação:', checkError);
         return { error: { message: 'Erro interno do sistema' } };
       }
 
       if (!userExists) {
+        console.error('❌ DEBUG: Usuário não existe na função RPC');
         return { error: { message: 'Usuário não encontrado' } };
       }
 

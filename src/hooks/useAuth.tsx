@@ -294,60 +294,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔍 DEBUG: Login iniciado para:', institutionalUser);
       
-      // ===== NORMALIZAÇÃO DO INPUT =====
-      // Remove acentos e padroniza entrada para busca flexível
-      const normalizedInput = institutionalUser.trim()
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
-
-      console.log('🔍 DEBUG: Input normalizado:', normalizedInput);
-
-      // ===== VERIFICAÇÃO DE USUÁRIO =====
-      // Use secure function to check if institutional user exists (case-insensitive)
-      const { data: userExists, error: checkError } = await supabase
-        .rpc('check_institutional_user_exists', { 
-          p_institutional_user: institutionalUser.trim() 
-        });
-
-      console.log('🔍 DEBUG: Resultado da verificação:', { userExists, checkError });
-
-      if (checkError) {
-        console.error('❌ DEBUG: Erro na verificação:', checkError);
-        return { error: { message: 'Erro interno do sistema' } };
-      }
-
-      if (!userExists) {
-        console.error('❌ DEBUG: Usuário não existe na função RPC');
-        return { error: { message: 'Usuário não encontrado' } };
-      }
-
-      // Get user profile data for authentication (case-insensitive search)
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*');
+      // ===== NORMALIZAÇÃO E VALIDAÇÃO =====
+      const normalizedInput = institutionalUser.trim();
       
-      let profileData = null;
-      if (profiles) {
-        profileData = profiles.find(profile => {
-          const normalizedStored = profile.institutional_user
-            .toLowerCase()
-            .trim()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
-          return normalizedStored === normalizedInput;
-        });
-      }
-
-      if (!profileData) {
-        return { error: { message: 'Usuário não encontrado' } };
+      if (!normalizedInput) {
+        return { error: { message: 'Usuário institucional é obrigatório' } };
       }
 
       // ===== VALIDAÇÃO DO PIN =====
-      // PIN deve ter exatamente 6 dígitos
       if (!/^\d{6}$/.test(pin)) {
         return { error: { message: 'PIN deve ter exatamente 6 dígitos' } };
       }
+
+      console.log('🔍 DEBUG: Input normalizado:', normalizedInput);
+
+      // ===== BUSCA DIRETA DO PERFIL =====
+      // Busca case-insensitive na tabela profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      console.log('🔍 DEBUG: Busca de perfis:', { profiles, profilesError });
+
+      if (profilesError) {
+        console.error('❌ DEBUG: Erro ao buscar perfis:', profilesError);
+        return { error: { message: 'Erro interno do sistema' } };
+      }
+
+      if (!profiles || profiles.length === 0) {
+        console.error('❌ DEBUG: Nenhum perfil encontrado na base');
+        return { error: { message: 'Sistema sem usuários cadastrados' } };
+      }
+
+      // Busca case-insensitive
+      const profileData = profiles.find(profile => {
+        const stored = profile.institutional_user.toLowerCase().trim();
+        const input = normalizedInput.toLowerCase().trim();
+        console.log('🔍 DEBUG: Comparando:', { stored, input, match: stored === input });
+        return stored === input;
+      });
+
+      if (!profileData) {
+        console.error('❌ DEBUG: Perfil não encontrado. Usuários disponíveis:', 
+          profiles.map(p => p.institutional_user));
+        return { error: { message: 'Usuário não encontrado' } };
+      }
+
+      console.log('✅ DEBUG: Perfil encontrado:', profileData.institutional_user);
 
       const tempEmail = `${profileData.institutional_user}@temp.com`;
 

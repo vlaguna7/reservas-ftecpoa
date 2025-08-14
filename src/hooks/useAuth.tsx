@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;        // Flag para evitar atualizações após unmount
     let initialCheckDone = false; // Flag para controlar verificação inicial
 
-      // AuthProvider initialized
+      
 
     // ===== FUNÇÃO PARA TRATAR ATUALIZAÇÕES DE SESSÃO =====
     // Centraliza o tratamento de mudanças de sessão
@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (event, session) => {
         if (!isMounted) return;
         
-        // Auth state changed
+        
         
         handleSession(session, `onAuthStateChange-${event}`);
         
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Sem isso, usuários logados seriam redirecionados para login ao recarregar
     const checkInitialSession = async () => {
       try {
-        // Checking initial session
+        
         
         // Buscar sessão existente no Supabase
         // 🔄 ADAPTAÇÃO PARA OUTROS SISTEMAS:
@@ -198,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(data);
       }
     } catch (error) {
-      // Profile fetch error
+      // Silently handle profile fetch errors
     }
   };
 
@@ -292,12 +292,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Autentica usuário com usuário institucional e PIN
   const signIn = async (institutionalUser: string, pin: string) => {
     try {
-      console.log('🔍 INICIANDO LOGIN:', institutionalUser.trim());
-
       // ===== NORMALIZAÇÃO DO INPUT =====
       const normalizedInput = institutionalUser.trim();
-
-      console.log('🔍 Buscando usuário:', normalizedInput);
 
       // ===== BUSCA DO PERFIL USANDO FUNÇÃO SECURITY DEFINER =====
       // Usa função específica que bypassa RLS para verificação de login
@@ -308,22 +304,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           p_pin: pin 
         }
       );
-
-      console.log('📋 Resultado da busca:', profileData?.length || 0, 'perfis encontrados');
       
       if (profileError) {
-        console.error('❌ Erro na busca do perfil:', profileError);
         return { error: { message: 'Erro interno. Tente novamente.' } };
       }
 
       if (!profileData || profileData.length === 0) {
-        console.log('❌ Perfil não encontrado para:', normalizedInput);
         return { error: { message: 'Usuário não encontrado no sistema' } };
       }
 
       const profile = profileData[0];
-      console.log('✅ Perfil encontrado:', profile.institutional_user);
-      console.log('🔑 User ID do perfil:', profile.user_id);
 
       // ===== VALIDAÇÃO DO PIN =====
       // PIN deve ter exatamente 6 dígitos
@@ -345,50 +335,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let data = null;
 
       // Tenta cada formato até um funcionar
-      console.log('🔐 Tentando login com email:', tempEmail);
-      console.log('🔐 Formatos de senha a tentar:', passwordFormats.length);
-      
       for (const [index, password] of passwordFormats.entries()) {
-        console.log(`🔐 Tentativa ${index + 1}/${passwordFormats.length} - Formato: ${index === 0 ? 'PIN simples' : index === 1 ? 'Formato legado' : 'Formato alternativo'}`);
-        
         const result = await supabase.auth.signInWithPassword({
           email: tempEmail,
           password: password
         });
 
         if (!result.error) {
-          console.log('✅ Login bem-sucedido com formato:', index);
           data = result.data;
           signInError = null;
           break;
         } else {
-          console.log(`❌ Falha na tentativa ${index + 1}:`, result.error.message);
           signInError = result.error;
         }
       }
 
-      console.log('🔐 Resultado final do login:', signInError ? 'FALHOU' : 'SUCESSO');
-
       // ===== TRATAMENTO DE ERROS =====
       if (signInError) {
-        console.log('❌ Erro no login:', signInError.message);
-        
         // Erro de email não confirmado - tentar confirmar automaticamente
         if (signInError.message?.includes('confirmation') || 
             signInError.message?.includes('confirmed') ||
             signInError.message?.includes('not confirmed')) {
           
-          console.log('🔧 Tentando confirmação automática...');
           try {
             await supabase.functions.invoke('confirm-user', {
               body: { userId: profile.user_id }
             });
             
-            console.log('⏱️ Aguardando confirmação...');
             await new Promise(resolve => setTimeout(resolve, 1500));
             
             // Tentar formatos novamente após confirmação
-            console.log('🔄 Tentando login novamente após confirmação...');
             for (const [index, password] of passwordFormats.entries()) {
               const result = await supabase.auth.signInWithPassword({
                 email: tempEmail,
@@ -396,7 +372,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               });
 
               if (!result.error) {
-                console.log('✅ Login bem-sucedido após confirmação');
                 await new Promise(resolve => setTimeout(resolve, 200));
                 return { error: null };
               }
@@ -404,23 +379,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             return { error: { message: 'Erro de autenticação após confirmação. Tente novamente.' } };
           } catch (confirmError) {
-            console.error('❌ Auto-confirmação falhou:', confirmError);
             return { error: { message: 'Erro de autenticação. Tente novamente.' } };
           }
         } else if (signInError.message?.includes('Invalid login credentials')) {
-          console.log('❌ Credenciais inválidas');
           return { error: { message: 'PIN incorreto. Verifique seus dados e tente novamente.' } };
         } else {
-          console.log('❌ Erro genérico:', signInError.message);
           return { error: { message: `Erro de autenticação: ${signInError.message}` } };
         }
       }
 
-      console.log('✅ Login realizado com sucesso!');
       await new Promise(resolve => setTimeout(resolve, 200));
       return { error: null };
     } catch (error) {
-      console.error('Erro no SignIn:', error);
       return { error: { message: 'Erro interno. Tente novamente.' } };
     }
   };

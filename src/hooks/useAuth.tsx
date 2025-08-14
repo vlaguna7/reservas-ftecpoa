@@ -292,31 +292,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Autentica usuário com usuário institucional e PIN
   const signIn = async (institutionalUser: string, pin: string) => {
     try {
+      console.log('🔍 INICIANDO LOGIN:', institutionalUser.trim());
+
       // ===== NORMALIZAÇÃO DO INPUT =====
-      // Remove acentos e padroniza entrada para busca flexível
       const normalizedInput = institutionalUser.trim()
         .toLowerCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
+        .replace(/[\u0300-\u036f]/g, '');
 
-      // ===== BUSCA DO USUÁRIO =====
-      // Primeiro tenta busca exata, depois busca normalizada
-      // 🔄 ADAPTAÇÃO PARA OUTROS BANCOS:
-      // - MongoDB: db.profiles.findOne({institutional_user: {$regex: /^user$/i}})
-      // - MySQL: SELECT * FROM profiles WHERE LOWER(institutional_user) = LOWER(?)
+      console.log('🔍 Buscando usuário:', institutionalUser.trim());
+
+      // ===== BUSCA DO PERFIL =====
+      // Primeira tentativa: busca exata case-insensitive
       let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .ilike('institutional_user', institutionalUser.trim())
         .maybeSingle();
 
+      console.log('📋 Primeira busca - resultado:', profileData ? 'ENCONTRADO' : 'NÃO ENCONTRADO');
+      
       // Se não encontrou, tenta busca normalizada (sem acentos)
-      if (!profileData) {
-        const { data: profiles } = await supabase
+      if (!profileData && !profileError) {
+        console.log('🔄 Tentando busca normalizada sem acentos...');
+        const { data: profiles, error: allProfilesError } = await supabase
           .from('profiles')
           .select('*');
         
+        if (allProfilesError) {
+          console.error('❌ Erro ao buscar perfis:', allProfilesError);
+          return { error: { message: 'Erro interno. Tente novamente.' } };
+        }
+        
         if (profiles) {
+          console.log('📊 Total de perfis para verificar:', profiles.length);
           profileData = profiles.find(profile => {
             const normalizedStored = profile.institutional_user
               .toLowerCase()
@@ -324,12 +333,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .replace(/[\u0300-\u036f]/g, '');
             return normalizedStored === normalizedInput;
           });
+          console.log('📋 Busca normalizada - resultado:', profileData ? 'ENCONTRADO' : 'NÃO ENCONTRADO');
         }
       }
 
-      if (profileError || !profileData) {
-        return { error: { message: 'Usuário não encontrado' } };
+      // Tratamento de erros
+      if (profileError) {
+        console.error('❌ Erro na busca do perfil:', profileError);
+        return { error: { message: 'Erro interno. Tente novamente.' } };
       }
+
+      if (!profileData) {
+        console.log('❌ Perfil não encontrado após todas as tentativas');
+        console.log('🔍 Input normalizado:', normalizedInput);
+        return { error: { message: 'Usuário não encontrado no sistema' } };
+      }
+
+      console.log('✅ Perfil encontrado:', profileData.institutional_user);
+      console.log('🔑 User ID do perfil:', profileData.user_id);
 
       // ===== VALIDAÇÃO DO PIN =====
       // PIN deve ter exatamente 6 dígitos
@@ -351,41 +372,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let data = null;
 
       // Tenta cada formato até um funcionar
+      console.log('🔐 Tentando login com email:', tempEmail);
+      console.log('🔐 Formatos de senha a tentar:', passwordFormats.length);
+      
       for (const [index, password] of passwordFormats.entries()) {
-        // 🔄 ADAPTAÇÃO PARA OUTROS SISTEMAS:
-        // - Firebase: signInWithEmailAndPassword(auth, email, password)
-        // - Auth0: auth0.loginWithUsernamePassword({username, password})
-        // - AWS Cognito: cognito.initiateAuth({username, password})
+        console.log(`🔐 Tentativa ${index + 1}/${passwordFormats.length} - Formato: ${index === 0 ? 'PIN simples' : index === 1 ? 'Formato legado' : 'Formato alternativo'}`);
+        
         const result = await supabase.auth.signInWithPassword({
           email: tempEmail,
           password: password
         });
 
         if (!result.error) {
+          console.log('✅ Login bem-sucedido com formato:', index);
           data = result.data;
           signInError = null;
           break;
         } else {
+          console.log(`❌ Falha na tentativa ${index + 1}:`, result.error.message);
           signInError = result.error;
         }
       }
 
+      console.log('🔐 Resultado final do login:', signInError ? 'FALHOU' : 'SUCESSO');
+
       // ===== TRATAMENTO DE ERROS =====
       if (signInError) {
+        console.log('❌ Erro no login:', signInError.message);
+        
         // Erro de email não confirmado - tentar confirmar automaticamente
         if (signInError.message?.includes('confirmation') || 
             signInError.message?.includes('confirmed') ||
             signInError.message?.includes('not confirmed')) {
           
+          console.log('🔧 Tentando confirmação automática...');
           try {
             await supabase.functions.invoke('confirm-user', {
               body: { userId: profileData.user_id }
             });
             
-            // Aguardar processamento da confirmação
+            console.log('⏱️ Aguardando confirmação...');
             await new Promise(resolve => setTimeout(resolve, 1500));
             
             // Tentar formatos novamente após confirmação
+            console.log('🔄 Tentando login novamente após confirmação...');
             for (const [index, password] of passwordFormats.entries()) {
               const result = await supabase.auth.signInWithPassword({
                 email: tempEmail,
@@ -393,7 +423,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               });
 
               if (!result.error) {
-                // Aguardar atualização do estado de auth
+                console.log('✅ Login bem-sucedido após confirmação');
                 await new Promise(resolve => setTimeout(resolve, 200));
                 return { error: null };
               }
@@ -401,17 +431,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             return { error: { message: 'Erro de autenticação após confirmação. Tente novamente.' } };
           } catch (confirmError) {
-            console.error('Auto-confirmação falhou:', confirmError);
+            console.error('❌ Auto-confirmação falhou:', confirmError);
             return { error: { message: 'Erro de autenticação. Tente novamente.' } };
           }
         } else if (signInError.message?.includes('Invalid login credentials')) {
-          return { error: { message: 'PIN incorreto ou usuário não encontrado' } };
+          console.log('❌ Credenciais inválidas');
+          return { error: { message: 'PIN incorreto. Verifique seus dados e tente novamente.' } };
         } else {
-          return { error: { message: signInError.message } };
+          console.log('❌ Erro genérico:', signInError.message);
+          return { error: { message: `Erro de autenticação: ${signInError.message}` } };
         }
       }
 
-      // Aguardar atualização do estado de auth antes de retornar
+      console.log('✅ Login realizado com sucesso!');
       await new Promise(resolve => setTimeout(resolve, 200));
       return { error: null };
     } catch (error) {

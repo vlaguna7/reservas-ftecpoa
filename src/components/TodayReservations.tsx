@@ -175,13 +175,19 @@ export function TodayReservations() {
           setTimeout(() => {
             console.log('🔄 TodayReservations: Fetching updated data...');
             fetchTodayReservations();
-          }, 100);
+          }, 300);
           
           // Segunda atualização para garantir sincronização
           setTimeout(() => {
             console.log('🔄 TodayReservations: Second fetch for sync...');
             fetchTodayReservations();
-          }, 500);
+          }, 700);
+          
+          // Terceira atualização para casos mais lentos
+          setTimeout(() => {
+            console.log('🔄 TodayReservations: Third fetch for reliability...');
+            fetchTodayReservations();
+          }, 1000);
         }
       )
       .subscribe((status) => {

@@ -157,7 +157,17 @@ export function LaboratoryReservations() {
               oldEquipmentType?.startsWith('laboratory_')) {
             setTimeout(() => {
               fetchLaboratoryReservations();
-            }, 100);
+            }, 300);
+            
+            // Segunda atualização para garantir sincronização
+            setTimeout(() => {
+              fetchLaboratoryReservations();
+            }, 700);
+            
+            // Terceira atualização para casos mais lentos
+            setTimeout(() => {
+              fetchLaboratoryReservations();
+            }, 1000);
           }
         }
       )

@@ -105,7 +105,17 @@ export function AuditoriumReservations() {
           console.log('🔄 AuditoriumReservations: Real-time change detected:', payload);
           setTimeout(() => {
             fetchAuditoriumReservations();
-          }, 100);
+          }, 300);
+          
+          // Segunda atualização para garantir sincronização
+          setTimeout(() => {
+            fetchAuditoriumReservations();
+          }, 700);
+          
+          // Terceira atualização para casos mais lentos
+          setTimeout(() => {
+            fetchAuditoriumReservations();
+          }, 1000);
         }
       )
       .subscribe();

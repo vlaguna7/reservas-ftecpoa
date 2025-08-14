@@ -227,8 +227,9 @@ export function MakeReservation() {
     console.log('📊 Fetching availability for dates:', availableDates.map(d => d.date));
     const dateList = availableDates.map(d => d.date);
     
+    // Use secure reservation_availability view instead of direct reservations table access
     const { data, error } = await supabase
-      .from('reservations')
+      .from('reservation_availability')
       .select('reservation_date, equipment_type')
       .in('reservation_date', dateList);
 

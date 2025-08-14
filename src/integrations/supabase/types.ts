@@ -337,6 +337,15 @@ export type Database = {
           email: string
         }[]
       }
+      get_equipment_availability: {
+        Args: { p_equipment_type: string; p_date: string }
+        Returns: {
+          reservation_date: string
+          equipment_type: string
+          time_slots: string[]
+          is_available: boolean
+        }[]
+      }
       get_profile_display_name: {
         Args: { p_user_id: string }
         Returns: string

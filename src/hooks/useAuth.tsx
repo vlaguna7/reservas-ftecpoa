@@ -299,6 +299,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
 
+      console.log('🔍 Login attempt:', { 
+        original: institutionalUser, 
+        trimmed: institutionalUser.trim(), 
+        normalized: normalizedInput 
+      });
+
       // ===== VERIFICAÇÃO DE USUÁRIO =====
       // Use secure function to check if institutional user exists
       const { data: userExists, error: checkError } = await supabase
@@ -306,11 +312,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           p_institutional_user: institutionalUser.trim() 
         });
 
+      console.log('🔍 User exists check:', { userExists, checkError });
+
       if (checkError) {
+        console.error('❌ Check error:', checkError);
         return { error: { message: 'Erro interno do sistema' } };
       }
 
       if (!userExists) {
+        // Tentar busca direta na tabela para debug
+        const { data: directCheck, error: directError } = await supabase
+          .from('profiles')
+          .select('institutional_user')
+          .eq('institutional_user', institutionalUser.trim())
+          .maybeSingle();
+        
+        console.log('🔍 Direct check result:', { directCheck, directError });
+        
+        // Buscar todos os usuários para comparação
+        const { data: allUsers } = await supabase
+          .from('profiles')
+          .select('institutional_user');
+        
+        console.log('🔍 All users in database:', allUsers?.map(u => u.institutional_user));
+        
         return { error: { message: 'Usuário não encontrado' } };
       }
 

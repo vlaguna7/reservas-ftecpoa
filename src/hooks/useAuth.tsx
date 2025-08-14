@@ -299,71 +299,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
 
-      console.log('🔍 Login attempt:', { 
-        original: institutionalUser, 
-        trimmed: institutionalUser.trim(), 
-        normalized: normalizedInput 
-      });
-
       // ===== VERIFICAÇÃO DE USUÁRIO =====
-      // Use secure function to check if institutional user exists
+      // Use secure function to check if institutional user exists (case-insensitive)
       const { data: userExists, error: checkError } = await supabase
         .rpc('check_institutional_user_exists', { 
           p_institutional_user: institutionalUser.trim() 
         });
 
-      console.log('🔍 User exists check:', { userExists, checkError });
-
       if (checkError) {
-        console.error('❌ Check error:', checkError);
         return { error: { message: 'Erro interno do sistema' } };
       }
 
       if (!userExists) {
-        // Tentar busca direta na tabela para debug
-        const { data: directCheck, error: directError } = await supabase
-          .from('profiles')
-          .select('institutional_user')
-          .eq('institutional_user', institutionalUser.trim())
-          .maybeSingle();
-        
-        console.log('🔍 Direct check result:', { directCheck, directError });
-        
-        // Buscar todos os usuários para comparação
-        const { data: allUsers } = await supabase
-          .from('profiles')
-          .select('institutional_user');
-        
-        console.log('🔍 All users in database:', allUsers?.map(u => u.institutional_user));
-        
         return { error: { message: 'Usuário não encontrado' } };
       }
 
-      // Get user profile data for authentication
-      let { data: profileData, error: profileError } = await supabase
+      // Get user profile data for authentication (case-insensitive search)
+      const { data: profiles } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('institutional_user', institutionalUser.trim())
-        .maybeSingle();
-
-      // Se não encontrou, tenta busca normalizada (sem acentos)
-      if (!profileData) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('*');
-        
-        if (profiles) {
-          profileData = profiles.find(profile => {
-            const normalizedStored = profile.institutional_user
-              .toLowerCase()
-              .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '');
-            return normalizedStored === normalizedInput;
-          });
-        }
+        .select('*');
+      
+      let profileData = null;
+      if (profiles) {
+        profileData = profiles.find(profile => {
+          const normalizedStored = profile.institutional_user
+            .toLowerCase()
+            .trim()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+          return normalizedStored === normalizedInput;
+        });
       }
 
-      if (profileError || !profileData) {
+      if (!profileData) {
         return { error: { message: 'Usuário não encontrado' } };
       }
 

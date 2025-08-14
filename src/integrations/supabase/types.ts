@@ -297,58 +297,12 @@ export type Database = {
       }
     }
     Views: {
-      reservation_availability: {
-        Row: {
-          created_at: string | null
-          equipment_type: string | null
-          reservation_date: string | null
-          status: string | null
-          time_slots: string[] | null
-        }
-        Insert: {
-          created_at?: string | null
-          equipment_type?: string | null
-          reservation_date?: string | null
-          status?: never
-          time_slots?: string[] | null
-        }
-        Update: {
-          created_at?: string | null
-          equipment_type?: string | null
-          reservation_date?: string | null
-          status?: never
-          time_slots?: string[] | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      check_institutional_user_exists: {
-        Args: { p_institutional_user: string }
-        Returns: boolean
-      }
       cleanup_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
-      }
-      get_admin_notification_emails: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          email: string
-        }[]
-      }
-      get_equipment_availability: {
-        Args: { p_equipment_type: string; p_date: string }
-        Returns: {
-          reservation_date: string
-          equipment_type: string
-          time_slots: string[]
-          is_available: boolean
-        }[]
-      }
-      get_profile_display_name: {
-        Args: { p_user_id: string }
-        Returns: string
       }
       handle_signup_with_profile: {
         Args: {

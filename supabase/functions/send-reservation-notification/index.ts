@@ -58,14 +58,16 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('📧 [EMAIL] Using fallback email:', actualUserEmail);
     }
 
-    // Buscar emails de notificação ativos usando função segura
+    // Buscar emails de notificação ativos - com logs detalhados
     console.log('🔍 [DATABASE] Fetching active notification emails...');
     const { data: emailList, error: emailError } = await supabase
-      .rpc('get_admin_notification_emails');
+      .from('admin_notification_emails')
+      .select('email, is_active, id')
+      .eq('is_active', true);
 
     console.log('📊 [DATABASE] Email query result:', { 
       emailCount: emailList?.length || 0,
-      emails: emailList?.map(e => e.email) || [],
+      emails: emailList?.map(e => ({ email: e.email, id: e.id })) || [],
       error: emailError 
     });
 
@@ -206,7 +208,7 @@ const handler = async (req: Request): Promise<Response> => {
     const results: any[] = [];
     
     for (let i = 0; i < emailList.length; i++) {
-      const email = emailList[i].email;
+      const { email } = emailList[i];
       console.log(`📧 [EMAIL ${i + 1}/${emailList.length}] Sending to: ${email}`);
       
       try {

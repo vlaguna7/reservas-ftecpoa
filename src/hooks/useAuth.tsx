@@ -209,19 +209,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const normalizedUser = institutionalUser.trim();
       const tempEmail = `${normalizedUser}@temp.com`; // Email temporário para Supabase
 
-      // ===== VERIFICAÇÃO DE USUÁRIO EXISTENTE =====
-      // Use secure function to check if institutional user already exists
-      const { data: userExists, error: checkError } = await supabase
-        .rpc('check_institutional_user_exists', { 
-          p_institutional_user: normalizedUser 
-        });
+      // ===== LIMPEZA DE PERFIL EXISTENTE =====
+      // Verifica se já existe um perfil com este usuário institucional
+      // e remove para evitar conflitos
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('user_id, id')
+        .eq('institutional_user', normalizedUser)
+        .single();
 
-      if (checkError) {
-        return { error: { message: 'Erro interno do sistema' } };
-      }
-
-      if (userExists) {
-        return { error: { message: 'Este usuário institucional já está cadastrado' } };
+      if (existingProfile) {
+        // Remover reservas e perfil antigos
+        await supabase.from('reservations').delete().eq('user_id', existingProfile.user_id);
+        await supabase.from('profiles').delete().eq('id', existingProfile.id);
       }
 
       // ===== CRIAÇÃO DE USUÁRIO =====
@@ -292,46 +292,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Autentica usuário com usuário institucional e PIN
   const signIn = async (institutionalUser: string, pin: string) => {
     try {
-      // ===== NORMALIZAÇÃO E VALIDAÇÃO =====
-      const normalizedInput = institutionalUser.trim();
-      
-      if (!normalizedInput) {
-        return { error: { message: 'Usuário institucional é obrigatório' } };
+      // ===== NORMALIZAÇÃO DO INPUT =====
+      // Remove acentos e padroniza entrada para busca flexível
+      const normalizedInput = institutionalUser.trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
+
+      // ===== BUSCA DO USUÁRIO =====
+      // Primeiro tenta busca exata, depois busca normalizada
+      // 🔄 ADAPTAÇÃO PARA OUTROS BANCOS:
+      // - MongoDB: db.profiles.findOne({institutional_user: {$regex: /^user$/i}})
+      // - MySQL: SELECT * FROM profiles WHERE LOWER(institutional_user) = LOWER(?)
+      let { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .ilike('institutional_user', institutionalUser.trim())
+        .maybeSingle();
+
+      // Se não encontrou, tenta busca normalizada (sem acentos)
+      if (!profileData) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (profiles) {
+          profileData = profiles.find(profile => {
+            const normalizedStored = profile.institutional_user
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '');
+            return normalizedStored === normalizedInput;
+          });
+        }
       }
 
-      // ===== VALIDAÇÃO DO PIN =====
-      if (!/^\d{6}$/.test(pin)) {
-        return { error: { message: 'PIN deve ter exatamente 6 dígitos' } };
-      }
-
-      // ===== VERIFICAÇÃO DE USUÁRIO VIA RPC =====
-      const { data: userExists, error: checkError } = await supabase
-        .rpc('check_institutional_user_exists', { 
-          p_institutional_user: normalizedInput 
-        });
-
-      if (checkError) {
-        return { error: { message: 'Erro interno do sistema' } };
-      }
-
-      if (!userExists) {
+      if (profileError || !profileData) {
         return { error: { message: 'Usuário não encontrado' } };
       }
 
-      // ===== BUSCA DO PERFIL ESPECÍFICO =====
-      // Busca direta usando ilike para case-insensitive
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .ilike('institutional_user', normalizedInput)
-        .maybeSingle();
-
-      if (profileError) {
-        return { error: { message: 'Erro ao buscar perfil do usuário' } };
-      }
-
-      if (!profileData) {
-        return { error: { message: 'Perfil do usuário não encontrado' } };
+      // ===== VALIDAÇÃO DO PIN =====
+      // PIN deve ter exatamente 6 dígitos
+      if (!/^\d{6}$/.test(pin)) {
+        return { error: { message: 'PIN deve ter exatamente 6 dígitos' } };
       }
 
       const tempEmail = `${profileData.institutional_user}@temp.com`;

@@ -53,6 +53,10 @@ export type Database = {
           email: string
           id: string
           is_active: boolean
+          notify_auditorium: boolean | null
+          notify_laboratory: boolean | null
+          notify_projector: boolean | null
+          notify_speaker: boolean | null
           updated_at: string
         }
         Insert: {
@@ -60,6 +64,10 @@ export type Database = {
           email: string
           id?: string
           is_active?: boolean
+          notify_auditorium?: boolean | null
+          notify_laboratory?: boolean | null
+          notify_projector?: boolean | null
+          notify_speaker?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -67,6 +75,10 @@ export type Database = {
           email?: string
           id?: string
           is_active?: boolean
+          notify_auditorium?: boolean | null
+          notify_laboratory?: boolean | null
+          notify_projector?: boolean | null
+          notify_speaker?: boolean | null
           updated_at?: string
         }
         Relationships: []

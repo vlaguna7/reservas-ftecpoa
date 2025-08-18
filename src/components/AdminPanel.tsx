@@ -111,6 +111,10 @@ interface NotificationEmail {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  notify_projector?: boolean;
+  notify_speaker?: boolean;
+  notify_laboratory?: boolean;
+  notify_auditorium?: boolean;
 }
 
 interface AdminAlert {
@@ -763,6 +767,31 @@ export function AdminPanel() {
       console.error('Error toggling email status:', error);
       toast({
         title: "Erro ao alterar status",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateNotificationPreferences = async (emailId: string, field: string, value: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('admin_notification_emails')
+        .update({ [field]: value })
+        .eq('id', emailId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Preferências atualizadas!",
+        description: "As configurações de notificação foram salvas."
+      });
+
+      fetchNotificationEmails();
+    } catch (error) {
+      console.error('Error updating notification preferences:', error);
+      toast({
+        title: "Erro ao atualizar preferências",
         description: "Tente novamente.",
         variant: "destructive"
       });
@@ -2931,7 +2960,81 @@ export function AdminPanel() {
                           Adicionado em {new Date(emailItem.created_at).toLocaleDateString('pt-BR')}
                         </p>
                       </div>
-                      <div className={`flex ${isMobile ? 'w-full' : 'items-center gap-2'}`}>
+                      <div className={`flex ${isMobile ? 'w-full flex-wrap gap-2' : 'items-center gap-2'}`}>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size={isMobile ? "sm" : "default"}
+                              className={`${isMobile ? 'flex-1' : ''} flex items-center gap-1`}
+                            >
+                              <Settings className="h-4 w-4" />
+                              {isMobile ? "Notificações" : "Gerenciar Notificações"}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="mx-4 max-w-lg">
+                            <DialogHeader>
+                              <DialogTitle>Configurar Notificações</DialogTitle>
+                              <DialogDescription>
+                                Escolha quais tipos de reserva este email deve receber notificações.
+                                <br />
+                                <strong>Email:</strong> {emailItem.email}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              <div className="space-y-4">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`notify-projector-${emailItem.id}`}
+                                    checked={emailItem.notify_projector ?? true}
+                                    onChange={(e) => updateNotificationPreferences(emailItem.id, 'notify_projector', e.target.checked)}
+                                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor={`notify-projector-${emailItem.id}`} className="text-sm font-medium">
+                                    📽️ Reservas de Projetor
+                                  </label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`notify-speaker-${emailItem.id}`}
+                                    checked={emailItem.notify_speaker ?? true}
+                                    onChange={(e) => updateNotificationPreferences(emailItem.id, 'notify_speaker', e.target.checked)}
+                                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor={`notify-speaker-${emailItem.id}`} className="text-sm font-medium">
+                                    🔊 Reservas de Caixa de Som
+                                  </label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`notify-laboratory-${emailItem.id}`}
+                                    checked={emailItem.notify_laboratory ?? true}
+                                    onChange={(e) => updateNotificationPreferences(emailItem.id, 'notify_laboratory', e.target.checked)}
+                                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor={`notify-laboratory-${emailItem.id}`} className="text-sm font-medium">
+                                    🧪 Reservas de Laboratório
+                                  </label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`notify-auditorium-${emailItem.id}`}
+                                    checked={emailItem.notify_auditorium ?? true}
+                                    onChange={(e) => updateNotificationPreferences(emailItem.id, 'notify_auditorium', e.target.checked)}
+                                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label htmlFor={`notify-auditorium-${emailItem.id}`} className="text-sm font-medium">
+                                    🎭 Reservas de Auditório
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                         <Button
                           variant="outline"
                           size={isMobile ? "sm" : "default"}

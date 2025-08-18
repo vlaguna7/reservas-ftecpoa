@@ -58,12 +58,29 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('📧 [EMAIL] Using fallback email:', actualUserEmail);
     }
 
-    // Buscar emails de notificação ativos - com logs detalhados
-    console.log('🔍 [DATABASE] Fetching active notification emails...');
+    // Determinar qual tipo de notificação é necessário baseado no equipamento
+    const equipmentType = reservationData.equipment_type;
+    let notificationColumn = '';
+    
+    if (equipmentType === 'projector') {
+      notificationColumn = 'notify_projector';
+    } else if (equipmentType === 'speaker') {
+      notificationColumn = 'notify_speaker';
+    } else if (equipmentType.startsWith('laboratory_')) {
+      notificationColumn = 'notify_laboratory';
+    } else if (equipmentType === 'auditorium') {
+      notificationColumn = 'notify_auditorium';
+    } else {
+      notificationColumn = 'notify_projector'; // fallback
+    }
+
+    // Buscar emails de notificação ativos para este tipo de equipamento - com logs detalhados
+    console.log('🔍 [DATABASE] Fetching active notification emails for equipment:', equipmentType, 'using column:', notificationColumn);
     const { data: emailList, error: emailError } = await supabase
       .from('admin_notification_emails')
-      .select('email, is_active, id')
-      .eq('is_active', true);
+      .select(`email, is_active, id, ${notificationColumn}`)
+      .eq('is_active', true)
+      .eq(notificationColumn, true);
 
     console.log('📊 [DATABASE] Email query result:', { 
       emailCount: emailList?.length || 0,

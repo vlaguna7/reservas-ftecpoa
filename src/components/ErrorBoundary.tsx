@@ -33,6 +33,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">Tente recarregar a página. Se o erro persistir, contate o administrador.</p>
+            {this.state.error && (
+              <div className="mt-2 text-xs text-destructive">
+                Detalhes: {this.state.error.message}
+              </div>
+            )}
           </CardContent>
         </Card>
       );

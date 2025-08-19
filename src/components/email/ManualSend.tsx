@@ -35,7 +35,7 @@ export const ManualSend = () => {
     content: "",
     sendToAll: true,
     selectedTeachers: [],
-    department: ""
+    department: "all"
   });
   const [sendProgress, setSendProgress] = useState<SendProgress>({
     total: 0,
@@ -98,7 +98,7 @@ export const ManualSend = () => {
         content: "",
         sendToAll: true,
         selectedTeachers: [],
-        department: ""
+        department: "all"
       });
     },
     onError: (error: any) => {
@@ -123,7 +123,7 @@ export const ManualSend = () => {
   const handleSelectAll = () => {
     if (!teachers) return;
     
-    const filteredTeachers = formData.department 
+    const filteredTeachers = formData.department !== "all"
       ? teachers.filter(t => t.department === formData.department)
       : teachers;
     
@@ -141,7 +141,7 @@ export const ManualSend = () => {
     if (!teachers) return [];
     
     if (formData.sendToAll) {
-      return formData.department 
+      return formData.department !== "all" 
         ? teachers.filter(t => t.department === formData.department)
         : teachers;
     }
@@ -181,7 +181,7 @@ export const ManualSend = () => {
       content: formData.content,
       sendToAll: formData.sendToAll,
       recipientIds: formData.sendToAll ? undefined : formData.selectedTeachers,
-      department: formData.department || undefined,
+      department: formData.department !== "all" ? formData.department : undefined,
       isManual: true
     };
 
@@ -277,7 +277,7 @@ export const ManualSend = () => {
                     <SelectValue placeholder="Todos os departamentos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os departamentos</SelectItem>
+                    <SelectItem value="all">Todos os departamentos</SelectItem>
                     {departments.map(dept => (
                       <SelectItem key={dept} value={dept!}>{dept}</SelectItem>
                     ))}
@@ -298,7 +298,7 @@ export const ManualSend = () => {
                 </div>
                 
                 <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">
-                  {teachers?.filter(t => !formData.department || t.department === formData.department).map(teacher => (
+                  {teachers?.filter(t => formData.department === "all" || t.department === formData.department).map(teacher => (
                     <div key={teacher.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`teacher-${teacher.id}`}

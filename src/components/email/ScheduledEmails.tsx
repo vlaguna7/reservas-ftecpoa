@@ -364,6 +364,78 @@ export const ScheduledEmails = () => {
                 </div>
               )}
 
+              {/* Seleção de professores específicos */}
+              {formData.target_emails !== "all" && Array.isArray(formData.target_emails) && (
+                <div>
+                  <Label>Selecionar Professores</Label>
+                  <div className="space-y-2">
+                    <div className="flex gap-2 mb-2">
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          if (teachers) {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              target_emails: teachers.map(t => t.id) 
+                            }));
+                          }
+                        }}
+                      >
+                        Selecionar Todos
+                      </Button>
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, target_emails: [] }));
+                        }}
+                      >
+                        Desmarcar Todos
+                      </Button>
+                    </div>
+                    
+                    <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">
+                      {teachers?.map(teacher => (
+                        <div key={teacher.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`teacher-${teacher.id}`}
+                            checked={formData.target_emails.includes(teacher.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  target_emails: [...prev.target_emails, teacher.id] 
+                                }));
+                              } else {
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  target_emails: prev.target_emails.filter((id: string) => id !== teacher.id) 
+                                }));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`teacher-${teacher.id}`} className="text-sm">
+                            {teacher.name} ({teacher.email})
+                            {teacher.department && (
+                              <span className="text-muted-foreground ml-1">- {teacher.department}</span>
+                            )}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {Array.isArray(formData.target_emails) && (
+                      <div className="text-sm text-muted-foreground">
+                        {formData.target_emails.length} professor(es) selecionado(s)
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <Button type="submit" disabled={emailMutation.isPending}>
                   {emailMutation.isPending ? "Salvando..." : "Salvar"}

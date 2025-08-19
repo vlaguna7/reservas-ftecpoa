@@ -65,7 +65,7 @@ async function sendSingleEmail(
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     const response = await resend.emails.send({
-      from: "Sistema de Reservas <onboarding@resend.dev>",
+      from: "Sistema de Reservas <noreply@unidadepoazn.app>",
       to: [email],
       subject: subject,
       html: content,

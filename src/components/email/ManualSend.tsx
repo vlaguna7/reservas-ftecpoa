@@ -63,8 +63,11 @@ export const ManualSend = () => {
     }
   });
 
-  // Get unique departments
-  const departments = [...new Set(teachers?.map(t => t.department).filter(Boolean))];
+  // Get unique departments (safe when teachers is undefined)
+  const departments = React.useMemo(
+    () => Array.from(new Set((teachers ?? []).map((t: any) => t.department).filter(Boolean))),
+    [teachers]
+  );
 
   // Send email mutation
   const sendMutation = useMutation({

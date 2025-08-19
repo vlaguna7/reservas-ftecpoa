@@ -64,3 +64,9 @@ verify_jwt = false
 
 [functions.send-reservation-notification]
 verify_jwt = false
+
+[functions.send-bulk-email]
+verify_jwt = false
+
+[functions.schedule-email-processor]
+verify_jwt = false

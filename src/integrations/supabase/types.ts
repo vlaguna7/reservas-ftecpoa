@@ -83,6 +83,47 @@ export type Database = {
         }
         Relationships: []
       }
+      email_logs: {
+        Row: {
+          email: string
+          error_message: string | null
+          id: string
+          is_manual: boolean
+          scheduled_email_id: string | null
+          sent_at: string
+          status: string
+          subject: string
+        }
+        Insert: {
+          email: string
+          error_message?: string | null
+          id?: string
+          is_manual?: boolean
+          scheduled_email_id?: string | null
+          sent_at?: string
+          status: string
+          subject: string
+        }
+        Update: {
+          email?: string
+          error_message?: string | null
+          id?: string
+          is_manual?: boolean
+          scheduled_email_id?: string | null
+          sent_at?: string
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_scheduled_email_id_fkey"
+            columns: ["scheduled_email_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment_settings: {
         Row: {
           id: string
@@ -245,6 +286,51 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_emails: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_sent: string | null
+          name: string
+          schedule_days: number[] | null
+          schedule_time: string
+          schedule_type: string
+          subject: string
+          target_emails: Json | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sent?: string | null
+          name: string
+          schedule_days?: number[] | null
+          schedule_time: string
+          schedule_type: string
+          subject: string
+          target_emails?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sent?: string | null
+          name?: string
+          schedule_days?: number[] | null
+          schedule_time?: string
+          schedule_type?: string
+          subject?: string
+          target_emails?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       security_audit_log: {
         Row: {
           action: string
@@ -272,6 +358,36 @@ export type Database = {
           ip_address?: unknown | null
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      teacher_emails: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }

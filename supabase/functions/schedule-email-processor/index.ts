@@ -19,11 +19,13 @@ interface ScheduledEmail {
 }
 
 function shouldSendToday(email: ScheduledEmail): boolean {
+  // Use Brazil timezone for proper time comparison
   const now = new Date();
-  const today = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
+  const brazilTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+  const today = brazilTime.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const currentTime = brazilTime.toTimeString().substring(0, 5); // HH:MM format
   
-  console.log(`🕐 [CHECK] Email "${email.name}" - Current: ${currentTime}, Scheduled: ${email.schedule_time}, Today: ${today}`);
+  console.log(`🕐 [CHECK] Email "${email.name}" - Current SP time: ${currentTime}, Scheduled: ${email.schedule_time}, Today: ${today}`);
 
   // Check if current time matches scheduled time (within 1 minute tolerance)
   const [schedHour, schedMin] = email.schedule_time.split(':').map(Number);
@@ -38,12 +40,13 @@ function shouldSendToday(email: ScheduledEmail): boolean {
     return false;
   }
 
-  // Check if already sent today
+  // Check if already sent today (using Brazil timezone)
   if (email.last_sent) {
     const lastSent = new Date(email.last_sent);
-    const today_start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const lastSentBrazil = new Date(lastSent.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+    const today_start = new Date(brazilTime.getFullYear(), brazilTime.getMonth(), brazilTime.getDate());
     
-    if (lastSent >= today_start) {
+    if (lastSentBrazil >= today_start) {
       console.log(`⏭️ [SKIP] Already sent today for "${email.name}"`);
       return false;
     }
@@ -63,7 +66,7 @@ function shouldSendToday(email: ScheduledEmail): boolean {
       break;
       
     case 'monthly':
-      const dayOfMonth = now.getDate();
+      const dayOfMonth = brazilTime.getDate();
       if (email.schedule_days && email.schedule_days.includes(dayOfMonth)) {
         console.log(`✅ [MONTHLY] Will send "${email.name}" (day ${dayOfMonth})`);
         return true;

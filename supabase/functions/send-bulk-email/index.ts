@@ -64,11 +64,40 @@ async function sendSingleEmail(
   attempt = 1
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
+    // Create simple plain text version
+    const textContent = content
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with spaces
+      .replace(/&amp;/g, '&')  // Replace &amp; with &
+      .replace(/&lt;/g, '<')   // Replace &lt; with <
+      .replace(/&gt;/g, '>')   // Replace &gt; with >
+      .trim();
+
+    // Create minimalistic HTML template
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
+    ${content}
+  </div>
+  <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p>Esta é uma mensagem automática do Sistema de Reservas.</p>
+  </div>
+</body>
+</html>`;
+
     const response = await resend.emails.send({
       from: "Sistema de Reservas <noreply@unidadepoazn.app>",
       to: [email],
       subject: subject,
-      html: content,
+      html: htmlContent,
+      text: textContent,
     });
 
     if (response.error) {

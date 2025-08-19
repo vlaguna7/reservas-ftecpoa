@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { SecureLogger } from '@/lib/secureLogger';
 import { InputSanitizer } from '@/lib/inputSanitizer';
+import { EmailManagement } from './EmailManagement';
 
 import {
   AlertDialog,
@@ -3627,6 +3628,9 @@ export function AdminPanel() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Email Management Section */}
+      <EmailManagement />
 
     </div>
   );

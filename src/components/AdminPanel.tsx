@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { SecureLogger } from '@/lib/secureLogger';
 import { InputSanitizer } from '@/lib/inputSanitizer';
 import { EmailManagement } from './EmailManagement';
+import { ErrorBoundary } from './ErrorBoundary';
 
 import {
   AlertDialog,
@@ -3630,7 +3631,9 @@ export function AdminPanel() {
       </Dialog>
 
       {/* Email Management Section */}
-      <EmailManagement />
+      <ErrorBoundary>
+        <EmailManagement />
+      </ErrorBoundary>
 
     </div>
   );

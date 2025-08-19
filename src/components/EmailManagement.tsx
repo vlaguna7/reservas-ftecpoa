@@ -56,7 +56,7 @@ export const EmailManagement = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className={`${isMobile ? 'w-full overflow-x-auto' : ''}`}>
-          <div className={`flex ${isMobile ? 'min-w-max gap-1' : 'gap-2'} border-b`}>
+          <TabsList className={`${isMobile ? 'min-w-max gap-1 border-b' : 'gap-2 border-b'}`}>
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
@@ -67,7 +67,7 @@ export const EmailManagement = () => {
                 {isMobile ? tab.shortLabel : tab.label}
               </TabsTrigger>
             ))}
-          </div>
+          </TabsList>
         </div>
 
         <TabsContent value="teachers" className="space-y-6">

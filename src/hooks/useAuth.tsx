@@ -338,8 +338,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ===== NORMALIZAÇÃO DO INPUT =====
       const normalizedInput = institutionalUser.trim();
 
-      // ===== BUSCA DO PERFIL USANDO FUNÇÃO SECURITY DEFINER =====
-      // Usa função específica que bypassa RLS para verificação de login
+      // ===== BUSCA PERFIL VIA FUNÇÃO SECURITY DEFINER =====
+      // Esta função só retorna dados se usuário estiver aprovado
       const { data: profileData, error: profileError } = await supabase.rpc(
         'verify_user_login',
         { 
@@ -353,23 +353,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!profileData || profileData.length === 0) {
-        return { error: { message: 'Usuário não encontrado no sistema' } };
+        return { error: { message: 'Usuário não encontrado ou não aprovado no sistema' } };
       }
 
       const profile = profileData[0];
 
       // ===== VALIDAÇÃO DO PIN =====
-      // PIN deve ter exatamente 6 dígitos
       if (!/^\d{6}$/.test(pin)) {
         return { error: { message: 'PIN deve ter exatamente 6 dígitos' } };
       }
 
       const tempEmail = `${profile.institutional_user}@temp.com`;
 
-      // ===== TENTATIVA DE LOGIN COM MÚLTIPLOS FORMATOS =====
-      // Suporta diferentes formatos de senha para compatibilidade
+      // ===== TENTATIVA DE LOGIN COM FORMATOS DE SENHA =====
       const passwordFormats = [
-        pin, // Formato atual (usuários novos)
+        pin, // Formato atual
         `${profile.institutional_user}_${pin}_2024!`, // Formato legado
         `${profile.institutional_user}_${pin}`, // Formato alternativo
       ];

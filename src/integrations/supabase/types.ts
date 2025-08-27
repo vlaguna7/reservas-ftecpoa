@@ -454,7 +454,6 @@ export type Database = {
           display_name: string
           institutional_user: string
           is_admin: boolean
-          pin_hash: string
           user_id: string
         }[]
       }

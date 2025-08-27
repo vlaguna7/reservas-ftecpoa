@@ -18,7 +18,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { sendReservationNotification } from '@/lib/emailNotifications';
 import { cn } from '@/lib/utils';
 
 interface EquipmentSettings {
@@ -565,19 +564,8 @@ export function MakeReservation() {
       
       const result = data?.[0];
       
-      // Enviar notificação por email em background
-      if (result) {
-        sendReservationNotification({
-          id: result.id,
-          equipment_type: result.equipment_type,
-          reservation_date: result.reservation_date,
-          observation: result.observation,
-          time_slots: result.time_slots,
-          user_id: result.user_id
-        }, 'created').catch(error => {
-          console.error('Error sending email notification:', error);
-        });
-      }
+      // Email notifications have been removed for security reasons
+      console.log('✅ Reservation created successfully:', result);
       
       const selectedLabels = selectedTimeSlots.map(slot => 
         TIME_SLOTS.find(ts => ts.value === slot)?.label
@@ -677,16 +665,7 @@ export function MakeReservation() {
       const result = data?.[0];
       if (result) {
         setTimeout(() => {
-          sendReservationNotification({
-            id: result.id,
-            equipment_type: result.equipment_type,
-            reservation_date: result.reservation_date,
-            observation: result.observation,
-            time_slots: result.time_slots,
-            user_id: result.user_id
-          }, 'created').catch(error => {
-            console.error('Error sending email notification:', error);
-          });
+        console.log('✅ Laboratory reservation created successfully:', result);
         }, 100); // Envia email após 100ms sem bloquear a UI
       }
 
@@ -801,21 +780,9 @@ export function MakeReservation() {
         variant: "destructive"
       });
     } else {
-      // Enviar notificação por email em background (não bloquear UI)
+      // Email notifications have been removed for security reasons
       const result = data?.[0];
-      if (result) {
-        // Não aguardar o envio do email para não deixar lento
-        sendReservationNotification({
-          id: result.id,
-          equipment_type: result.equipment_type,
-          reservation_date: result.reservation_date,
-          observation: result.observation,
-          time_slots: result.time_slots,
-          user_id: result.user_id
-        }, 'created').catch(error => {
-          console.error('Error sending email notification:', error);
-        });
-      }
+      console.log('✅ Reservation created successfully:', result);
       // Disparar confetes quando a reserva for realizada com sucesso
       triggerConfetti();
 
@@ -870,21 +837,9 @@ export function MakeReservation() {
         variant: "destructive"
       });
     } else {
-      // Enviar notificação por email em background (não bloquear UI)
+      // Email notifications have been removed for security reasons
       const deletedReservation = data?.[0];
-      if (deletedReservation) {
-        // Não aguardar o envio do email para não deixar lento
-        sendReservationNotification({
-          id: deletedReservation.id,
-          equipment_type: deletedReservation.equipment_type,
-          reservation_date: deletedReservation.reservation_date,
-          observation: deletedReservation.observation,
-          time_slots: deletedReservation.time_slots,
-          user_id: deletedReservation.user_id
-        }, 'cancelled').catch(error => {
-          console.error('Error sending email notification:', error);
-        });
-      }
+      console.log('✅ Reservation cancelled successfully:', deletedReservation);
       
       toast({
         title: "Reserva cancelada!",

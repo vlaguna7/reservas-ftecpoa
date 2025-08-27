@@ -32,7 +32,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 // - PHP: criar script PHP que usa PHPMailer
 // - Python: criar endpoint FastAPI que usa smtplib
 // - .NET: criar controller que usa System.Net.Mail
-import { sendReservationNotification } from '@/lib/emailNotifications';
+
 
 interface LaboratoryReservation {
   id: string;
@@ -223,17 +223,8 @@ export function LaboratoryReservations() {
         // - Python: usar smtplib ou sendgrid
         // - .NET: usar System.Net.Mail ou SendGrid SDK
         const deletedReservation = data[0];
-        sendReservationNotification({
-          id: deletedReservation.id,
-          equipment_type: deletedReservation.equipment_type,
-          reservation_date: deletedReservation.reservation_date,
-          observation: deletedReservation.observation,
-          time_slots: deletedReservation.time_slots,
-          user_id: deletedReservation.user_id
-        }, 'cancelled').catch(error => {
-          // ⚠️ Não bloqueamos a UI se o e-mail falhar
-          console.error('❌ Erro ao enviar notificação por e-mail:', error);
-        });
+        // Email notifications have been removed for security reasons
+        console.log('✅ Laboratory reservation cancelled successfully:', deletedReservation);
         
         // ===== FEEDBACK PARA O USUÁRIO =====
         toast({

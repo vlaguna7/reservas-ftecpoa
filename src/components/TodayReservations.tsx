@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { sendReservationNotification } from '@/lib/emailNotifications';
+
 
 interface Reservation {
   id: string;
@@ -318,18 +318,8 @@ export function TodayReservations() {
       if (data && data.length > 0) {
         console.log('Reservation successfully deleted:', data[0]);
         
-        // Enviar notificação por email em background (não bloquear UI)
-        const deletedReservation = data[0];
-        sendReservationNotification({
-          id: deletedReservation.id,
-          equipment_type: deletedReservation.equipment_type,
-          reservation_date: deletedReservation.reservation_date,
-          observation: deletedReservation.observation,
-          time_slots: deletedReservation.time_slots,
-          user_id: deletedReservation.user_id
-        }, 'cancelled').catch(error => {
-          console.error('Error sending email notification:', error);
-        });
+        // Email notifications have been removed for security reasons  
+        console.log('✅ Today reservation cancelled successfully:', data[0]);
         
         toast({
           title: "Reserva cancelada!",

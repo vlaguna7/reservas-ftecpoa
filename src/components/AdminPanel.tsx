@@ -11,12 +11,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { toast } from '@/hooks/use-toast';
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Settings, Users, Calendar as CalendarIcon, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff, Plus, HelpCircle, Mail, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Settings, Users, Calendar as CalendarIcon, Projector, Speaker, MonitorSpeaker, Trash2, Edit3, Save, X, BarChart3, Download, Activity, UserCheck, UserX, Shield, ShieldOff, Key, UserMinus, FlaskConical, Power, PowerOff, Plus, HelpCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { SecureLogger } from '@/lib/secureLogger';
 import { InputSanitizer } from '@/lib/inputSanitizer';
-import { EmailManagement } from './EmailManagement';
 import { ErrorBoundary } from './ErrorBoundary';
 
 import {
@@ -105,18 +104,6 @@ interface FAQ {
   sort_order: number;
   created_at: string;
   updated_at: string;
-}
-
-interface NotificationEmail {
-  id: string;
-  email: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  notify_projector?: boolean;
-  notify_speaker?: boolean;
-  notify_laboratory?: boolean;
-  notify_auditorium?: boolean;
 }
 
 interface AdminAlert {
@@ -212,13 +199,6 @@ export function AdminPanel() {
     sort_order: 0
   });
   
-  // Estados para emails de notificação
-  const [notificationEmails, setNotificationEmails] = useState<NotificationEmail[]>([]);
-  const [addingEmail, setAddingEmail] = useState(false);
-  const [newEmailForm, setNewEmailForm] = useState({
-    email: ''
-  });
-  
   // Estados para alertas admin
   const [adminAlerts, setAdminAlerts] = useState<AdminAlert[]>([]);
   const [addingAlert, setAddingAlert] = useState(false);
@@ -269,7 +249,6 @@ export function AdminPanel() {
     fetchAllUsers();
     fetchLaboratorySettings();
     fetchFaqs();
-    fetchNotificationEmails();
     fetchAdminAlerts();
     fetchSystemStats();
     fetchAuditoriumReservations();
@@ -495,20 +474,6 @@ export function AdminPanel() {
     setFaqs(data || []);
   };
 
-  const fetchNotificationEmails = async () => {
-    const { data, error } = await supabase
-      .from('admin_notification_emails')
-      .select('*')
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching notification emails:', error);
-      return;
-    }
-
-    setNotificationEmails(data || []);
-  };
-
   const fetchAdminAlerts = async () => {
     const { data, error } = await supabase
       .from('admin_alerts')
@@ -666,140 +631,6 @@ export function AdminPanel() {
     }
   };
 
-  const createNotificationEmail = async () => {
-    if (!newEmailForm.email.trim()) {
-      toast({
-        title: "Email é obrigatório",
-        description: "Por favor, insira um endereço de email válido.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validação básica de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmailForm.email)) {
-      toast({
-        title: "Email inválido",
-        description: "Por favor, insira um endereço de email válido.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('admin_notification_emails')
-        .insert({
-          email: newEmailForm.email.trim()
-        });
-
-      if (error) {
-        if (error.code === '23505') { // unique violation
-          toast({
-            title: "Email já cadastrado",
-            description: "Este email já está na lista de notificações.",
-            variant: "destructive"
-          });
-        } else {
-          throw error;
-        }
-        return;
-      }
-
-      toast({
-        title: "Email adicionado!",
-        description: "O email foi adicionado à lista de notificações."
-      });
-
-      setAddingEmail(false);
-      setNewEmailForm({ email: '' });
-      fetchNotificationEmails();
-    } catch (error) {
-      console.error('Error creating notification email:', error);
-      toast({
-        title: "Erro ao adicionar email",
-        description: "Tente novamente.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const deleteNotificationEmail = async (emailId: string) => {
-    try {
-      const { error } = await supabase
-        .from('admin_notification_emails')
-        .delete()
-        .eq('id', emailId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Email removido!",
-        description: "O email foi removido da lista de notificações."
-      });
-
-      fetchNotificationEmails();
-    } catch (error) {
-      console.error('Error deleting notification email:', error);
-      toast({
-        title: "Erro ao remover email",
-        description: "Tente novamente.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const toggleNotificationEmailStatus = async (emailId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('admin_notification_emails')
-        .update({ is_active: !currentStatus })
-        .eq('id', emailId);
-
-      if (error) throw error;
-
-      toast({
-        title: `Email ${!currentStatus ? 'ativado' : 'desativado'}!`,
-        description: `O email foi ${!currentStatus ? 'ativado' : 'desativado'} para notificações.`
-      });
-
-      fetchNotificationEmails();
-    } catch (error) {
-      console.error('Error toggling email status:', error);
-      toast({
-        title: "Erro ao alterar status",
-        description: "Tente novamente.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const updateNotificationPreferences = async (emailId: string, field: string, value: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('admin_notification_emails')
-        .update({ [field]: value })
-        .eq('id', emailId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Preferências atualizadas!",
-        description: "As configurações de notificação foram salvas."
-      });
-
-      fetchNotificationEmails();
-    } catch (error) {
-      console.error('Error updating notification preferences:', error);
-      toast({
-        title: "Erro ao atualizar preferências",
-        description: "Tente novamente.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const fetchSystemStats = async () => {
     try {
       // Total users
@@ -848,57 +679,6 @@ export function AdminPanel() {
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
-    }
-  };
-
-  const toggleUserAdmin = async (userId: string, currentAdminStatus: boolean) => {
-    try {
-      SecureLogger.log('Updating admin status for user');
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ is_admin: !currentAdminStatus })
-        .eq('user_id', userId)
-        .select();
-
-      if (error) {
-        console.error('Error updating admin status:', error);
-        toast({
-          title: "Erro ao alterar permissão",
-          description: error.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (data && data.length > 0) {
-        console.log('Successfully updated user:', data[0]);
-        toast({
-          title: "Permissão alterada!",
-          description: `Usuário ${!currentAdminStatus ? 'promovido a' : 'removido de'} administrador.`
-        });
-        
-        // Recarregar todos os dados para garantir que a UI seja atualizada
-        await Promise.all([
-          fetchAllUsers(),
-          fetchSystemStats(),
-          fetchAllReservations()
-        ]);
-      } else {
-        console.error('No data returned from update');
-        toast({
-          title: "Erro ao alterar permissão",
-          description: "Nenhum usuário foi atualizado. Verifique se o usuário existe.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Exception in toggleUserAdmin:', error);
-      toast({
-        title: "Erro ao alterar permissão",
-        description: "Erro interno. Tente novamente.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -2304,49 +2084,6 @@ export function AdminPanel() {
                           </DialogContent>
                         </Dialog>
 
-                        {/* Toggle Admin */}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className={user.is_admin ? 'text-orange-600 hover:text-orange-600' : 'text-purple-600 hover:text-purple-600'}
-                            >
-                              {user.is_admin ? (
-                                <>
-                                  <ShieldOff className="h-3 w-3 mr-2" />
-                                  Remover Admin
-                                </>
-                              ) : (
-                                <>
-                                  <Shield className="h-3 w-3 mr-2" />
-                                  Tornar Admin
-                                </>
-                              )}
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                {user.is_admin ? 'Remover' : 'Conceder'} Privilégios de Administrador
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja {user.is_admin ? 'remover os privilégios de administrador de' : 'tornar'} {user.display_name} {user.is_admin ? '' : 'um administrador'}? 
-                                {user.is_admin ? ' Ele perderá acesso às funções administrativas.' : ' Ele terá acesso completo ao painel administrativo.'}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => toggleUserAdmin(user.user_id, user.is_admin)}
-                                className={user.is_admin ? 'bg-orange-600 hover:bg-orange-700' : 'bg-purple-600 hover:bg-purple-700'}
-                              >
-                                {user.is_admin ? 'Remover Privilégios' : 'Conceder Privilégios'}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-
                         {/* Delete User */}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -2843,239 +2580,6 @@ export function AdminPanel() {
                          </div>
                        </div>
                     )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Email Notifications Management */}
-      <Card className="shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-lg' : ''}`}>
-              <Mail className="h-5 w-5" />
-              Notificações por Email
-            </CardTitle>
-            <p className={`text-muted-foreground mt-1 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-              Gerencie os emails que recebem notificações de reservas criadas ou canceladas
-            </p>
-          </div>
-          <Dialog open={addingEmail} onOpenChange={setAddingEmail}>
-            <DialogTrigger asChild>
-              <Button className={`flex items-center ${isMobile ? 'p-2' : 'gap-2'}`}>
-                <Plus className="h-4 w-4" />
-                {!isMobile && "Adicionar Email"}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="mx-4 max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Adicionar Email de Notificação</DialogTitle>
-                <DialogDescription>
-                  Adicione um email que receberá notificações quando reservas forem criadas ou canceladas.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="exemplo@email.com"
-                    value={newEmailForm.email}
-                    onChange={(e) => setNewEmailForm({ email: e.target.value })}
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Button onClick={createNotificationEmail} className="flex-1">
-                    Adicionar Email
-                  </Button>
-                  <Button 
-                    variant="secondary" 
-                    onClick={async () => {
-                      try {
-                        console.log('🧪 Testing email notifications...');
-                        const { data, error } = await supabase.functions.invoke('test-email-send');
-                        if (error) {
-                          console.error('Test error:', error);
-                          toast({
-                            title: "Erro no teste",
-                            description: "Não foi possível executar o teste de emails.",
-                            variant: "destructive"
-                          });
-                        } else {
-                          console.log('Test result:', data);
-                          toast({
-                            title: "Teste enviado!",
-                            description: `Emails de teste enviados para ${data.emailsFound} endereços.`
-                          });
-                        }
-                      } catch (error) {
-                        console.error('Test exception:', error);
-                      }
-                    }}
-                  >
-                    Testar
-                  </Button>
-                  <Button variant="outline" onClick={() => {
-                    setAddingEmail(false);
-                    setNewEmailForm({ email: '' });
-                  }}>
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          {notificationEmails.length === 0 ? (
-            <div className="text-center py-8">
-              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                Nenhum email de notificação cadastrado.
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Adicione emails para receber notificações de reservas.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {notificationEmails.map((emailItem) => (
-                <Card key={emailItem.id} className={`${isMobile ? 'p-3' : 'p-4'}`}>
-                  <CardContent className="p-0">
-                    <div className={`flex ${isMobile ? 'flex-col space-y-3' : 'items-center justify-between'}`}>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className={`font-medium ${isMobile ? 'text-sm' : ''}`}>
-                            {emailItem.email}
-                          </span>
-                          <Badge variant={emailItem.is_active ? "default" : "secondary"} 
-                                 className={isMobile ? 'text-xs' : ''}>
-                            {emailItem.is_active ? "Ativo" : "Inativo"}
-                          </Badge>
-                        </div>
-                        <p className={`text-muted-foreground mt-1 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                          Adicionado em {new Date(emailItem.created_at).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                      <div className={`flex ${isMobile ? 'w-full flex-wrap gap-2' : 'items-center gap-2'}`}>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size={isMobile ? "sm" : "default"}
-                              className={`${isMobile ? 'flex-1' : ''} flex items-center gap-1`}
-                            >
-                              <Settings className="h-4 w-4" />
-                              {isMobile ? "Notificações" : "Gerenciar Notificações"}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="mx-4 max-w-lg">
-                            <DialogHeader>
-                              <DialogTitle>Configurar Notificações</DialogTitle>
-                              <DialogDescription>
-                                Escolha quais tipos de reserva este email deve receber notificações.
-                                <br />
-                                <strong>Email:</strong> {emailItem.email}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                              <div className="space-y-4">
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id={`notify-projector-${emailItem.id}`}
-                                    checked={emailItem.notify_projector ?? true}
-                                    onChange={(e) => updateNotificationPreferences(emailItem.id, 'notify_projector', e.target.checked)}
-                                    className="rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor={`notify-projector-${emailItem.id}`} className="text-sm font-medium">
-                                    📽️ Reservas de Projetor
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id={`notify-speaker-${emailItem.id}`}
-                                    checked={emailItem.notify_speaker ?? true}
-                                    onChange={(e) => updateNotificationPreferences(emailItem.id, 'notify_speaker', e.target.checked)}
-                                    className="rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor={`notify-speaker-${emailItem.id}`} className="text-sm font-medium">
-                                    🔊 Reservas de Caixa de Som
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id={`notify-laboratory-${emailItem.id}`}
-                                    checked={emailItem.notify_laboratory ?? true}
-                                    onChange={(e) => updateNotificationPreferences(emailItem.id, 'notify_laboratory', e.target.checked)}
-                                    className="rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor={`notify-laboratory-${emailItem.id}`} className="text-sm font-medium">
-                                    🧪 Reservas de Laboratório
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id={`notify-auditorium-${emailItem.id}`}
-                                    checked={emailItem.notify_auditorium ?? true}
-                                    onChange={(e) => updateNotificationPreferences(emailItem.id, 'notify_auditorium', e.target.checked)}
-                                    className="rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label htmlFor={`notify-auditorium-${emailItem.id}`} className="text-sm font-medium">
-                                    🎭 Reservas de Auditório
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                        <Button
-                          variant="outline"
-                          size={isMobile ? "sm" : "default"}
-                          onClick={() => toggleNotificationEmailStatus(emailItem.id, emailItem.is_active)}
-                          className={`${isMobile ? 'flex-1' : ''} flex items-center gap-1`}
-                        >
-                          {emailItem.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          {emailItem.is_active ? "Desativar" : "Ativar"}
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size={isMobile ? "sm" : "default"} 
-                                    className={`${isMobile ? 'flex-1' : ''}`}>
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Excluir
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="mx-4 max-w-lg">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja remover este email da lista de notificações?
-                                <br />
-                                <strong>Email:</strong> {emailItem.email}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => deleteNotificationEmail(emailItem.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -3629,12 +3133,6 @@ export function AdminPanel() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Email Management Section */}
-      <ErrorBoundary>
-        <EmailManagement />
-      </ErrorBoundary>
-
     </div>
   );
 }

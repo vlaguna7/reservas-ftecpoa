@@ -47,82 +47,44 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_notification_emails: {
+      admin_audit_log: {
         Row: {
+          action: string
+          admin_user_id: string | null
           created_at: string
-          email: string
+          details: Json | null
           id: string
-          is_active: boolean
-          notify_auditorium: boolean | null
-          notify_laboratory: boolean | null
-          notify_projector: boolean | null
-          notify_speaker: boolean | null
-          updated_at: string
+          ip_address: unknown | null
+          severity: string | null
+          target_user_email: string | null
+          user_agent: string | null
+          user_id: string | null
         }
         Insert: {
+          action: string
+          admin_user_id?: string | null
           created_at?: string
-          email: string
+          details?: Json | null
           id?: string
-          is_active?: boolean
-          notify_auditorium?: boolean | null
-          notify_laboratory?: boolean | null
-          notify_projector?: boolean | null
-          notify_speaker?: boolean | null
-          updated_at?: string
+          ip_address?: unknown | null
+          severity?: string | null
+          target_user_email?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Update: {
+          action?: string
+          admin_user_id?: string | null
           created_at?: string
-          email?: string
+          details?: Json | null
           id?: string
-          is_active?: boolean
-          notify_auditorium?: boolean | null
-          notify_laboratory?: boolean | null
-          notify_projector?: boolean | null
-          notify_speaker?: boolean | null
-          updated_at?: string
+          ip_address?: unknown | null
+          severity?: string | null
+          target_user_email?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
-      }
-      email_logs: {
-        Row: {
-          email: string
-          error_message: string | null
-          id: string
-          is_manual: boolean
-          scheduled_email_id: string | null
-          sent_at: string
-          status: string
-          subject: string
-        }
-        Insert: {
-          email: string
-          error_message?: string | null
-          id?: string
-          is_manual?: boolean
-          scheduled_email_id?: string | null
-          sent_at?: string
-          status: string
-          subject: string
-        }
-        Update: {
-          email?: string
-          error_message?: string | null
-          id?: string
-          is_manual?: boolean
-          scheduled_email_id?: string | null
-          sent_at?: string
-          status?: string
-          subject?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "email_logs_scheduled_email_id_fkey"
-            columns: ["scheduled_email_id"]
-            isOneToOne: false
-            referencedRelation: "scheduled_emails"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       equipment_settings: {
         Row: {
@@ -286,51 +248,6 @@ export type Database = {
         }
         Relationships: []
       }
-      scheduled_emails: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          is_active: boolean
-          last_sent: string | null
-          name: string
-          schedule_days: number[] | null
-          schedule_time: string
-          schedule_type: string
-          subject: string
-          target_emails: Json | null
-          updated_at: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_sent?: string | null
-          name: string
-          schedule_days?: number[] | null
-          schedule_time: string
-          schedule_type: string
-          subject: string
-          target_emails?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_sent?: string | null
-          name?: string
-          schedule_days?: number[] | null
-          schedule_time?: string
-          schedule_type?: string
-          subject?: string
-          target_emails?: Json | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       security_audit_log: {
         Row: {
           action: string
@@ -358,36 +275,6 @@ export type Database = {
           ip_address?: unknown | null
           user_agent?: string | null
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      teacher_emails: {
-        Row: {
-          created_at: string
-          department: string | null
-          email: string
-          id: string
-          is_active: boolean
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          department?: string | null
-          email: string
-          id?: string
-          is_active?: boolean
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          department?: string | null
-          email?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -451,6 +338,14 @@ export type Database = {
       }
     }
     Functions: {
+      check_admin_elevation_attempts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          attempt_count: number
+          last_attempt: string
+          suspicious_user_id: string
+        }[]
+      }
       check_institutional_user_exists: {
         Args: { p_institutional_user: string }
         Returns: boolean
@@ -459,12 +354,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      get_admin_notification_emails: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          email: string
-        }[]
-      }
       get_equipment_availability: {
         Args: { p_date: string; p_equipment_type: string }
         Returns: {
@@ -472,6 +361,16 @@ export type Database = {
           is_available: boolean
           reservation_date: string
           time_slots: string[]
+        }[]
+      }
+      get_equipment_availability_secure: {
+        Args: { p_date: string; p_equipment_type: string }
+        Returns: {
+          equipment_type: string
+          is_available: boolean
+          reservation_date: string
+          time_slots: string[]
+          user_count: number
         }[]
       }
       get_profile_display_name: {
@@ -490,6 +389,18 @@ export type Database = {
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      is_admin_secure: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      log_privilege_attempt: {
+        Args: {
+          action_attempted: string
+          request_details?: Json
+          target_user_id: string
+        }
+        Returns: undefined
       }
       verify_user_login: {
         Args: { p_institutional_user: string; p_pin: string }

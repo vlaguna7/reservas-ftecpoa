@@ -36,7 +36,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { sendReservationNotification } from '@/lib/emailNotifications';
+
 
 interface Reservation {
   id: string;
@@ -184,18 +184,8 @@ export function MyReservations() {
         // - .NET Core: usar System.Net.Mail ou SendGrid SDK
         // - Laravel: usar Mail facade ou Notification system
         const deletedReservation = data[0];
-        sendReservationNotification({
-          id: deletedReservation.id,
-          equipment_type: deletedReservation.equipment_type,
-          reservation_date: deletedReservation.reservation_date,
-          observation: deletedReservation.observation,
-          time_slots: deletedReservation.time_slots,
-          user_id: deletedReservation.user_id
-        }, 'cancelled').catch(error => {
-          // ⚠️ Capturamos erro de e-mail mas não bloqueamos o cancelamento
-          // O usuário já conseguiu cancelar, mesmo que o e-mail falhe
-          console.error('❌ Erro ao enviar notificação por e-mail:', error);
-        });
+        // Email notifications have been removed for security reasons
+        console.log('✅ My reservation cancelled successfully:', deletedReservation);
         
         // ===== FEEDBACK POSITIVO PARA O USUÁRIO =====
         toast({

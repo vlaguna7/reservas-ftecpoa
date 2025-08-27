@@ -349,113 +349,114 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Autentica usuário com usuário institucional e PIN
   const signIn = async (institutionalUser: string, pin: string) => {
     try {
-      // ===== NORMALIZAÇÃO DO INPUT =====
-      const normalizedInput = institutionalUser.trim();
-
-      // ===== BUSCA PERFIL VIA FUNÇÃO SECURITY DEFINER =====
-      // Esta função só retorna dados se usuário estiver aprovado
-      const { data: profileData, error: profileError } = await supabase.rpc(
-        'verify_user_login',
-        { 
-          p_institutional_user: normalizedInput,
-          p_pin: pin 
-        }
-      );
-      
-      if (profileError) {
-        return { error: { message: 'Erro interno. Tente novamente.' } };
-      }
-
-      if (!profileData || profileData.length === 0) {
-        return { error: { message: 'Usuário não encontrado ou não aprovado no sistema' } };
-      }
-
-      const profile = profileData[0];
-
       // ===== VALIDAÇÃO DO PIN =====
       if (!/^\d{6}$/.test(pin)) {
         return { error: { message: 'PIN deve ter exatamente 6 dígitos' } };
       }
 
-      const tempEmail = `${profile.institutional_user}@temp.com`;
+      // ===== NORMALIZAÇÃO DO INPUT =====
+      const normalizedInput = institutionalUser.trim();
 
-      // ===== TENTATIVA DE LOGIN COM FORMATOS DE SENHA =====
+      // ===== CONSTRUÇÃO DE EMAILS CANDIDATOS =====
+      // Tenta diferentes variações para compatibilidade com usuários antigos
+      const candidateEmails = [
+        `${normalizedInput}@temp.com`,
+        `${normalizedInput.toLowerCase()}@temp.com`
+      ];
+
+      // ===== FORMATOS DE SENHA PARA COMPATIBILIDADE =====
       const passwordFormats = [
         pin, // Formato atual
-        `${profile.institutional_user}_${pin}_2024!`, // Formato legado
-        `${profile.institutional_user}_${pin}`, // Formato alternativo
+        `${normalizedInput}_${pin}_2024!`, // Formato legado
+        `${normalizedInput}_${pin}`, // Formato alternativo
+        `${normalizedInput.toLowerCase()}_${pin}_2024!`, // Formato legado lowercase
+        `${normalizedInput.toLowerCase()}_${pin}` // Formato alternativo lowercase
       ];
 
       let signInError = null;
-      let data = null;
+      let loginSuccessful = false;
+      let userIdFromLogin = null;
 
-      // Tenta cada formato até um funcionar
-      for (const [index, password] of passwordFormats.entries()) {
-        const result = await supabase.auth.signInWithPassword({
-          email: tempEmail,
-          password: password
-        });
+      // ===== TENTATIVAS DE LOGIN =====
+      // Tenta todas as combinações de email e senha
+      outerLoop: for (const email of candidateEmails) {
+        for (const password of passwordFormats) {
+          const result = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+          });
 
-        if (!result.error) {
-          data = result.data;
-          signInError = null;
-          break;
-        } else {
-          signInError = result.error;
-        }
-      }
-
-      // ===== TRATAMENTO DE ERROS =====
-      if (signInError) {
-        // Erro de email não confirmado - tentar confirmar automaticamente
-        if (signInError.message?.includes('confirmation') || 
-            signInError.message?.includes('confirmed') ||
-            signInError.message?.includes('not confirmed')) {
-          
-          try {
-            await supabase.functions.invoke('confirm-user', {
-              body: { userId: profile.user_id }
-            });
+          if (!result.error) {
+            loginSuccessful = true;
+            userIdFromLogin = result.data.user?.id;
+            break outerLoop;
+          } else {
+            signInError = result.error;
             
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            // Tentar formatos novamente após confirmação
-            for (const [index, password] of passwordFormats.entries()) {
-              const result = await supabase.auth.signInWithPassword({
-                email: tempEmail,
-                password: password
-              });
+            // Se erro de confirmação de email, tentar confirmar automaticamente
+            if (result.error.message?.includes('confirmation') || 
+                result.error.message?.includes('confirmed') ||
+                result.error.message?.includes('not confirmed')) {
+              
+              try {
+                // Buscar user_id pelo institutional_user para confirmar
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('user_id')
+                  .eq('institutional_user', normalizedInput)
+                  .single();
 
-              if (!result.error) {
-                await new Promise(resolve => setTimeout(resolve, 200));
-                return { error: null };
+                if (profileData?.user_id) {
+                  await supabase.functions.invoke('confirm-user', {
+                    body: { userId: profileData.user_id }
+                  });
+                  
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                  
+                  // Tentar novamente após confirmação
+                  const retryResult = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                  });
+
+                  if (!retryResult.error) {
+                    loginSuccessful = true;
+                    userIdFromLogin = retryResult.data.user?.id;
+                    break outerLoop;
+                  }
+                }
+              } catch (confirmError) {
+                // Continue tentando outras combinações
               }
             }
-            
-            return { error: { message: 'Erro de autenticação após confirmação. Tente novamente.' } };
-          } catch (confirmError) {
-            return { error: { message: 'Erro de autenticação. Tente novamente.' } };
           }
-        } else if (signInError.message?.includes('Invalid login credentials')) {
-          return { error: { message: 'PIN incorreto. Verifique seus dados e tente novamente.' } };
-        } else {
-          return { error: { message: `Erro de autenticação: ${signInError.message}` } };
         }
       }
 
-      // Após login bem-sucedido, verificar status de aprovação de forma segura
-      const { data: sessionData } = await supabase.auth.getSession();
-      const uid = sessionData?.session?.user?.id;
-      if (uid) {
+      // ===== VERIFICAR RESULTADO DO LOGIN =====
+      if (!loginSuccessful) {
+        if (signInError?.message?.includes('Invalid login credentials')) {
+          return { error: { message: 'Usuário ou PIN incorretos. Verifique seus dados e tente novamente.' } };
+        } else {
+          return { error: { message: 'Usuário não encontrado ou não aprovado no sistema' } };
+        }
+      }
+
+      // ===== VERIFICAR STATUS DE APROVAÇÃO APÓS LOGIN =====
+      if (userIdFromLogin) {
         const { data: statusData, error: statusError } = await supabase.rpc('get_user_status', {
-          p_user_id: uid,
+          p_user_id: userIdFromLogin,
         });
+        
         const status = (statusData as string | null) ?? null;
+        
         if (statusError || status !== 'approved') {
           await supabase.auth.signOut();
           const message = status === 'rejected'
             ? 'Cadastro rejeitado. Contate o administrador.'
-            : 'Cadastro pendente de aprovação. Aguarde o administrador.';
+            : status === 'pending'
+            ? 'Cadastro pendente de aprovação. Aguarde o administrador.'
+            : 'Não foi possível verificar status de aprovação.';
           return { error: { message } };
         }
       }

@@ -123,13 +123,6 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mb-4">
-            <img 
-              src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
-              alt="FTEC Logo" 
-              className="mx-auto h-16 object-contain"
-            />
-          </div>
           <CardTitle className="text-2xl">Sistema de Reservas</CardTitle>
           <CardDescription>
             É sua primeira vez aqui? Cadastre-se antes de continuar

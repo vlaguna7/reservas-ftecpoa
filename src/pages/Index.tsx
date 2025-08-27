@@ -40,21 +40,13 @@ const Index = () => {
       </div>
       
       <div className="container mx-auto px-4 py-8 relative z-10">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <img 
-            src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
-            alt="FTEC Logo" 
-            className="mx-auto h-20 md:h-24 w-auto object-contain animate-fade-in"
-          />
-        </div>
         
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4 text-foreground animate-fade-in">
             Sistema de Reservas de Equipamentos
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in">
-            Plataforma para professores e parceiros reservarem projetores, caixas de som e nosso Auditório na unidade FTEC POA.
+            Plataforma para professores e parceiros reservarem projetores, caixas de som e auditório.
           </p>
         </div>
 

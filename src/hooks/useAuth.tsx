@@ -327,7 +327,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Suporta diferentes formatos de senha para compatibilidade
       const passwordFormats = [
         pin, // Formato atual (usuários novos)
-        `FTEC_${profile.institutional_user}_${pin}_2024!`, // Formato legado
+        `${profile.institutional_user}_${pin}_2024!`, // Formato legado
         `${profile.institutional_user}_${pin}`, // Formato alternativo
       ];
 

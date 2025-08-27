@@ -138,14 +138,6 @@ export default function Dashboard() {
           {/* ===== LAYOUT DESKTOP ===== */}
           {/* Interface para desktop/tablet */}
           <div className="hidden md:block">
-            {/* ===== LOGO CENTRALIZADA ===== */}
-            <div className="text-center mb-4">
-              <img 
-                src="/lovable-uploads/50a7b433-bce7-4dc2-8818-e0d903409823.png" 
-                alt="FTEC Logo" 
-                className="h-12 object-contain mx-auto"
-              />
-            </div>
             
             {/* ===== CABEÇALHO COMPACTO - LINHA ÚNICA ===== */}
             <div className="flex items-center justify-between mb-3">

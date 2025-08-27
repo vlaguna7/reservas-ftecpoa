@@ -19,7 +19,6 @@ interface Reservation {
   user_id: string; // 🔐 CRÍTICO: ID único do usuário para verificação de segurança
   user_profile: {
     display_name: string;
-    is_admin?: boolean;
     green_tag_text?: string | null;
     classroom_monday?: string;
     classroom_tuesday?: string;
@@ -105,7 +104,7 @@ export function TodayReservations() {
       const userIds = reservationData.map(r => r.user_id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, display_name, is_admin, green_tag_text, classroom_monday, classroom_tuesday, classroom_wednesday, classroom_thursday, classroom_friday')
+        .select('user_id, display_name, green_tag_text, classroom_monday, classroom_tuesday, classroom_wednesday, classroom_thursday, classroom_friday')
         .in('user_id', userIds);
 
       if (profileError) {
@@ -133,7 +132,6 @@ export function TodayReservations() {
           user_id: reservation.user_id, // 🔐 IMPORTANTE: Incluir user_id para verificação de segurança
           user_profile: {
             display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado',
-            is_admin: profileMap.get(reservation.user_id)?.is_admin || false,
             green_tag_text: profileMap.get(reservation.user_id)?.green_tag_text || null,
             classroom_monday: profileMap.get(reservation.user_id)?.classroom_monday || null,
             classroom_tuesday: profileMap.get(reservation.user_id)?.classroom_tuesday || null,
@@ -458,13 +456,8 @@ export function TodayReservations() {
                   <h3 className="font-semibold text-base sm:text-lg">
                     {getDisplayName(groupKey, teacherReservations)}
                   </h3>
-                  {teacherReservations[0]?.user_profile?.is_admin && (
-                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 shrink-0">
-                      Admin
-                    </Badge>
-                  )}
                   {getCurrentDayClassroom(teacherReservations[0]?.user_profile) && (
-                    <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 shrink-0">
+                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 shrink-0">
                       {getCurrentDayClassroom(teacherReservations[0]?.user_profile)}
                     </Badge>
                   )}

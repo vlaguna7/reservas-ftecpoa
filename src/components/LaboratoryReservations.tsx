@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 // Ícones do Lucide React
 import { FlaskConical, Calendar, ChevronDown, ChevronRight, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 // Biblioteca para formatação de datas
 // 🔄 ADAPTAÇÃO: Pode usar moment.js, dayjs ou Date nativo
 import { format } from 'date-fns';
@@ -44,7 +43,6 @@ interface LaboratoryReservation {
   user_id: string; // 🔐 CRÍTICO: ID único do usuário para verificação de segurança
   user_profile: {
     display_name: string;
-    is_admin?: boolean;
   };
 }
 
@@ -103,7 +101,7 @@ export function LaboratoryReservations() {
       const userIds = reservationData.map(r => r.user_id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, display_name, is_admin')
+        .select('user_id, display_name')
         .in('user_id', userIds);
 
       if (profileError) {
@@ -121,8 +119,7 @@ export function LaboratoryReservations() {
         equipment_type: reservation.equipment_type,
         user_id: reservation.user_id, // 🔐 IMPORTANTE: Incluir user_id para verificação de segurança
         user_profile: {
-          display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado',
-          is_admin: profileMap.get(reservation.user_id)?.is_admin || false
+          display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
         }
       }));
 
@@ -353,13 +350,8 @@ export function LaboratoryReservations() {
                           <div className="text-xs md:text-sm text-muted-foreground truncate">
                             {format(new Date(reservation.reservation_date + 'T12:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                           </div>
-                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground truncate">
-                            <span>{reservation.user_profile.display_name}</span>
-                            {reservation.user_profile.is_admin && (
-                              <Badge className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 shrink-0">
-                                Admin
-                              </Badge>
-                            )}
+                          <div className="text-xs md:text-sm text-muted-foreground truncate">
+                            {reservation.user_profile.display_name}
                           </div>
                         </div>
                       </div>

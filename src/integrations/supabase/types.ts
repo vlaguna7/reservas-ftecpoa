@@ -444,6 +444,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      is_user_approved: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
       log_privilege_attempt: {
         Args: {
           action_attempted: string

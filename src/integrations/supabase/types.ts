@@ -423,6 +423,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: string
       }
+      get_user_status_debug: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
       handle_signup_with_profile: {
         Args: {
           p_display_name: string

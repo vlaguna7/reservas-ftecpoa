@@ -166,6 +166,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           classroom_friday: string | null
           classroom_monday: string | null
           classroom_thursday: string | null
@@ -178,10 +180,14 @@ export type Database = {
           institutional_user: string
           is_admin: boolean
           pin_hash: string
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["user_status"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           classroom_friday?: string | null
           classroom_monday?: string | null
           classroom_thursday?: string | null
@@ -194,10 +200,14 @@ export type Database = {
           institutional_user: string
           is_admin?: boolean
           pin_hash: string
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           classroom_friday?: string | null
           classroom_monday?: string | null
           classroom_thursday?: string | null
@@ -210,6 +220,8 @@ export type Database = {
           institutional_user?: string
           is_admin?: boolean
           pin_hash?: string
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
           user_id?: string
         }
@@ -275,6 +287,36 @@ export type Database = {
           ip_address?: unknown | null
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_approval_audit: {
+        Row: {
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          new_status: Database["public"]["Enums"]["user_status"]
+          old_status: Database["public"]["Enums"]["user_status"] | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_status: Database["public"]["Enums"]["user_status"]
+          old_status?: Database["public"]["Enums"]["user_status"] | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_status?: Database["public"]["Enums"]["user_status"]
+          old_status?: Database["public"]["Enums"]["user_status"] | null
+          reason?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -377,6 +419,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: string
       }
+      get_user_status: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
       handle_signup_with_profile: {
         Args: {
           p_display_name: string
@@ -414,7 +460,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      user_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -541,6 +587,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_status: ["pending", "approved", "rejected"],
+    },
   },
 } as const

@@ -105,9 +105,9 @@ export default function Auth() {
     } else {
       toast({
         title: "Cadastro realizado!",
-        description: "Você pode fazer login agora.",
+        description: "Seu cadastro foi enviado e está aguardando aprovação do administrador. Você receberá uma confirmação quando for aprovado.",
         className: "bg-blue-900 text-white border-blue-700 shadow-lg",
-        duration: 4000
+        duration: 6000
       });
       setSignupData({ displayName: '', institutionalUser: '', pin: '', confirmPin: '' });
       
@@ -125,7 +125,7 @@ export default function Auth() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Sistema de Reservas</CardTitle>
           <CardDescription>
-            É sua primeira vez aqui? Cadastre-se antes de continuar
+            Cadastros precisam ser aprovados pelo administrador antes do primeiro acesso
           </CardDescription>
         </CardHeader>
         <CardContent>

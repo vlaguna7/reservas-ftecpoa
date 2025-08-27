@@ -37,6 +37,10 @@ interface Profile {
   display_name: string;         // Nome de exibição do usuário
   institutional_user: string;   // Usuário institucional (matrícula/login)
   is_admin: boolean;            // Flag de administrador
+  status: 'pending' | 'approved' | 'rejected'; // Status de aprovação
+  approved_by?: string;         // ID do admin que aprovou
+  approved_at?: string;         // Data de aprovação
+  rejection_reason?: string;    // Motivo da rejeição (se rejeitado)
   created_at: string;           // Data de criação
   updated_at: string;           // Data de última atualização
 }
@@ -195,7 +199,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data) {
-        setProfile(data);
+        // ===== VERIFICAÇÃO DE STATUS DE APROVAÇÃO =====
+        if (data.status === 'pending') {
+          // Usuário pendente - fazer logout e mostrar mensagem
+          await supabase.auth.signOut();
+          toast({
+            title: "Cadastro Pendente",
+            description: "Seu cadastro está aguardando aprovação do administrador. Entre em contato para mais informações.",
+            variant: "default"
+          });
+          navigate('/auth');
+          return;
+        } else if (data.status === 'rejected') {
+          // Usuário rejeitado - fazer logout e mostrar motivo
+          await supabase.auth.signOut();
+          const reason = data.rejection_reason ? `: ${data.rejection_reason}` : '';
+          toast({
+            title: "Cadastro Rejeitado",
+            description: `Seu cadastro foi rejeitado${reason}. Entre em contato com o administrador.`,
+            variant: "destructive"
+          });
+          navigate('/auth');
+          return;
+        }
+        
+        // Só definir perfil se usuário aprovado
+        if (data.status === 'approved') {
+          setProfile(data);
+        }
       }
     } catch (error) {
       // Silently handle profile fetch errors

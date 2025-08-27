@@ -400,15 +400,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               
               try {
                 // Buscar user_id pelo institutional_user para confirmar
-                const { data: profileData } = await supabase
-                  .from('profiles')
-                  .select('user_id')
-                  .eq('institutional_user', normalizedInput)
-                  .single();
+                const candidateUsernames = [normalizedInput, normalizedInput.toLowerCase()];
+                let profileForConfirm = null;
+                
+                for (const username of candidateUsernames) {
+                  const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('user_id')
+                    .eq('institutional_user', username)
+                    .single();
+                  
+                  if (profileData?.user_id) {
+                    profileForConfirm = profileData;
+                    break;
+                  }
+                }
 
-                if (profileData?.user_id) {
+                if (profileForConfirm?.user_id) {
                   await supabase.functions.invoke('confirm-user', {
-                    body: { userId: profileData.user_id }
+                    body: { userId: profileForConfirm.user_id }
                   });
                   
                   await new Promise(resolve => setTimeout(resolve, 1500));

@@ -90,7 +90,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;        // Flag para evitar atualizações após unmount
     let initialCheckDone = false; // Flag para controlar verificação inicial
 
-      
+    // Limpar possíveis tokens inválidos no localStorage na inicialização
+    const clearInvalidTokens = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error && error.message.includes('refresh_token_not_found')) {
+          await supabase.auth.signOut();
+          localStorage.clear();
+        }
+      } catch (error) {
+        await supabase.auth.signOut();
+        localStorage.clear();
+      }
+    };
+
+    clearInvalidTokens();
 
     // ===== FUNÇÃO PARA TRATAR ATUALIZAÇÕES DE SESSÃO =====
     // Centraliza o tratamento de mudanças de sessão

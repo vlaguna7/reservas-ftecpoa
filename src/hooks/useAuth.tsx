@@ -188,45 +188,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // - Firebase: doc(db, 'profiles', userId).get()
   const fetchProfile = async (userId: string) => {
     try {
+      // 1) Verifica status via função SECURITY DEFINER (bypassa RLS)
+      const { data: statusData, error: statusError } = await supabase.rpc('get_user_status', {
+        p_user_id: userId,
+      });
+
+      const status = (statusData as string | null) ?? null;
+
+      // Se não conseguimos verificar o status com segurança, bloquear por padrão
+      if (statusError || !status) {
+        await supabase.auth.signOut();
+        toast({
+          title: 'Não foi possível verificar seu status',
+          description: 'Tente novamente mais tarde ou contate o administrador.',
+          variant: 'destructive',
+        });
+        navigate('/auth');
+        return;
+      }
+
+      if (status === 'pending') {
+        await supabase.auth.signOut();
+        toast({
+          title: 'Cadastro Pendente',
+          description:
+            'Seu cadastro está aguardando aprovação do administrador. Entre em contato para mais informações.',
+          variant: 'default',
+        });
+        navigate('/auth');
+        return;
+      }
+
+      if (status === 'rejected') {
+        await supabase.auth.signOut();
+        toast({
+          title: 'Cadastro Rejeitado',
+          description: 'Seu cadastro foi rejeitado. Entre em contato com o administrador.',
+          variant: 'destructive',
+        });
+        navigate('/auth');
+        return;
+      }
+
+      // 2) Status aprovado: carregar perfil (RLS permitirá SELECT)
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle(); // Use maybeSingle() em vez de single() para evitar erro se não encontrar
+        .maybeSingle();
 
-      if (error) {
-        return;
-      }
-
-      if (data) {
-        // ===== VERIFICAÇÃO DE STATUS DE APROVAÇÃO =====
-        if (data.status === 'pending') {
-          // Usuário pendente - fazer logout e mostrar mensagem
-          await supabase.auth.signOut();
-          toast({
-            title: "Cadastro Pendente",
-            description: "Seu cadastro está aguardando aprovação do administrador. Entre em contato para mais informações.",
-            variant: "default"
-          });
-          navigate('/auth');
-          return;
-        } else if (data.status === 'rejected') {
-          // Usuário rejeitado - fazer logout e mostrar motivo
-          await supabase.auth.signOut();
-          const reason = data.rejection_reason ? `: ${data.rejection_reason}` : '';
-          toast({
-            title: "Cadastro Rejeitado",
-            description: `Seu cadastro foi rejeitado${reason}. Entre em contato com o administrador.`,
-            variant: "destructive"
-          });
-          navigate('/auth');
-          return;
-        }
-        
-        // Só definir perfil se usuário aprovado
-        if (data.status === 'approved') {
-          setProfile(data);
-        }
+      if (!error && data) {
+        setProfile(data);
       }
     } catch (error) {
       // Silently handle profile fetch errors
@@ -419,7 +431,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Após login bem-sucedido, verificar status de aprovação de forma segura
+      const { data: sessionData } = await supabase.auth.getSession();
+      const uid = sessionData?.session?.user?.id;
+      if (uid) {
+        const { data: statusData, error: statusError } = await supabase.rpc('get_user_status', {
+          p_user_id: uid,
+        });
+        const status = (statusData as string | null) ?? null;
+        if (statusError || status !== 'approved') {
+          await supabase.auth.signOut();
+          const message = status === 'rejected'
+            ? 'Cadastro rejeitado. Contate o administrador.'
+            : 'Cadastro pendente de aprovação. Aguarde o administrador.';
+          return { error: { message } };
+        }
+      }
+
       return { error: null };
     } catch (error) {
       return { error: { message: 'Erro interno. Tente novamente.' } };

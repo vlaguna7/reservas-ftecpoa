@@ -259,12 +259,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // ===== FUNÇÃO DE CADASTRO =====
-  // Cria nova conta de usuário com perfil
+  // ===== FUNÇÃO DE CADASTRO COM PROTEÇÃO ANTI-IP =====
+  // Cria nova conta de usuário com validação avançada de IP e perfil
   const signUp = async (displayName: string, institutionalUser: string, pin: string) => {
     try {
       const normalizedUser = institutionalUser.trim();
       const tempEmail = `${normalizedUser}@temp.com`; // Email temporário para Supabase
+
+      // ===== VALIDAÇÃO PRÉ-REGISTRO =====
+      // Verificar IP e limite de registros antes de criar usuário
+      const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-registration', {
+        body: {
+          institutional_user: normalizedUser,
+          display_name: displayName,
+          pin: pin,
+          user_agent: navigator.userAgent
+        }
+      });
+
+      if (validationError) {
+        console.error('Validation error:', validationError);
+        return { error: { message: 'Erro na validação do registro. Tente novamente.' } };
+      }
+
+      if (!validationResult?.success) {
+        return { error: { message: validationResult?.message || 'Erro na validação' } };
+      }
+
+      if (!validationResult.canRegister) {
+        let errorMessage = 'Não foi possível realizar o cadastro.';
+        
+        if (validationResult.reason === 'ip_blocked') {
+          errorMessage = 'IP temporariamente bloqueado devido a múltiplas tentativas. Tente novamente mais tarde.';
+        } else if (validationResult.reason === 'limit_exceeded') {
+          errorMessage = 'Limite de cadastros por IP atingido (máximo 3). Entre em contato com o administrador se necessário.';
+        } else {
+          errorMessage = validationResult.message || errorMessage;
+        }
+
+        return { error: { message: errorMessage } };
+      }
 
       // ===== LIMPEZA DE PERFIL EXISTENTE =====
       // Verifica se já existe um perfil com este usuário institucional
@@ -299,12 +333,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             institutional_user: normalizedUser,
-            display_name: displayName
+            display_name: displayName,
+            user_agent: navigator.userAgent,
+            ip_address: 'client_captured' // Será capturado pela Edge Function
           }
         }
       });
 
       if (error) {
+        // Log tentativa falhada
+        await supabase.rpc('log_registration_attempt', {
+          p_ip_address: '127.0.0.1', // Fallback, real IP será capturado no servidor
+          p_user_agent: navigator.userAgent,
+          p_success: false,
+          p_user_id: null
+        });
+
         if (error.message.includes('already registered')) {
           return { error: { message: 'Usuário já existe. Tente fazer login.' } };
         }
@@ -335,12 +379,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileResult.status === 'rejected' || (profileResult.status === 'fulfilled' && profileResult.value.error)) {
         // Reverter criação do usuário se perfil falhou
         await supabase.auth.admin.deleteUser(data.user.id);
+        
+        // Log tentativa falhada
+        await supabase.rpc('log_registration_attempt', {
+          p_ip_address: '127.0.0.1',
+          p_user_agent: navigator.userAgent,
+          p_success: false,
+          p_user_id: data.user.id
+        });
+
         return { error: { message: 'Erro na criação do perfil' } };
       }
+
+      // ===== LOG DE SUCESSO =====
+      // Registrar cadastro bem-sucedido
+      await supabase.rpc('log_registration_attempt', {
+        p_ip_address: '127.0.0.1', // Real IP será capturado no servidor
+        p_user_agent: navigator.userAgent,
+        p_success: true,
+        p_user_id: data.user.id
+      });
 
       return { error: null };
 
     } catch (error: any) {
+      // Log erro interno
+      await supabase.rpc('log_registration_attempt', {
+        p_ip_address: '127.0.0.1',
+        p_user_agent: navigator.userAgent || 'unknown',
+        p_success: false,
+        p_user_id: null
+      });
+
       return { error: { message: `Erro interno: ${error.message}` } };
     }
   };

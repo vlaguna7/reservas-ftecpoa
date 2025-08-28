@@ -274,9 +274,21 @@ export default function Dashboard() {
           {/* Painel administrativo - apenas para usuários administradores */}
           {/* 🔄 CONTROLE DE ACESSO: verificação dupla (aqui e no componente) */}
           {profile.is_admin && (
+          {/* Painel Administrativo Seguro - Novo Sistema */}
+          {role === 'admin' && (
             <TabsContent value="admin" className="space-y-6">
-              <AdminPanel />
+              <AdminGuard>
+                <SecureAdminDashboard />
+              </AdminGuard>
             </TabsContent>
+          )}
+
+          {/* Painel Admin Legado */}
+          <TabsContent value="admin-legacy" className="space-y-6">
+            <UserGuard>
+              <AdminPanel />
+            </UserGuard>
+          </TabsContent>
           )}
         </Tabs>
       </main>

@@ -21,8 +21,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 // ===== PÁGINAS DA APLICAÇÃO =====
 // Página inicial (landing page)
 import Index from "./pages/Index";
-// Página de autenticação (login/cadastro)
-import Auth from "./pages/Auth";
+// Página de autenticação segura (login/cadastro com proteção IP)
+import SecureAuth from "./pages/SecureAuth";
 // Dashboard principal do sistema (área logada)
 import Dashboard from "./pages/Dashboard";
 // Página 404 (não encontrada)
@@ -66,8 +66,8 @@ const App = () => (
             {/* Rota principal - página inicial */}
             <Route path="/" element={<Index />} />
             
-            {/* Rota de autenticação - login e cadastro */}
-            <Route path="/auth" element={<Auth />} />
+            {/* Rota de autenticação segura - login e cadastro com proteção IP */}
+            <Route path="/auth" element={<SecureAuth />} />
             
             {/* Rota do dashboard - área logada */}
             <Route path="/dashboard" element={<Dashboard />} />

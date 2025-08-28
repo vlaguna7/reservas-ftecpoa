@@ -70,3 +70,9 @@ verify_jwt = false
 
 [functions.schedule-email-processor]
 verify_jwt = false
+
+[functions.validate-registration]
+verify_jwt = false
+
+[functions.admin-dashboard-access]
+verify_jwt = false

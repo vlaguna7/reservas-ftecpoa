@@ -137,6 +137,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ip_registration_control: {
+        Row: {
+          blocked_until: string | null
+          created_at: string | null
+          first_registration_at: string | null
+          ip_address: unknown
+          last_registration_at: string | null
+          registration_count: number
+          suspicious_activity: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          blocked_until?: string | null
+          created_at?: string | null
+          first_registration_at?: string | null
+          ip_address: unknown
+          last_registration_at?: string | null
+          registration_count?: number
+          suspicious_activity?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          blocked_until?: string | null
+          created_at?: string | null
+          first_registration_at?: string | null
+          ip_address?: unknown
+          last_registration_at?: string | null
+          registration_count?: number
+          suspicious_activity?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       laboratory_settings: {
         Row: {
           created_at: string
@@ -181,6 +214,7 @@ export type Database = {
           is_admin: boolean
           pin_hash: string
           rejection_reason: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
           status: Database["public"]["Enums"]["user_status"]
           updated_at: string
           user_id: string
@@ -201,6 +235,7 @@ export type Database = {
           is_admin?: boolean
           pin_hash: string
           rejection_reason?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
           user_id: string
@@ -221,6 +256,7 @@ export type Database = {
           is_admin?: boolean
           pin_hash?: string
           rejection_reason?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
           user_id?: string
@@ -320,6 +356,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ip_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          ip_address: unknown
+          is_signup: boolean | null
+          registration_timestamp: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ip_address: unknown
+          is_signup?: boolean | null
+          registration_timestamp?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          is_signup?: boolean | null
+          registration_timestamp?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_viewed_alerts: {
         Row: {
           alert_id: string
@@ -380,6 +446,14 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_admin_dashboard: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      can_make_reservations_secure: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       check_admin_elevation_attempts: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -392,9 +466,17 @@ export type Database = {
         Args: { p_institutional_user: string }
         Returns: boolean
       }
+      check_ip_registration_limit: {
+        Args: { p_ip_address: unknown }
+        Returns: Json
+      }
       cleanup_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      detect_ip_fraud_patterns: {
+        Args: { p_ip_address: unknown }
+        Returns: Json
       }
       get_equipment_availability: {
         Args: { p_date: string; p_equipment_type: string }
@@ -418,6 +500,10 @@ export type Database = {
       get_profile_display_name: {
         Args: { p_user_id: string }
         Returns: string
+      }
+      get_user_role_secure: {
+        Args: { p_user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
       }
       get_user_status: {
         Args: { p_user_id: string }
@@ -456,6 +542,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_registration_attempt: {
+        Args: {
+          p_ip_address: unknown
+          p_success: boolean
+          p_user_agent: string
+          p_user_id?: string
+        }
+        Returns: undefined
+      }
       verify_user_login: {
         Args: { p_institutional_user: string; p_pin: string }
         Returns: {
@@ -467,6 +562,7 @@ export type Database = {
       }
     }
     Enums: {
+      user_role: "visitor" | "user" | "admin"
       user_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -595,6 +691,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      user_role: ["visitor", "user", "admin"],
       user_status: ["pending", "approved", "rejected"],
     },
   },

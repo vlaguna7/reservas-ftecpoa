@@ -62,6 +62,9 @@ verify_jwt = false
 [functions.admin-auth-manager]
 verify_jwt = false
 
+[functions.admin-access-validator]
+verify_jwt = false
+
 [functions.send-reservation-notification]
 verify_jwt = false
 

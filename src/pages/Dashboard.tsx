@@ -31,6 +31,8 @@ import { MyReservations } from '@/components/MyReservations';
 import { Profile } from '@/components/Profile';
 // Painel administrativo (apenas para admins)
 import { AdminPanel } from '@/components/AdminPanel';
+// Guarda de segurança para área administrativa
+import { AdminGuard } from '@/components/AdminGuard';
 // Componente para mostrar reservas de hoje
 import { TodayReservations } from '@/components/TodayReservations';
 // Componente para reservas de auditório
@@ -272,10 +274,12 @@ export default function Dashboard() {
 
           {/* ===== ABA: ADMIN ===== */}
           {/* Painel administrativo - apenas para usuários administradores */}
-          {/* 🔄 CONTROLE DE ACESSO: verificação dupla (aqui e no componente) */}
+          {/* 🔒 CONTROLE DE ACESSO ULTRA-SEGURO: verificação tripla (frontend + server-side + componente) */}
           {profile.is_admin && (
             <TabsContent value="admin" className="space-y-6">
-              <AdminPanel />
+              <AdminGuard>
+                <AdminPanel />
+              </AdminGuard>
             </TabsContent>
           )}
         </Tabs>

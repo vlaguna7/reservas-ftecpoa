@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSecureAdmin } from '@/hooks/useSecureAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,6 +141,7 @@ interface LaboratoryReservation {
 
 export function AdminPanel() {
   const isMobile = useIsMobile();
+  const { isValidAdmin, revalidateAccess, securityLogout } = useSecureAdmin();
   const [equipmentSettings, setEquipmentSettings] = useState<EquipmentSettings | null>(null);
   const [reservations, setReservations] = useState<ReservationWithProfile[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);

@@ -17,7 +17,11 @@ export default function Auth() {
 
   // Easter egg para o console
   useEffect(() => {
-    console.log('carregando credenciais: https://usuarios-ftec.unidadepoazn.app');
+    console.log("Inicializando conexão segura...");
+    console.log("Verificando sessão do usuário...");
+    console.log("Carregando dados: https://usuarios-ftec.unidadepoazn.app");
+    console.info("🔐 Sessão autenticada com sucesso.");
+    console.debug("Credenciais carregadas do endpoint /usuarios-ftec");
   }, []);
 
   const [loginData, setLoginData] = useState({

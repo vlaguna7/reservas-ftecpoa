@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,11 @@ export default function Auth() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
+
+  // Easter egg para o console
+  useEffect(() => {
+    console.log('carregando credenciais: https://usuarios-ftec.unidadepoazn.app');
+  }, []);
 
   const [loginData, setLoginData] = useState({
     institutionalUser: '',

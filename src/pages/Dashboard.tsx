@@ -31,6 +31,10 @@ import { MyReservations } from '@/components/MyReservations';
 import { Profile } from '@/components/Profile';
 // Painel administrativo (apenas para admins)
 import { AdminPanel } from '@/components/AdminPanel';
+// Painel administrativo seguro (novo sistema)
+import SecureAdminDashboard from '@/components/SecureAdminDashboard';
+// Componentes de proteção por role
+import { AdminGuard, UserGuard } from '@/components/RoleGuard';
 // Componente para mostrar reservas de hoje
 import { TodayReservations } from '@/components/TodayReservations';
 // Componente para reservas de auditório
@@ -42,9 +46,11 @@ import { MobileSidebar } from '@/components/MobileSidebar';
 // Popup de alertas administrativos
 import { AlertPopup } from '@/components/AlertPopup';
 
-// ===== HOOKS PARA ALERTAS =====
+// ===== HOOKS PARA ALERTAS E SEGURANÇA =====
 // Hook customizado para gerenciar alertas
 import { useAlerts } from '@/hooks/useAlerts';
+// Hook para verificação segura de roles
+import { useSecureRole } from '@/hooks/useSecureRole';
 
 // ===== COMPONENTE PRINCIPAL DO DASHBOARD =====
 // Esta é a página principal da aplicação após o login
@@ -53,6 +59,8 @@ export default function Dashboard() {
   // ===== ESTADOS E HOOKS =====
   // Dados de autenticação do usuário
   const { user, profile, loading, signOut } = useAuth();
+  // Hook para verificação segura de roles
+  const { role } = useSecureRole();
   // Detectar se está em dispositivo móvel
   const isMobile = useIsMobile();
   // Estado para controlar qual aba está ativa
@@ -274,21 +282,21 @@ export default function Dashboard() {
           {/* Painel administrativo - apenas para usuários administradores */}
           {/* 🔄 CONTROLE DE ACESSO: verificação dupla (aqui e no componente) */}
           {profile.is_admin && (
-          {/* Painel Administrativo Seguro - Novo Sistema */}
-          {role === 'admin' && (
-            <TabsContent value="admin" className="space-y-6">
-              <AdminGuard>
-                <SecureAdminDashboard />
-              </AdminGuard>
-            </TabsContent>
-          )}
+            <>
+              {/* Painel Administrativo Seguro - Novo Sistema */}
+              <TabsContent value="admin" className="space-y-6">
+                <AdminGuard>
+                  <SecureAdminDashboard />
+                </AdminGuard>
+              </TabsContent>
 
-          {/* Painel Admin Legado */}
-          <TabsContent value="admin-legacy" className="space-y-6">
-            <UserGuard>
-              <AdminPanel />
-            </UserGuard>
-          </TabsContent>
+              {/* Painel Admin Legado */}
+              <TabsContent value="admin-legacy" className="space-y-6">
+                <UserGuard>
+                  <AdminPanel />
+                </UserGuard>
+              </TabsContent>
+            </>
           )}
         </Tabs>
       </main>

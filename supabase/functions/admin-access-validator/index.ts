@@ -50,12 +50,45 @@ serve(async (req) => {
 
     console.log('🔍 Validating admin access for user:', user.id);
 
+    // Log the admin access check separately (without affecting the function result)
+    try {
+      await supabaseClient
+        .from('security_audit_log')
+        .insert({
+          user_id: user.id,
+          action: 'admin_access_check',
+          details: { timestamp: new Date().toISOString(), function: 'admin-access-validator' },
+          ip_address: req.headers.get('CF-Connecting-IP') || req.headers.get('X-Forwarded-For') || 'unknown'
+        });
+    } catch (logError) {
+      console.warn('⚠️ Failed to log admin access check:', logError);
+    }
+
     // Call our ultra-secure admin verification function
     const { data: isAdminSecure, error: adminError } = await supabaseClient
       .rpc('is_admin_secure_v2', { p_user_id: user.id });
 
     if (adminError) {
       console.error('❌ Error checking admin status:', adminError);
+      
+      // Log the failed attempt
+      try {
+        await supabaseClient
+          .from('security_audit_log')
+          .insert({
+            user_id: user.id,
+            action: 'admin_access_denied',
+            details: { 
+              reason: 'admin_verification_error',
+              error: adminError.message,
+              timestamp: new Date().toISOString()
+            },
+            ip_address: req.headers.get('CF-Connecting-IP') || req.headers.get('X-Forwarded-For') || 'unknown'
+          });
+      } catch (logError) {
+        console.warn('⚠️ Failed to log admin access denial:', logError);
+      }
+      
       return new Response(JSON.stringify({ 
         isValid: false, 
         error: 'Admin verification failed' 

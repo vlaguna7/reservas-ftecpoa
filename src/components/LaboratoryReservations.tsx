@@ -72,18 +72,14 @@ export function LaboratoryReservations() {
         });
       }
 
-      // Buscar todas as reservas de laboratório a partir de hoje
+      // Buscar reservas de laboratório usando função segura
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      // Lista dos valores válidos de laboratório
-      const laboratoryValues = Object.keys(laboratoryNames);
-
       const { data: reservationData, error: reservationError } = await supabase
-        .from('reservations')
-        .select('id, reservation_date, observation, user_id, created_at, equipment_type')
-        .in('equipment_type', laboratoryValues)
+        .rpc('get_reservations_with_display_name')
         .gte('reservation_date', todayStr)
+        .like('equipment_type', 'laboratory_%')
         .order('reservation_date', { ascending: true });
 
       if (reservationError) {
@@ -97,33 +93,20 @@ export function LaboratoryReservations() {
         return;
       }
 
-      // Buscar perfis dos usuários
-      const userIds = reservationData.map(r => r.user_id);
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id, display_name')
-        .in('user_id', userIds);
-
-      if (profileError) {
-        console.error('Error fetching profiles:', profileError);
-        return;
-      }
-
-      // Combinar dados
-      const profileMap = new Map(profileData?.map(p => [p.user_id, p]) || []);
+      // Processar dados das reservas de forma segura
       const combinedData = reservationData.map(reservation => ({
         id: reservation.id,
         reservation_date: reservation.reservation_date,
         observation: reservation.observation || '',
         created_at: reservation.created_at,
         equipment_type: reservation.equipment_type,
-        user_id: reservation.user_id, // 🔐 IMPORTANTE: Incluir user_id para verificação de segurança
+        user_id: reservation.is_own_reservation ? user?.id : 'hidden', // Ocultar user_id de outros usuários
         user_profile: {
-          display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
+          display_name: reservation.display_name || 'Professor não identificado'
         }
       }));
 
-      console.log('Laboratory reservations loaded:', combinedData);
+      console.log('Laboratory reservations loaded (secure):', combinedData);
       setReservations(combinedData);
     } catch (error) {
       console.error('Error fetching laboratory reservations:', error);

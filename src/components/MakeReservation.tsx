@@ -264,38 +264,45 @@ export function MakeReservation() {
     console.log('📊 Fetching availability for dates:', availableDates.map(d => d.date));
     const dateList = availableDates.map(d => d.date);
     
-    const { data, error } = await supabase
-      .from('reservations')
-      .select('reservation_date, equipment_type')
-      .in('reservation_date', dateList);
-
-    if (error) {
-      console.error('❌ Error fetching availability:', error);
-      return;
-    }
-
-    console.log('📊 Reservation data:', data);
-
     const counts: Record<string, ReservationCount> = {};
     
+    // Inicializar contadores para cada data
     dateList.forEach(date => {
       counts[date] = { projector_count: 0, speaker_count: 0, auditorium_count: 0 };
     });
 
-    data.forEach(reservation => {
-      const dateStr = reservation.reservation_date;
-      if (reservation.equipment_type === 'projector') {
-        counts[dateStr].projector_count++;
-      }
-      if (reservation.equipment_type === 'speaker') {
-        counts[dateStr].speaker_count++;
-      }
-      if (reservation.equipment_type === 'auditorium') {
-        counts[dateStr].auditorium_count++;
-      }
-    });
+    // Buscar disponibilidade para cada equipamento usando função segura
+    for (const date of dateList) {
+      for (const equipment of ['projector', 'speaker', 'auditorium']) {
+        try {
+          const { data, error } = await supabase
+            .rpc('check_reservation_availability_secure', {
+              p_equipment_type: equipment,
+              p_date: date
+            });
 
-    console.log('📊 Calculated counts:', counts);
+          if (error) {
+            console.error(`❌ Error fetching ${equipment} availability for ${date}:`, error);
+            continue;
+          }
+
+          // Somar reservas para este equipamento e data
+          const totalReservations = data?.reduce((sum, item) => sum + (item.reserved_count || 0), 0) || 0;
+          
+          if (equipment === 'projector') {
+            counts[date].projector_count = totalReservations;
+          } else if (equipment === 'speaker') {
+            counts[date].speaker_count = totalReservations;
+          } else if (equipment === 'auditorium') {
+            counts[date].auditorium_count = totalReservations;
+          }
+        } catch (err) {
+          console.error(`💥 Unexpected error checking ${equipment} availability:`, err);
+        }
+      }
+    }
+
+    console.log('📊 Calculated counts using secure function:', counts);
     setAvailability(counts);
   };
 
@@ -391,44 +398,42 @@ export function MakeReservation() {
   const checkAuditoriumAvailability = async (date: string, timeSlots: string[], excludeCurrentUser = false) => {
     console.log('🔍 Verificando disponibilidade para:', { date, timeSlots, excludeCurrentUser });
     
-    let query = supabase
-      .from('reservations')
-      .select('time_slots, user_id')
-      .eq('reservation_date', date)
-      .eq('equipment_type', 'auditorium');
+    try {
+      // Usar função segura para verificar disponibilidade
+      const { data, error } = await supabase
+        .rpc('check_reservation_availability_secure', {
+          p_equipment_type: 'auditorium',
+          p_date: date
+        });
 
-    // Se excludeCurrentUser for true, excluir reservas do usuário atual
-    if (excludeCurrentUser && user) {
-      query = query.neq('user_id', user.id);
-    }
+      if (error) {
+        console.error('Error checking auditorium availability:', error);
+        return { available: false, conflictingSlots: [] };
+      }
 
-    const { data, error } = await query;
+      console.log('🔍 Reservas encontradas via função segura:', data);
 
-    console.log('🔍 Reservas encontradas:', data);
-    console.log('🔍 Erro na consulta:', error);
+      if (!data || data.length === 0) {
+        console.log('✅ Nenhuma reserva encontrada - horários disponíveis');
+        return { available: true, conflictingSlots: [] };
+      }
 
-    if (error) {
-      console.error('Error checking auditorium availability:', error);
+      // Verificar conflitos de horários
+      const existingSlots = data.flatMap(reservation => reservation.time_slots || []);
+      console.log('🔍 Horários já reservados:', existingSlots);
+      
+      const conflictingSlots = timeSlots.filter(slot => existingSlots.includes(slot));
+      console.log('⚠️ Conflitos encontrados:', conflictingSlots);
+      
+      return {
+        available: conflictingSlots.length === 0,
+        conflictingSlots,
+        existingSlots // Retornar os horários existentes para verificação
+      };
+    } catch (err) {
+      console.error('💥 Unexpected error checking auditorium availability:', err);
       return { available: false, conflictingSlots: [] };
     }
-
-    if (data.length === 0) {
-      console.log('✅ Nenhuma reserva encontrada - horários disponíveis');
-      return { available: true, conflictingSlots: [] };
-    }
-
-    // Verificar conflitos de horários (excluindo reservas do próprio usuário quando solicitado)
-    const existingSlots = data.flatMap(reservation => reservation.time_slots || []);
-    console.log('🔍 Horários já reservados (excluindo usuário atual se solicitado):', existingSlots);
-    
-    const conflictingSlots = timeSlots.filter(slot => existingSlots.includes(slot));
-    console.log('⚠️ Conflitos encontrados:', conflictingSlots);
-    
-    return {
-      available: conflictingSlots.length === 0,
-      conflictingSlots,
-      existingSlots // Retornar os horários existentes para verificação
-    };
   };
   
   // Função para forçar data local sem problemas de timezone

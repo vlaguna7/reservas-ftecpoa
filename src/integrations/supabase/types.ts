@@ -470,6 +470,16 @@ export type Database = {
         Args: { p_ip_address: unknown }
         Returns: Json
       }
+      check_reservation_availability_secure: {
+        Args: { p_date: string; p_equipment_type: string }
+        Returns: {
+          equipment_type: string
+          is_available: boolean
+          reservation_date: string
+          reserved_count: number
+          time_slots: string[]
+        }[]
+      }
       cleanup_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -504,6 +514,19 @@ export type Database = {
       get_profile_display_name: {
         Args: { p_user_id: string }
         Returns: string
+      }
+      get_reservations_with_display_name: {
+        Args: { p_equipment_type?: string }
+        Returns: {
+          created_at: string
+          display_name: string
+          equipment_type: string
+          id: string
+          is_own_reservation: boolean
+          observation: string
+          reservation_date: string
+          time_slots: string[]
+        }[]
       }
       get_user_role_secure: {
         Args: { p_user_id: string }

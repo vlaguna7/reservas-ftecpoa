@@ -30,52 +30,41 @@ export function AuditoriumReservations() {
 
   const fetchAuditoriumReservations = async () => {
     try {
-      // Buscar todas as reservas do auditório a partir de hoje (sem limitação de data futura)
+      // Buscar todas as reservas do auditório a partir de hoje usando função segura
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      const { data: reservationData, error: reservationError } = await supabase
-        .from('reservations')
-        .select('id, reservation_date, observation, user_id, created_at, time_slots')
-        .eq('equipment_type', 'auditorium')
+      const { data, error } = await supabase
+        .rpc('get_reservations_with_display_name', { 
+          p_equipment_type: 'auditorium' 
+        })
         .gte('reservation_date', todayStr)
         .order('reservation_date', { ascending: true });
 
-      if (reservationError) {
-        console.error('Error fetching auditorium reservations:', reservationError);
+      if (error) {
+        console.error('Error fetching auditorium reservations:', error);
         return;
       }
 
-      if (!reservationData || reservationData.length === 0) {
+      if (!data || data.length === 0) {
         setReservations([]);
         return;
       }
 
-      // Buscar perfis dos usuários
-      const userIds = reservationData.map(r => r.user_id);
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id, display_name')
-        .in('user_id', userIds);
-
-      if (profileError) {
-        console.error('Error fetching profiles:', profileError);
-        return;
-      }
-
-      // Combinar dados
-      const profileMap = new Map(profileData?.map(p => [p.user_id, p]) || []);
-      const combinedData = reservationData.map(reservation => ({
-        id: reservation.id,
-        reservation_date: reservation.reservation_date,
-        observation: reservation.observation || '',
-        created_at: reservation.created_at,
-        time_slots: reservation.time_slots || [],
-        user_id: reservation.user_id, // 🔐 IMPORTANTE: Incluir user_id para verificação de segurança
-        user_profile: {
-          display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado'
-        }
-      }));
+      // Processar dados das reservas de forma segura
+      const combinedData = data
+        .filter(res => res.equipment_type === 'auditorium')
+        .map(reservation => ({
+          id: reservation.id,
+          reservation_date: reservation.reservation_date,
+          observation: reservation.observation || '',
+          created_at: reservation.created_at,
+          time_slots: reservation.time_slots || [],
+          user_id: reservation.is_own_reservation ? user?.id : 'hidden', // Ocultar user_id de outros usuários
+          user_profile: {
+            display_name: reservation.display_name || 'Professor não identificado'
+          }
+        }));
 
       setReservations(combinedData);
     } catch (error) {

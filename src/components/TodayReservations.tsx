@@ -17,14 +17,9 @@ interface Reservation {
   display_type?: string;
   created_at: string;
   user_id: string; // 🔐 CRÍTICO: ID único do usuário para verificação de segurança
-  user_profile: {
+  profiles: {
     display_name: string;
-    green_tag_text?: string | null;
-    classroom_monday?: string;
-    classroom_tuesday?: string;
-    classroom_wednesday?: string;
-    classroom_thursday?: string;
-    classroom_friday?: string;
+    user_id?: string;
   };
 }
 
@@ -59,15 +54,25 @@ export function TodayReservations() {
       
       console.log('🔍 TodayReservations: Fetching reservations for date:', dateStr);
 
-      // Buscar apenas reservas de projetores e caixas de som
+      // Buscar nomes dos laboratórios para mapear códigos
+      const { data: labData } = await supabase
+        .from('laboratory_settings')
+        .select('laboratory_code, laboratory_name');
+
+      // Criar mapeamento de códigos de laboratório para nomes
+      const laboratoryNames: Record<string, string> = {};
+      labData?.forEach(lab => {
+        laboratoryNames[lab.laboratory_code] = lab.laboratory_name;
+      });
+
+      // Usar função segura para obter reservas com display_name
       const { data: reservationData, error: reservationError } = await supabase
-        .from('reservations')
-        .select('id, equipment_type, user_id, created_at')
+        .rpc('get_reservations_with_display_name')
         .eq('reservation_date', dateStr)
         .in('equipment_type', ['projector', 'speaker'])
         .order('created_at', { ascending: true });
 
-      console.log('🔍 TodayReservations: Raw reservation data:', reservationData);
+      console.log('🔍 TodayReservations: Secure reservation data:', reservationData);
 
       if (reservationError) {
         console.error('❌ TodayReservations: Error fetching reservations:', reservationError);
@@ -80,72 +85,32 @@ export function TodayReservations() {
         return;
       }
 
-      // Buscar nomes dos laboratórios para mapear códigos
-      const { data: labData } = await supabase
-        .from('laboratory_settings')
-        .select('laboratory_code, laboratory_name');
-
-      // Criar mapeamento de códigos de laboratório para nomes
-      const laboratoryNames: Record<string, string> = {};
-      labData?.forEach(lab => {
-        laboratoryNames[lab.laboratory_code] = lab.laboratory_name;
-      });
-
-      console.log('🔍 TodayReservations: Laboratory mapping:', laboratoryNames);
-      console.log('🔍 TodayReservations: Looking for laboratory:', reservationData.filter(r => r.equipment_type.startsWith('laboratory_')));
-
-      if (reservationData.length === 0) {
-        console.log('📭 TodayReservations: No reservations found for today');
-        setReservations([]);
-        return;
-      }
-
-      // Segunda query: buscar perfis dos usuários
-      const userIds = reservationData.map(r => r.user_id);
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id, display_name, green_tag_text, classroom_monday, classroom_tuesday, classroom_wednesday, classroom_thursday, classroom_friday')
-        .in('user_id', userIds);
-
-      if (profileError) {
-        console.error('❌ TodayReservations: Error fetching profiles:', profileError);
-        return;
-      }
-
-      console.log('👥 TodayReservations: Profile data:', profileData);
-
-      // Combinar dados
-      const profileMap = new Map(profileData?.map(p => [p.user_id, p]) || []);
+      // Processar dados das reservas de forma segura
       const combinedData = reservationData.map(reservation => {
         // Para laboratórios, usar o nome mapeado se disponível
         let displayType = reservation.equipment_type;
         if (reservation.equipment_type.startsWith('laboratory_')) {
           displayType = laboratoryNames[reservation.equipment_type] || reservation.equipment_type;
-          console.log(`🔍 TodayReservations: Mapping laboratory ${reservation.equipment_type} to "${displayType}"`);
         }
           
         return {
           id: reservation.id,
           equipment_type: reservation.equipment_type,
           display_type: displayType,
+          user_id: reservation.is_own_reservation ? user?.id : 'hidden', // Ocultar user_id de outros usuários
           created_at: reservation.created_at,
-          user_id: reservation.user_id, // 🔐 IMPORTANTE: Incluir user_id para verificação de segurança
-          user_profile: {
-            display_name: profileMap.get(reservation.user_id)?.display_name || 'Professor não identificado',
-            green_tag_text: profileMap.get(reservation.user_id)?.green_tag_text || null,
-            classroom_monday: profileMap.get(reservation.user_id)?.classroom_monday || null,
-            classroom_tuesday: profileMap.get(reservation.user_id)?.classroom_tuesday || null,
-            classroom_wednesday: profileMap.get(reservation.user_id)?.classroom_wednesday || null,
-            classroom_thursday: profileMap.get(reservation.user_id)?.classroom_thursday || null,
-            classroom_friday: profileMap.get(reservation.user_id)?.classroom_friday || null
+          profiles: {
+            display_name: reservation.display_name,
+            user_id: reservation.is_own_reservation ? user?.id : 'hidden' // Ocultar user_id de outros usuários
           }
         };
       });
 
-      console.log('✅ TodayReservations: Final combined data:', combinedData);
+      console.log('🔍 TodayReservations: Processed secure data:', combinedData);
       setReservations(combinedData);
+
     } catch (error) {
-      console.error('Error fetching reservations:', error);
+      console.error('❌ TodayReservations: Error:', error);
     } finally {
       setLoading(false);
     }
@@ -378,7 +343,7 @@ export function TodayReservations() {
 
   // Agrupar reservas por professor (usando user_id para separar usuários com mesmo nome)
   const groupedReservations = reservations.reduce((acc, reservation) => {
-    const teacherName = reservation.user_profile?.display_name || 'Professor não identificado';
+    const teacherName = reservation.profiles?.display_name || 'Professor não identificado';
     const userId = reservation.user_id;
     const groupKey = `${teacherName}_${userId}`;
     
@@ -391,24 +356,13 @@ export function TodayReservations() {
 
   // Função helper para obter nome de exibição
   const getDisplayName = (groupKey: string, reservationsList: Reservation[]): string => {
-    return reservationsList[0]?.user_profile?.display_name || 'Professor não identificado';
+    return reservationsList[0]?.profiles?.display_name || 'Professor não identificado';
   };
 
-  // Get current day classroom
+  // Get current day classroom - função simplificada
   const getCurrentDayClassroom = (userProfile: any) => {
-    if (!userProfile) return null;
-    
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    
-    switch (dayOfWeek) {
-      case 1: return userProfile.classroom_monday;
-      case 2: return userProfile.classroom_tuesday;
-      case 3: return userProfile.classroom_wednesday;
-      case 4: return userProfile.classroom_thursday;
-      case 5: return userProfile.classroom_friday;
-      default: return null; // Weekend
-    }
+    // Funcionalidade de sala removida por segurança
+    return null;
   };
 
   if (loading) {
@@ -456,9 +410,9 @@ export function TodayReservations() {
                   <h3 className="font-semibold text-base sm:text-lg">
                     {getDisplayName(groupKey, teacherReservations)}
                   </h3>
-                  {getCurrentDayClassroom(teacherReservations[0]?.user_profile) && (
+                  {getCurrentDayClassroom(teacherReservations[0]?.profiles) && (
                     <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 shrink-0">
-                      {getCurrentDayClassroom(teacherReservations[0]?.user_profile)}
+                      {getCurrentDayClassroom(teacherReservations[0]?.profiles)}
                     </Badge>
                   )}
                 </div>

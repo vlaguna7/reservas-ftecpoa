@@ -116,7 +116,7 @@ export function MyReservations() {
 
     const { data, error } = await supabase
       .from('reservations')
-      .select('*')
+      .select('id, equipment_type, reservation_date, observation, created_at, time_slots')
       .eq('user_id', user.id)
       .gte('reservation_date', format(twoDaysAgo, 'yyyy-MM-dd'))
       .order('created_at', { ascending: false });
@@ -130,8 +130,18 @@ export function MyReservations() {
       });
     } else {
       console.log('Reservations data:', data); // Debug log
-      setReservations(data || []);
-      setFilteredReservations(data || []);
+      // Remover campos sensíveis por segurança
+      const sanitizedData = data?.map(reservation => ({
+        id: reservation.id,
+        equipment_type: reservation.equipment_type,
+        reservation_date: reservation.reservation_date,
+        observation: reservation.observation,
+        created_at: reservation.created_at,
+        time_slots: reservation.time_slots
+      })) || [];
+      
+      setReservations(sanitizedData);
+      setFilteredReservations(sanitizedData);
     }
 
     setLoading(false);

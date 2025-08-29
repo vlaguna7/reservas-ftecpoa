@@ -105,22 +105,27 @@ export const useSecureAdmin = () => {
       setLastValidation(Date.now());
       setIsValidating(false);
 
-      // Configurar validação contínua a cada 30 segundos
+      // Configurar validação contínua a cada 2 minutos (reduzir logs)
       heartbeatIntervalRef.current = setInterval(async () => {
         const heartbeatResult = await validateAdminAccess();
         
-        if (!heartbeatResult.isValid || heartbeatResult.blocked) {
-          await securityLogout('Perda de privilégios administrativos');
+        // Só fazer logout se realmente bloqueado por atividade suspeita
+        if (heartbeatResult.blocked) {
+          await securityLogout('Atividade suspeita detectada');
           return;
         }
 
-        if (heartbeatResult.isSuspicious && heartbeatResult.riskScore && heartbeatResult.riskScore > 50) {
-          await securityLogout('Comportamento suspeito detectado');
+        // Se não é válido mas não bloqueado, apenas marcar como inválido
+        // O AdminGuard vai mostrar "acesso negado" sem derrubar a sessão
+        if (!heartbeatResult.isValid) {
+          setIsValidAdmin(false);
           return;
         }
 
+        // Tudo ok, manter válido
+        setIsValidAdmin(true);
         setLastValidation(Date.now());
-      }, 30000); // 30 segundos
+      }, 120000); // 2 minutos
 
       // Opcional: Detecção de DevTools (pode ser removida)
       validationIntervalRef.current = setInterval(() => {

@@ -76,7 +76,9 @@ serve(async (req) => {
     const shouldBlock = riskAnalysis?.should_block || false;
     const isSuspicious = riskAnalysis?.is_suspicious || false;
 
-    if (shouldBlock) {
+    // Only block if user is NOT a valid admin AND has suspicious activity
+    // Valid admins should never be blocked regardless of risk score
+    if (!isAdminSecure && shouldBlock) {
       console.log('🚨 Blocking suspicious admin access attempt from user:', user.id);
       return new Response(JSON.stringify({ 
         isValid: false, 

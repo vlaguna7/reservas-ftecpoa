@@ -301,6 +301,7 @@ export function AdminPanel() {
   };
 
   const fetchAllReservations = async () => {
+    console.log('🔍 Fetching all reservations...');
     const { data, error } = await supabase
       .from('reservations')
       .select(`
@@ -313,6 +314,7 @@ export function AdminPanel() {
       .order('reservation_date', { ascending: true });
 
     if (error) {
+      console.error('❌ Error fetching reservations:', error);
       toast({
         title: "Erro ao carregar reservas",
         description: error.message,
@@ -321,22 +323,29 @@ export function AdminPanel() {
       return;
     }
 
+    console.log('📊 Found reservations:', data?.length || 0);
+
     // Fetch profile data separately for each reservation
     const reservationsWithProfiles = await Promise.all(
       (data || []).map(async (reservation) => {
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('display_name, institutional_user')
           .eq('user_id', reservation.user_id)
-          .single();
+          .maybeSingle(); // Using maybeSingle to avoid errors when no data is found
+
+        if (profileError) {
+          console.error('❌ Error fetching profile for reservation:', reservation.id, profileError);
+        }
 
         return {
           ...reservation,
-          profiles: profileData || { display_name: 'N/A', institutional_user: 'N/A' }
+          profiles: profileData || { display_name: 'Professor não identificado', institutional_user: 'N/A' }
         };
       })
     );
 
+    console.log('✅ All reservations with profiles loaded:', reservationsWithProfiles.length);
     setReservations(reservationsWithProfiles);
   };
 
@@ -1306,6 +1315,7 @@ export function AdminPanel() {
 
   const fetchAuditoriumReservations = async () => {
     try {
+      console.log('🔍 Fetching auditorium reservations...');
       // Buscar todas as reservas do auditório a partir de hoje
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -1318,9 +1328,16 @@ export function AdminPanel() {
         .order('reservation_date', { ascending: true });
 
       if (reservationError) {
-        console.error('Error fetching auditorium reservations:', reservationError);
+        console.error('❌ Error fetching auditorium reservations:', reservationError);
+        toast({
+          title: "Erro ao carregar reservas do auditório",
+          description: reservationError.message,
+          variant: "destructive"
+        });
         return;
       }
+
+      console.log('📊 Found auditorium reservations:', reservationData?.length || 0);
 
       if (!reservationData || reservationData.length === 0) {
         setAuditoriumReservations([]);
@@ -1335,7 +1352,12 @@ export function AdminPanel() {
         .in('user_id', userIds);
 
       if (profileError) {
-        console.error('Error fetching profiles:', profileError);
+        console.error('❌ Error fetching profiles for auditorium reservations:', profileError);
+        toast({
+          title: "Erro ao carregar perfis",
+          description: profileError.message,
+          variant: "destructive"
+        });
         return;
       }
 
@@ -1352,13 +1374,20 @@ export function AdminPanel() {
         }
       }));
 
+      console.log('✅ Auditorium reservations with profiles loaded:', combinedData.length);
       setAuditoriumReservations(combinedData);
     } catch (error) {
-      console.error('Error fetching auditorium reservations:', error);
+      console.error('❌ Exception in fetchAuditoriumReservations:', error);
+      toast({
+        title: "Erro ao carregar reservas do auditório",
+        description: "Erro interno. Tente recarregar a página.",
+        variant: "destructive"
+      });
     }
   };
 
   const fetchLaboratoryReservations = async () => {
+    console.log('🔍 Fetching laboratory reservations...');
     const { data, error } = await supabase
       .from('reservations')
       .select(`
@@ -1372,25 +1401,37 @@ export function AdminPanel() {
       .order('reservation_date', { ascending: true });
 
     if (error) {
-      console.error('Error fetching laboratory reservations:', error);
+      console.error('❌ Error fetching laboratory reservations:', error);
+      toast({
+        title: "Erro ao carregar reservas de laboratório",
+        description: error.message,
+        variant: "destructive"
+      });
       return;
     }
 
+    console.log('📊 Found laboratory reservations:', data?.length || 0);
+
     const reservationsWithProfiles = await Promise.all(
       (data || []).map(async (reservation) => {
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('display_name')
           .eq('user_id', reservation.user_id)
-          .single();
+          .maybeSingle(); // Using maybeSingle to avoid errors when no data is found
+
+        if (profileError) {
+          console.error('❌ Error fetching profile for user:', reservation.user_id, profileError);
+        }
 
         return {
           ...reservation,
-          user_profile: profileData || { display_name: 'N/A' }
+          user_profile: profileData || { display_name: 'Professor não identificado' }
         };
       })
     );
 
+    console.log('✅ Laboratory reservations with profiles loaded:', reservationsWithProfiles.length);
     setLaboratoryReservations(reservationsWithProfiles);
   };
 

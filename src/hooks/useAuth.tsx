@@ -89,18 +89,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;        // Flag para evitar atualizações após unmount
     let initialCheckDone = false; // Flag para controlar verificação inicial
+    let loadingTimeout: NodeJS.Timeout; // Timeout para iOS Safari
+
+    // Detectar iOS Safari para logs específicos
+    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+    
+    if (isIOSSafari) {
+      console.log('🍎 iOS Safari detectado - aplicando correções específicas');
+    }
+
+    // TIMEOUT DE SEGURANÇA para iOS Safari (10 segundos máximo)
+    loadingTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.log('⏰ Timeout de loading atingido - forçando carregamento');
+        setLoading(false);
+        if (isIOSSafari && !session) {
+          console.log('🍎 iOS Safari: Forçando redirect para auth após timeout');
+          navigate('/auth');
+        }
+      }
+    }, 10000);
 
     // Limpar possíveis tokens inválidos no localStorage na inicialização
     const clearInvalidTokens = async () => {
       try {
+        if (isIOSSafari) {
+          console.log('🍎 iOS Safari: Verificando tokens...');
+        }
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error && error.message.includes('refresh_token_not_found')) {
+          if (isIOSSafari) {
+            console.log('🍎 iOS Safari: Token inválido encontrado, limpando...');
+          }
           await supabase.auth.signOut();
           localStorage.clear();
+          // Para iOS, também limpar sessionStorage
+          if (isIOSSafari) {
+            sessionStorage.clear();
+          }
         }
       } catch (error) {
+        if (isIOSSafari) {
+          console.log('🍎 iOS Safari: Erro na verificação de tokens, limpando tudo...');
+        }
         await supabase.auth.signOut();
         localStorage.clear();
+        if (isIOSSafari) {
+          sessionStorage.clear();
+        }
       }
     };
 
@@ -111,18 +148,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const handleSession = (session: Session | null, source: string) => {
       if (!isMounted) return; // Evita atualizações se componente foi desmontado
       
+      if (isIOSSafari) {
+        console.log(`🍎 iOS Safari: handleSession - source: ${source}, hasSession: ${!!session}`);
+      }
+      
       // Atualizar estados com dados da sessão
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         // Buscar perfil em background para não bloquear a UI
-        // 🔄 ALTERNATIVA: usar React Query para cache automático
+        // Para iOS Safari, usar delay maior para evitar problemas
+        const delay = isIOSSafari ? 500 : 0;
         setTimeout(() => {
           if (isMounted) {
             fetchProfile(session.user.id);
           }
-        }, 0);
+        }, delay);
       } else {
         setProfile(null); // Limpar perfil se não há sessão
       }
@@ -154,31 +196,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Sem isso, usuários logados seriam redirecionados para login ao recarregar
     const checkInitialSession = async () => {
       try {
+        if (isIOSSafari) {
+          console.log('🍎 iOS Safari: Iniciando verificação de sessão...');
+        }
         
+        // Para iOS Safari, tentar sessionStorage como fallback
+        if (isIOSSafari) {
+          const fallbackSession = sessionStorage.getItem('supabase.auth.token');
+          if (fallbackSession) {
+            console.log('🍎 iOS Safari: Sessão encontrada no sessionStorage');
+          }
+        }
         
         // Buscar sessão existente no Supabase
-        // 🔄 ADAPTAÇÃO PARA OUTROS SISTEMAS:
-        // - Firebase: getCurrentUser() ou auth.currentUser
-        // - Auth0: getAccessTokenSilently()
-        // - localStorage: localStorage.getItem('token')
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
+          if (isIOSSafari) {
+            console.log('🍎 iOS Safari: Erro na verificação de sessão:', error.message);
+          }
           setLoading(false);
           return;
+        }
+        
+        if (isIOSSafari) {
+          console.log('🍎 iOS Safari: Sessão verificada:', !!session);
         }
         
         handleSession(session, 'verificacao-inicial');
         initialCheckDone = true;
         
-        // Sempre remover loading após verificação inicial
+        // Para iOS Safari, delay maior para garantir estabilidade
+        const delay = isIOSSafari ? 300 : 100;
         setTimeout(() => {
           if (isMounted) {
             setLoading(false);
           }
-        }, 100);
+        }, delay);
         
       } catch (error) {
+        if (isIOSSafari) {
+          console.log('🍎 iOS Safari: Erro fatal na verificação:', error);
+        }
         setLoading(false);
       }
     };
@@ -191,6 +250,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false;
       subscription.unsubscribe(); // Remover listener
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout); // Limpar timeout
+      }
     };
   }, []);
 

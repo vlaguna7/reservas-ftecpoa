@@ -14,9 +14,24 @@ const Index = () => {
   // O redirecionamento para dashboard só acontece quando clicam no botão
 
   if (loading) {
+    // Detectar iOS Safari para mensagem específica
+    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+    
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+          {isIOSSafari && (
+            <div className="text-center max-w-sm px-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                🍎 Carregando no iOS Safari...
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Se o carregamento demorar, tente recarregar a página ou usar o Chrome/Firefox.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

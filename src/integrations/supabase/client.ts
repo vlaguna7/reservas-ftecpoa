@@ -8,16 +8,30 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Detectar iOS Safari para configurações específicas
+const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    // Para iOS Safari, usar sessionStorage é mais confiável
+    storage: isIOSSafari ? sessionStorage : localStorage,
     persistSession: true,
-    autoRefreshToken: true,
+    // Desabilitar autoRefreshToken no iOS Safari para evitar loops
+    autoRefreshToken: !isIOSSafari,
     detectSessionInUrl: true,
+    // Configurações específicas para iOS
+    ...(isIOSSafari && {
+      debug: false, // Desabilitar debug no iOS para performance
+      storageKey: 'sb-auth-token-ios', // Chave específica para iOS
+    }),
   },
   global: {
     headers: {
       'X-Client-Info': 'reservas-hostinger@1.0.0',
+      // Header específico para iOS Safari
+      ...(isIOSSafari && {
+        'X-iOS-Safari': 'true',
+      }),
     },
   },
   db: {
@@ -25,7 +39,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
   realtime: {
     params: {
-      eventsPerSecond: 2, // Reduzir carga de eventos em tempo real
+      // Reduzir eventos em tempo real para iOS Safari
+      eventsPerSecond: isIOSSafari ? 1 : 2,
     },
   },
 });

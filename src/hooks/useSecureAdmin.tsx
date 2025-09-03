@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { isIOSSafari, logIOS } from '@/lib/iosUtils';
 
 interface AdminValidationResult {
   isValid: boolean;
@@ -25,27 +26,56 @@ export const useSecureAdmin = () => {
   // Função para validar acesso admin no servidor
   const validateAdminAccess = async (): Promise<AdminValidationResult> => {
     if (!user) {
+      logIOS('Admin validation failed: No user session');
       return { isValid: false, error: 'No user session' };
     }
 
     try {
       console.log('🔐 Validating admin access for user:', user.id);
+      logIOS('Starting admin validation', { userId: user.id });
+      
+      // Para iOS Safari, tentar múltiplas vezes obter o token
+      let sessionToken = null;
+      let retryCount = 0;
+      const maxRetries = isIOSSafari() ? 3 : 1;
+      
+      while (!sessionToken && retryCount < maxRetries) {
+        const sessionResult = await supabase.auth.getSession();
+        sessionToken = sessionResult.data.session?.access_token;
+        
+        if (!sessionToken && isIOSSafari()) {
+          logIOS(`Token attempt ${retryCount + 1}/${maxRetries} failed, retrying...`);
+          // Pequena pausa para iOS Safari
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        retryCount++;
+      }
+      
+      if (!sessionToken) {
+        logIOS('Failed to get session token after retries');
+        return { isValid: false, error: 'No access token available' };
+      }
+      
+      logIOS('Got session token, making admin validation request');
       
       const { data, error } = await supabase.functions.invoke('admin-access-validator', {
         headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          Authorization: `Bearer ${sessionToken}`,
         },
       });
 
       if (error) {
         console.error('❌ Admin validation error:', error);
+        logIOS('Admin validation error', error);
         return { isValid: false, error: error.message };
       }
 
       console.log('✅ Admin validation result:', data);
+      logIOS('Admin validation successful', data);
       return data as AdminValidationResult;
     } catch (error) {
       console.error('❌ Exception in admin validation:', error);
+      logIOS('Exception in admin validation', error);
       return { isValid: false, error: 'Validation failed' };
     }
   };
@@ -109,6 +139,13 @@ export const useSecureAdmin = () => {
       heartbeatIntervalRef.current = setInterval(async () => {
         const heartbeatResult = await validateAdminAccess();
         
+        // Para iOS Safari, ser mais tolerante com falhas temporárias
+        if (isIOSSafari() && (!heartbeatResult.isValid && !heartbeatResult.blocked)) {
+          logIOS('Heartbeat validation failed, but not blocking on iOS', heartbeatResult);
+          // No iOS Safari, não invalidar imediatamente - pode ser problema temporário de rede
+          return;
+        }
+        
         // Só fazer logout se realmente bloqueado por atividade suspeita
         if (heartbeatResult.blocked) {
           await securityLogout('Atividade suspeita detectada');
@@ -125,7 +162,7 @@ export const useSecureAdmin = () => {
         // Tudo ok, manter válido
         setIsValidAdmin(true);
         setLastValidation(Date.now());
-      }, 120000); // 2 minutos
+      }, isIOSSafari() ? 180000 : 120000); // 3 minutos para iOS Safari, 2 minutos para outros
 
       // Opcional: Detecção de DevTools (pode ser removida)
       validationIntervalRef.current = setInterval(() => {

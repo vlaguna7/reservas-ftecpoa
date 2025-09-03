@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-ios-safari',
 };
 
 serve(async (req) => {
@@ -13,6 +13,11 @@ serve(async (req) => {
   }
 
   try {
+    // Detect iOS Safari
+    const userAgent = req.headers.get('User-Agent') || '';
+    const isiOSSafari = req.headers.get('X-iOS-Safari') === 'true';
+    const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent);
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -21,7 +26,11 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.log('❌ No authorization header provided');
+      console.log('❌ No authorization header provided', { 
+        isiOSSafari, 
+        isIOSDevice, 
+        userAgent: userAgent.substring(0, 100) 
+      });
       return new Response(JSON.stringify({ 
         isValid: false, 
         error: 'No authorization provided' 
@@ -34,11 +43,36 @@ serve(async (req) => {
     // Extract JWT token
     const token = authHeader.replace('Bearer ', '');
     
-    // Get user from JWT
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    if (isIOSDevice) {
+      console.log('🍎 iOS device detected, processing admin validation');
+    }
+    
+    // Get user from JWT with retry for iOS devices
+    let user = null;
+    let authError = null;
+    let retryCount = 0;
+    const maxRetries = isIOSDevice ? 2 : 0;
+    
+    do {
+      const result = await supabaseClient.auth.getUser(token);
+      user = result.data.user;
+      authError = result.error;
+      
+      if (authError && isIOSDevice && retryCount < maxRetries) {
+        console.log(`🍎 iOS: Auth attempt ${retryCount + 1} failed, retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      
+      retryCount++;
+    } while (authError && isIOSDevice && retryCount <= maxRetries);
     
     if (authError || !user) {
-      console.log('❌ Invalid token or user not found:', authError?.message);
+      console.log('❌ Invalid token or user not found:', { 
+        error: authError?.message,
+        isiOSSafari,
+        isIOSDevice,
+        retryCount 
+      });
       return new Response(JSON.stringify({ 
         isValid: false, 
         error: 'Invalid authentication' 
@@ -48,7 +82,10 @@ serve(async (req) => {
       });
     }
 
-    console.log('🔍 Validating admin access for user:', user.id);
+    console.log('🔍 Validating admin access for user:', user.id, { 
+      isiOSSafari, 
+      isIOSDevice 
+    });
 
     // Log the admin access check separately (without affecting the function result)
     try {
@@ -57,7 +94,13 @@ serve(async (req) => {
         .insert({
           user_id: user.id,
           action: 'admin_access_check',
-          details: { timestamp: new Date().toISOString(), function: 'admin-access-validator' },
+          details: { 
+            timestamp: new Date().toISOString(), 
+            function: 'admin-access-validator',
+            isiOSSafari,
+            isIOSDevice,
+            userAgent: userAgent.substring(0, 200)
+          },
           ip_address: req.headers.get('CF-Connecting-IP') || req.headers.get('X-Forwarded-For') || 'unknown'
         });
     } catch (logError) {

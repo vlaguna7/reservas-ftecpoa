@@ -3,6 +3,7 @@ import { useSecureAdmin } from '@/hooks/useSecureAdmin';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Shield, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { isIOSSafari } from '@/lib/iosUtils';
 
 interface AdminGuardProps {
   children: ReactNode;
@@ -41,7 +42,10 @@ export const AdminGuard = ({ children, showLoading = true }: AdminGuardProps) =>
             <div className="text-center">
               <h3 className="text-lg font-semibold text-destructive">Acesso Negado</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Você não possui privilégios administrativos válidos.
+                {isIOSSafari() 
+                  ? 'Problemas de conexão detectados no iOS Safari. Tente novamente.'
+                  : 'Você não possui privilégios administrativos válidos.'
+                }
               </p>
             </div>
             <Button 

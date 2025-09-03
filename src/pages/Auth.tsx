@@ -163,6 +163,7 @@ export default function Auth() {
                   <Input
                     id="pin"
                     type="password"
+                    inputMode="numeric"
                     placeholder="123456"
                     maxLength={6}
                     pattern="[0-9]{6}"
@@ -224,6 +225,7 @@ export default function Auth() {
                   <Input
                     id="signup-pin"
                     type="password"
+                    inputMode="numeric"
                     placeholder="123456"
                     maxLength={6}
                     pattern="[0-9]{6}"
@@ -241,6 +243,7 @@ export default function Auth() {
                   <Input
                     id="confirm-pin"
                     type="password"
+                    inputMode="numeric"
                     placeholder="123456"
                     maxLength={6}
                     pattern="[0-9]{6}"

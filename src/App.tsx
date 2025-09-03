@@ -14,9 +14,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // 🔄 ALTERNATIVAS: Next.js Router, Reach Router (descontinuado), Vue Router, Angular Router
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+// ===== REACT HOOKS =====
+import { useEffect } from "react";
+
 // ===== HOOKS E PROVIDERS CUSTOMIZADOS =====
 // Context Provider para autenticação de usuários
 import { AuthProvider } from "@/hooks/useAuth";
+
+// ===== SISTEMA DE SEGURANÇA =====
+// Proteção contra ferramentas de desenvolvedor
+import { devToolsProtection } from "@/lib/devToolsProtection";
 
 // ===== PÁGINAS DA APLICAÇÃO =====
 // Página inicial (landing page)
@@ -45,41 +52,53 @@ const queryClient = new QueryClient();
 // 3. Toasters: componentes de notificação
 // 4. BrowserRouter: roteamento da aplicação
 // 5. AuthProvider: contexto de autenticação
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    {/* Provider para tooltips em toda aplicação */}
-    <TooltipProvider>
-      {/* Componentes de notificação toast */}
-      <Toaster />
-      <Sonner />
-      
-      {/* Roteador principal da aplicação */}
-      {/* 🔄 ALTERNATIVAS DE ROTEAMENTO:
-          - HashRouter: para hospedam que não suportam HTML5 history
-          - MemoryRouter: para testes ou apps que não precisam de URL
-          - StaticRouter: para renderização no servidor (SSR) */}
-      <BrowserRouter>
-        {/* Provider de autenticação - envolve todas as rotas */}
-        <AuthProvider>
-          {/* Definição das rotas da aplicação */}
-          <Routes>
-            {/* Rota principal - página inicial */}
-            <Route path="/" element={<Index />} />
-            
-            {/* Rota de autenticação - login e cadastro */}
-            <Route path="/auth" element={<Auth />} />
-            
-            {/* Rota do dashboard - área logada */}
-            <Route path="/dashboard" element={<Dashboard />} />
-            
-            {/* IMPORTANTE: Adicione todas as rotas customizadas ACIMA da rota "*" */}
-            {/* Rota catch-all - captura qualquer URL não definida */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Inicializar sistema de proteção contra DevTools
+  useEffect(() => {
+    devToolsProtection.init();
+    
+    // Cleanup na desmontagem do componente
+    return () => {
+      devToolsProtection.destroy();
+    };
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      {/* Provider para tooltips em toda aplicação */}
+      <TooltipProvider>
+        {/* Componentes de notificação toast */}
+        <Toaster />
+        <Sonner />
+        
+        {/* Roteador principal da aplicação */}
+        {/* 🔄 ALTERNATIVAS DE ROTEAMENTO:
+            - HashRouter: para hospedam que não suportam HTML5 history
+            - MemoryRouter: para testes ou apps que não precisam de URL
+            - StaticRouter: para renderização no servidor (SSR) */}
+        <BrowserRouter>
+          {/* Provider de autenticação - envolve todas as rotas */}
+          <AuthProvider>
+            {/* Definição das rotas da aplicação */}
+            <Routes>
+              {/* Rota principal - página inicial */}
+              <Route path="/" element={<Index />} />
+              
+              {/* Rota de autenticação - login e cadastro */}
+              <Route path="/auth" element={<Auth />} />
+              
+              {/* Rota do dashboard - área logada */}
+              <Route path="/dashboard" element={<Dashboard />} />
+              
+              {/* IMPORTANTE: Adicione todas as rotas customizadas ACIMA da rota "*" */}
+              {/* Rota catch-all - captura qualquer URL não definida */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

@@ -39,6 +39,15 @@ interface FAQ {
   sort_order: number;
 }
 
+interface LaboratoryAvailabilityResult {
+  available: boolean;
+  is_laboratory: boolean;
+  laboratory_name?: string;
+  reserved_by?: string;
+  reservation_date?: string;
+  created_at?: string;
+}
+
 // Definição dos horários do auditório
 const TIME_SLOTS = [
   { value: 'morning', label: 'Manhã - 09h/12h' },
@@ -632,80 +641,137 @@ export function MakeReservation() {
       setLoading(true);
       const dateStr = formatDateToLocalString(laboratoryDate);
       
-      // Verificar se já existe reserva para este laboratório na data
-      const { data: existingReservations, error: checkError } = await supabase
-        .from('reservations')
-        .select('id')
-        .eq('equipment_type', selectedLaboratory)
-        .eq('reservation_date', dateStr);
+      console.log('🔍 Confirmar reserva de laboratório:', { 
+        selectedLaboratory, 
+        laboratoryDate, 
+        dateStr,
+        needsSupplies,
+        observation: laboratoryObservation
+      });
 
-      if (checkError) {
-        throw checkError;
+      // Verificar disponibilidade em tempo real usando nova função
+      const { data: availabilityCheck, error: availabilityError } = await supabase
+        .rpc('check_laboratory_availability_real_time', {
+          p_equipment_type: selectedLaboratory,
+          p_reservation_date: dateStr
+        });
+
+      if (availabilityError) {
+        console.error('Erro ao verificar disponibilidade:', availabilityError);
+        toast({
+          title: "Erro",
+          description: "Erro ao verificar disponibilidade. Tente novamente.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
 
-      if (existingReservations && existingReservations.length > 0) {
-        setLaboratoryError('Este laboratório já está reservado para esta data. Por favor, selecione outro dia disponível.');
+      // Cast do resultado e verificar se não está disponível
+      const availabilityResult = availabilityCheck as unknown as LaboratoryAvailabilityResult;
+      if (!availabilityResult?.available) {
+        const labName = availabilityResult?.laboratory_name || laboratoryNames[selectedLaboratory] || selectedLaboratory;
+        const reservedBy = availabilityResult?.reserved_by || 'outro usuário';
+        setLaboratoryError(`O laboratório ${labName} já está reservado para esta data por ${reservedBy}. Por favor, escolha outra data.`);
+        setLoading(false);
         return;
       }
 
       const observation = needsSupplies 
         ? laboratoryObservation.trim()
         : 'Não deseja insumos extras.';
+
+      // Reservar o laboratório com retry em caso de conflito
+      const maxRetries = 3;
+      let retryCount = 0;
       
-      const { data, error } = await supabase
-        .from('reservations')
-        .insert({
-          user_id: user.id,
-          equipment_type: selectedLaboratory,
-          reservation_date: dateStr,
-          observation: observation
-        })
-        .select();
+      while (retryCount < maxRetries) {
+        try {
+          const { data, error } = await supabase
+            .from('reservations')
+            .insert({
+              user_id: user.id,
+              equipment_type: selectedLaboratory,
+              reservation_date: dateStr,
+              observation: observation
+            })
+            .select();
 
-      if (error) {
-        throw error;
+          if (error) {
+            // Se for erro de duplicata/conflict, tentar novamente
+            if (error.code === '23505' || error.message.includes('já está reservado') || error.message.includes('unique')) {
+              console.log(`🔄 Tentativa ${retryCount + 1} falhou por conflito, tentando novamente...`);
+              retryCount++;
+              if (retryCount < maxRetries) {
+                // Aguardar um pouco antes de tentar novamente
+                await new Promise(resolve => setTimeout(resolve, 500));
+                continue;
+              } else {
+                // Máximo de tentativas atingido
+                const labName = laboratoryNames[selectedLaboratory] || selectedLaboratory;
+                setLaboratoryError(`O laboratório ${labName} foi reservado por outro usuário enquanto você fazia a reserva. Por favor, escolha outra data.`);
+                setLoading(false);
+                return;
+              }
+            } else {
+              // Outro tipo de erro
+              throw error;
+            }
+          } else {
+            // Sucesso!
+            console.log('✅ Reserva de laboratório criada com sucesso:', data);
+            
+            // Enviar notificação por email em background (não espera concluir)
+            const result = data?.[0];
+            if (result) {
+              setTimeout(() => {
+              console.log('✅ Laboratory reservation created successfully:', result);
+              }, 100); // Envia email após 100ms sem bloquear a UI
+            }
+
+            const laboratoryName = laboratoryOptions.find(lab => lab.value === selectedLaboratory)?.label || 'Laboratório';
+
+            // Disparar confetes para reserva de laboratório
+            triggerConfetti();
+
+            toast({
+              title: "Reserva confirmada!",
+              description: `${laboratoryName} reservado para ${format(laboratoryDate, "dd/MM/yyyy", { locale: ptBR })}.`,
+              className: "bg-blue-900 border-blue-800 text-white [&>*]:text-white animate-scale-in"
+            });
+
+            // Scroll para o meio da página na versão mobile após sucesso
+            if (isMobile) {
+              setTimeout(() => {
+                const pageHeight = document.documentElement.scrollHeight;
+                const middlePosition = pageHeight / 2;
+                
+                window.scrollTo({
+                  top: middlePosition,
+                  behavior: 'smooth'
+                });
+              }, 1500);
+            }
+
+            // Reset form
+            setSelectedLaboratory('');
+            setLaboratoryDate(undefined);
+            setNeedsSupplies(null);
+            setLaboratoryObservation('');
+            setLaboratoryError('');
+            break;
+          }
+        } catch (insertError: any) {
+          console.error('❌ Erro ao criar reserva de laboratório:', insertError);
+          if (retryCount >= maxRetries - 1) {
+            setLaboratoryError(insertError.message || 'Erro ao criar reserva. Tente novamente.');
+          }
+          break;
+        }
       }
 
-      // Enviar notificação por email em background (não espera concluir)
-      const result = data?.[0];
-      if (result) {
-        setTimeout(() => {
-        console.log('✅ Laboratory reservation created successfully:', result);
-        }, 100); // Envia email após 100ms sem bloquear a UI
-      }
-
-      const laboratoryName = laboratoryOptions.find(lab => lab.value === selectedLaboratory)?.label || 'Laboratório';
-
-      // Disparar confetes para reserva de laboratório
-      triggerConfetti();
-
-      toast({
-        title: "Reserva confirmada!",
-        description: `${laboratoryName} reservado para ${format(laboratoryDate, "dd/MM/yyyy", { locale: ptBR })}.`,
-        className: "bg-blue-900 border-blue-800 text-white [&>*]:text-white animate-scale-in"
-      });
-
-      // Scroll para o meio da página na versão mobile após sucesso
-      if (isMobile) {
-        setTimeout(() => {
-          const pageHeight = document.documentElement.scrollHeight;
-          const middlePosition = pageHeight / 2;
-          
-          window.scrollTo({
-            top: middlePosition,
-            behavior: 'smooth'
-          });
-        }, 1500);
-      }
-
-      // Reset form
-      setSelectedLaboratory('');
-      setLaboratoryDate(undefined);
-      setNeedsSupplies(null);
-      setLaboratoryObservation('');
-      setLaboratoryError('');
     } catch (error: any) {
-      console.error('Error creating laboratory reservation:', error);
+      console.error('💥 Erro inesperado na reserva de laboratório:', error);
       setLaboratoryError(error.message || 'Erro ao criar reserva. Tente novamente.');
     } finally {
       setLoading(false);

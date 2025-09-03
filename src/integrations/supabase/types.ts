@@ -470,6 +470,10 @@ export type Database = {
         Args: { p_ip_address: unknown }
         Returns: Json
       }
+      check_laboratory_availability_real_time: {
+        Args: { p_equipment_type: string; p_reservation_date: string }
+        Returns: Json
+      }
       check_reservation_availability_secure: {
         Args: { p_date: string; p_equipment_type: string }
         Returns: {
@@ -581,6 +585,14 @@ export type Database = {
           p_user_id?: string
         }
         Returns: undefined
+      }
+      validate_laboratory_reservation: {
+        Args: {
+          p_equipment_type: string
+          p_reservation_date: string
+          p_user_id?: string
+        }
+        Returns: boolean
       }
       verify_user_login: {
         Args: { p_institutional_user: string; p_pin: string }

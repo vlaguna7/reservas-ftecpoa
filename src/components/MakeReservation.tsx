@@ -10,8 +10,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Projector, Speaker, AlertCircle, X, HelpCircle, Building, FlaskConical } from 'lucide-react';
+import { Calendar, Projector, Speaker, AlertCircle, X, HelpCircle, Building, FlaskConical, FileText } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -781,6 +782,12 @@ export function MakeReservation() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Para formulário de eventos, redirecionar para sistema externo
+    if (selectedEquipment === 'events-form') {
+      window.open('https://eventos.unidadepoazn.app', '_blank', 'noopener,noreferrer');
+      return;
+    }
+    
     // Para auditório, usar função específica
     if (selectedEquipment === 'auditorium') {
       await confirmAuditoriumReservation();
@@ -936,6 +943,8 @@ export function MakeReservation() {
         return <Building className="h-4 w-4" />;
       case 'laboratory':
         return <FlaskConical className="h-4 w-4" />;
+      case 'events-form':
+        return <FileText className="h-4 w-4" />;
       default:
         return null;
     }
@@ -956,6 +965,8 @@ export function MakeReservation() {
         return 'Auditório';
       case 'laboratory':
         return 'Laboratório';
+      case 'events-form':
+        return 'Formulário de Eventos';
       default:
         return '';
     }
@@ -966,12 +977,17 @@ export function MakeReservation() {
       <div>
         <Label className="text-base font-medium">Selecione uma opção:</Label>
         <RadioGroup value={selectedEquipment} onValueChange={setSelectedEquipment} className="mt-3">
-          {['projector', 'speaker', 'auditorium', 'laboratory'].map((type) => (
+          {['projector', 'speaker', 'auditorium', 'laboratory', 'events-form'].map((type) => (
             <div key={type} className="flex items-center space-x-2">
               <RadioGroupItem value={type} id={type} />
               <Label htmlFor={type} className="flex items-center gap-2 cursor-pointer">
                 {getEquipmentIcon(type)}
                 {getEquipmentLabel(type)}
+                {type === 'events-form' && (
+                  <Badge className="ml-2 text-xs px-2 py-0.5" style={{ backgroundColor: '#153288', color: 'white' }}>
+                    Novo
+                  </Badge>
+                )}
               </Label>
             </div>
           ))}
@@ -981,6 +997,8 @@ export function MakeReservation() {
             ? 'O auditório pode ser reservado uma vez por dia por professor.'
             : selectedEquipment === 'laboratory'
             ? 'Selecione o laboratório desejado e escolha uma data para a reserva.'
+            : selectedEquipment === 'events-form'
+            ? 'Novo sistema para registro de presença em eventos e palestras, com formulários integrados e recurso de geolocalização.'
             : 'Você pode fazer 1 reserva de cada tipo de equipamento por dia (1 projetor + 1 caixa de som).'
           }
         </div>
@@ -1356,8 +1374,28 @@ export function MakeReservation() {
         </div>
       )}
 
+      {/* Interface específica para Formulário de Eventos */}
+      {selectedEquipment === 'events-form' && (
+        <div className="space-y-4">
+          <div className="p-4 bg-accent/50 rounded-lg border">
+            <p className="text-sm text-muted-foreground mb-3">
+              Novo sistema para registro de presença em eventos e palestras, com formulários integrados e recurso de geolocalização.{' '}
+              <a 
+                href="https://eventos.unidadepoazn.app" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                Clique aqui
+              </a>
+              .
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Interface para equipamentos normais */}
-      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedEquipment !== 'laboratory' && (
+      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedEquipment !== 'laboratory' && selectedEquipment !== 'events-form' && (
         <div>
           <Label className="text-base font-medium">Data disponível para reserva:</Label>
           <div className="mt-3 space-y-3">
@@ -1451,7 +1489,7 @@ export function MakeReservation() {
         </div>
       )}
 
-      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedEquipment !== 'laboratory' && selectedDate && hasUserReservation(selectedDate, selectedEquipment) && (
+      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedEquipment !== 'laboratory' && selectedEquipment !== 'events-form' && selectedDate && hasUserReservation(selectedDate, selectedEquipment) && (
         <Alert variant="default" className="border-amber-200 bg-amber-50">
           <AlertCircle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
@@ -1460,7 +1498,7 @@ export function MakeReservation() {
         </Alert>
       )}
 
-      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedEquipment !== 'laboratory' && selectedDate && !hasUserReservation(selectedDate, selectedEquipment) && !isAvailable(selectedDate, selectedEquipment) && (
+      {selectedEquipment && selectedEquipment !== 'auditorium' && selectedEquipment !== 'laboratory' && selectedEquipment !== 'events-form' && selectedDate && !hasUserReservation(selectedDate, selectedEquipment) && !isAvailable(selectedDate, selectedEquipment) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -1474,10 +1512,14 @@ export function MakeReservation() {
       disabled={loading || !selectedEquipment || 
         (selectedEquipment === 'auditorium' ? (!auditoriumDate || selectedTimeSlots.length === 0 || !!auditoriumError || !auditoriumObservation.trim()) :
           selectedEquipment === 'laboratory' ? (!selectedLaboratory || !laboratoryDate || needsSupplies === null || (needsSupplies && !laboratoryObservation.trim())) :
+          selectedEquipment === 'events-form' ? false :
           (!selectedDate || hasUserReservation(selectedDate, selectedEquipment) || !isAvailable(selectedDate, selectedEquipment)))}
         className="w-full"
       >
-        {loading ? 'Reservando...' : selectedEquipment === 'laboratory' ? 'Reservar Laboratório' : 'Confirmar Reserva'}
+        {loading ? 'Reservando...' : 
+         selectedEquipment === 'laboratory' ? 'Reservar Laboratório' : 
+         selectedEquipment === 'events-form' ? 'Acessar Sistema de Eventos' :
+         'Confirmar Reserva'}
       </Button>
 
       <Collapsible open={showFAQ} onOpenChange={setShowFAQ}>

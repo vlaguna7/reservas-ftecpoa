@@ -998,7 +998,7 @@ export function MakeReservation() {
             : selectedEquipment === 'laboratory'
             ? 'Selecione o laboratório desejado e escolha uma data para a reserva.'
             : selectedEquipment === 'events-form'
-            ? 'Sistema integrado para eventos e palestras.'
+            ? ''
             : 'Você pode fazer 1 reserva de cada tipo de equipamento por dia (1 projetor + 1 caixa de som).'
           }
         </div>
@@ -1386,7 +1386,7 @@ export function MakeReservation() {
                 rel="noopener noreferrer"
                 className="text-primary hover:underline font-medium"
               >
-                Acesse o sistema
+                https://eventos.unidadepoazn.app
               </a>
               .
             </p>

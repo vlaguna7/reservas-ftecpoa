@@ -984,7 +984,7 @@ export function MakeReservation() {
                 {getEquipmentIcon(type)}
                 {getEquipmentLabel(type)}
                 {type === 'events-form' && (
-                  <Badge className="ml-0.5 text-xs px-1 py-0.5" style={{ backgroundColor: '#153288', color: 'white' }}>
+                  <Badge className="text-[0.625rem] px-1 py-0.5 leading-tight" style={{ backgroundColor: '#153288', color: 'white', fontSize: '0.625rem' }}>
                     Novo
                   </Badge>
                 )}

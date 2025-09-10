@@ -998,7 +998,7 @@ export function MakeReservation() {
             : selectedEquipment === 'laboratory'
             ? 'Selecione o laboratório desejado e escolha uma data para a reserva.'
             : selectedEquipment === 'events-form'
-            ? ''
+            ? 'Novo sistema para registro de presença em eventos e palestras, com formulários integrados e recurso de geolocalização.'
             : 'Você pode fazer 1 reserva de cada tipo de equipamento por dia (1 projetor + 1 caixa de som).'
           }
         </div>
@@ -1379,16 +1379,7 @@ export function MakeReservation() {
         <div className="space-y-4">
           <div className="p-4 bg-accent/50 rounded-lg border">
             <p className="text-sm text-muted-foreground mb-3">
-              Novo sistema para registro de presença em eventos e palestras, com formulários integrados e recurso de geolocalização.{' '}
-              <a 
-                href="https://eventos.unidadepoazn.app" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary hover:underline font-medium"
-              >
-                https://eventos.unidadepoazn.app
-              </a>
-              .
+              Novo sistema para registro de presença em eventos e palestras, com formulários integrados e recurso de geolocalização.
             </p>
           </div>
         </div>

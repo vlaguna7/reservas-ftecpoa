@@ -98,17 +98,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🍎 iOS Safari detectado - aplicando correções específicas');
     }
 
-    // TIMEOUT DE SEGURANÇA para iOS Safari (10 segundos máximo)
+    // TIMEOUT DE SEGURANÇA mais generoso para iOS Safari (15 segundos)
     loadingTimeout = setTimeout(() => {
       if (isMounted && loading) {
-        console.log('⏰ Timeout de loading atingido - forçando carregamento');
+        console.log('⏰ Timeout de loading atingido - finalizando carregamento');
         setLoading(false);
-        if (isIOSSafari && !session) {
-          console.log('🍎 iOS Safari: Forçando redirect para auth após timeout');
-          navigate('/auth');
+        // Não forçar redirect imediato no iOS - dar chance para sessão se estabelecer
+        if (isIOSSafari) {
+          console.log('🍎 iOS Safari: Timeout atingido, mas mantendo usuário na página atual');
         }
       }
-    }, 10000);
+    }, 15000);
 
     // Limpar possíveis tokens inválidos no localStorage na inicialização
     const clearInvalidTokens = async () => {

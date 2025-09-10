@@ -45,15 +45,70 @@ export const getIOSSafeConfig = () => {
   const isIOSDevice = isIOSSafari();
   
   return {
-    // Desabilitar refresh automático de token no iOS Safari por problemas conhecidos
-    autoRefreshToken: !isIOSDevice,
-    // Usar sessionStorage como fallback no iOS
-    storage: isIOSDevice ? sessionStorage : localStorage,
-    // Timeout menor para iOS
-    networkTimeout: isIOSDevice ? 8000 : 15000,
-    // Retry menos agressivo no iOS
-    maxRetries: isIOSDevice ? 2 : 3,
+    // HABILITAR refresh automático de token no iOS Safari - correção crítica
+    autoRefreshToken: true,
+    // Usar storage híbrido no iOS
+    storage: isIOSDevice ? createIOSHybridStorage() : localStorage,
+    // Timeout otimizado para iOS
+    networkTimeout: isIOSDevice ? 10000 : 15000,
+    // Retry mais robusto no iOS
+    maxRetries: isIOSDevice ? 3 : 3,
   };
+};
+
+/**
+ * Storage híbrido para iOS que usa localStorage + sessionStorage
+ */
+export const createIOSHybridStorage = () => {
+  return {
+    getItem: (key: string) => {
+      try {
+        return localStorage.getItem(key) || sessionStorage.getItem(key);
+      } catch {
+        return sessionStorage.getItem(key);
+      }
+    },
+    setItem: (key: string, value: string) => {
+      try {
+        localStorage.setItem(key, value);
+        sessionStorage.setItem(key, value); // Backup
+      } catch {
+        sessionStorage.setItem(key, value);
+      }
+    },
+    removeItem: (key: string) => {
+      try {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      } catch {
+        sessionStorage.removeItem(key);
+      }
+    }
+  };
+};
+
+/**
+ * Força refresh de token se está próximo do vencimento
+ */
+export const forceTokenRefreshIfNeeded = async (supabase: any): Promise<void> => {
+  if (!isIOSSafari()) return;
+  
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    
+    // Calcular se token expira em menos de 5 minutos
+    const expiresAt = session.expires_at || 0;
+    const now = Math.floor(Date.now() / 1000);
+    const timeUntilExpiry = expiresAt - now;
+    
+    if (timeUntilExpiry < 300) { // Menos de 5 minutos
+      logIOS('Forçando refresh de token preventivo');
+      await supabase.auth.refreshSession();
+    }
+  } catch (error) {
+    logIOS('Erro no refresh preventivo de token:', error);
+  }
 };
 
 /**

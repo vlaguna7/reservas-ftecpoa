@@ -8,16 +8,48 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// Detectar iOS Safari para configurações específicas
-const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
+// Detectar iOS para configurações específicas
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isIOSSafari = isIOS && /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
+
+// Storage híbrido para iOS - usa localStorage como primário e sessionStorage como backup
+const createHybridStorage = () => {
+  if (!isIOS) return localStorage;
+  
+  return {
+    getItem: (key: string) => {
+      try {
+        return localStorage.getItem(key) || sessionStorage.getItem(key);
+      } catch {
+        return sessionStorage.getItem(key);
+      }
+    },
+    setItem: (key: string, value: string) => {
+      try {
+        localStorage.setItem(key, value);
+        sessionStorage.setItem(key, value); // Backup no sessionStorage
+      } catch {
+        sessionStorage.setItem(key, value);
+      }
+    },
+    removeItem: (key: string) => {
+      try {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      } catch {
+        sessionStorage.removeItem(key);
+      }
+    }
+  };
+};
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    // Para iOS Safari, usar sessionStorage é mais confiável
-    storage: isIOSSafari ? sessionStorage : localStorage,
+    // Storage híbrido para iOS, localStorage padrão para outros
+    storage: createHybridStorage(),
     persistSession: true,
-    // Desabilitar autoRefreshToken no iOS Safari para evitar loops
-    autoRefreshToken: !isIOSSafari,
+    // HABILITAR autoRefreshToken para iOS - isso é crítico
+    autoRefreshToken: true,
     detectSessionInUrl: true,
     // Configurações específicas para iOS
     ...(isIOSSafari && {

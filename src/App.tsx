@@ -20,6 +20,7 @@ import { useEffect } from "react";
 // ===== HOOKS E PROVIDERS CUSTOMIZADOS =====
 // Context Provider para autenticação de usuários
 import { AuthProvider } from "@/hooks/useAuth";
+import { useIOSSessionManager } from "@/hooks/useIOSSessionManager";
 
 // ===== SISTEMA DE SEGURANÇA =====
 // Proteção contra ferramentas de desenvolvedor
@@ -53,6 +54,9 @@ const queryClient = new QueryClient();
 // 4. BrowserRouter: roteamento da aplicação
 // 5. AuthProvider: contexto de autenticação
 const App = () => {
+  // Gerenciador de sessão iOS ativo em toda a aplicação
+  useIOSSessionManager();
+
   // Inicializar sistema de proteção contra DevTools
   useEffect(() => {
     devToolsProtection.init();

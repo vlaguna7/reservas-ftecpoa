@@ -54,7 +54,7 @@ export type Database = {
           created_at: string
           details: Json | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           severity: string | null
           target_user_email: string | null
           user_agent: string | null
@@ -66,7 +66,7 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           severity?: string | null
           target_user_email?: string | null
           user_agent?: string | null
@@ -78,7 +78,7 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           severity?: string | null
           target_user_email?: string | null
           user_agent?: string | null
@@ -302,7 +302,7 @@ export type Database = {
           created_at: string | null
           details: Json | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           user_agent: string | null
           user_id: string | null
         }
@@ -311,7 +311,7 @@ export type Database = {
           created_at?: string | null
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
           user_id?: string | null
         }
@@ -320,7 +320,7 @@ export type Database = {
           created_at?: string | null
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
           user_id?: string | null
         }
@@ -455,7 +455,7 @@ export type Database = {
         Returns: boolean
       }
       check_admin_elevation_attempts: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           attempt_count: number
           last_attempt: string
@@ -484,10 +484,7 @@ export type Database = {
           time_slots: string[]
         }[]
       }
-      cleanup_rate_limits: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_rate_limits: { Args: never; Returns: undefined }
       detect_ip_fraud_patterns: {
         Args: { p_ip_address: unknown }
         Returns: Json
@@ -515,10 +512,7 @@ export type Database = {
           user_count: number
         }[]
       }
-      get_profile_display_name: {
-        Args: { p_user_id: string }
-        Returns: string
-      }
+      get_profile_display_name: { Args: { p_user_id: string }; Returns: string }
       get_reservations_with_display_name: {
         Args: { p_equipment_type?: string }
         Returns: {
@@ -536,14 +530,8 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
-      get_user_status: {
-        Args: { p_user_id: string }
-        Returns: string
-      }
-      get_user_status_debug: {
-        Args: { p_user_id: string }
-        Returns: string
-      }
+      get_user_status: { Args: { p_user_id: string }; Returns: string }
+      get_user_status_debug: { Args: { p_user_id: string }; Returns: string }
       handle_signup_with_profile: {
         Args: {
           p_display_name: string
@@ -553,22 +541,10 @@ export type Database = {
         }
         Returns: undefined
       }
-      is_admin: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
-      is_admin_secure: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
-      is_admin_secure_v2: {
-        Args: { p_user_id: string }
-        Returns: boolean
-      }
-      is_user_approved: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { user_id: string }; Returns: boolean }
+      is_admin_secure: { Args: { user_id: string }; Returns: boolean }
+      is_admin_secure_v2: { Args: { p_user_id: string }; Returns: boolean }
+      is_user_approved: { Args: { user_id: string }; Returns: boolean }
       log_privilege_attempt: {
         Args: {
           action_attempted: string
